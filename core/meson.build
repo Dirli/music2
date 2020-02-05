@@ -3,6 +3,7 @@ executable(
     'Daemon.vala',
     'Queue.vala',
     'Server.vala',
+    core_files,
     vala_args: vala_args,
     dependencies: core_deps,
     install : true
