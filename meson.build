@@ -16,4 +16,5 @@ core_deps = [
     dep_gee,
 ]
 
-subdir('core')
+subdir ('lib')
+subdir ('core')
