@@ -1,0 +1,101 @@
+namespace Music2 {
+    public class Core.Queue : GLib.Object {
+        private Gee.ArrayList<uint> tracks_queue;
+        private Gee.ArrayList<uint> past_tracks;
+
+        public Queue () {
+            tracks_queue = new Gee.ArrayList<uint> ();
+            past_tracks = new Gee.ArrayList<uint> ();
+        }
+
+        public void add_index (uint i, bool past = false) {
+            if (!past) {
+                tracks_queue.add (i);
+            } else {
+                past_tracks.add (i);
+            }
+        }
+
+        public void set_index (uint i) {
+            if (tracks_queue.size > 0 && i != tracks_queue[0]) {
+                var index = tracks_queue.index_of (i);
+                if (index >= 0) {
+                    past_tracks.add_all (tracks_queue.slice (0, index));
+                    tracks_queue = tracks_queue.slice (index, tracks_queue.size) as Gee.ArrayList<uint>;
+                } else {
+                    var past_index = past_tracks.index_of (i);
+                    if (past_index >= 0) {
+                        var tmp_past = past_tracks.slice (past_index, past_tracks.size) as Gee.ArrayList<uint>;
+                        for (var arr_i = tmp_past.size - 1 ; arr_i >= 0; arr_i--) {
+                            tracks_queue.insert (0, tmp_past[arr_i]);
+                        }
+                        if (past_index > 0) {
+                            past_tracks = past_tracks.slice (0, past_index) as Gee.ArrayList<uint>;
+                        } else {
+                            past_tracks.clear ();
+                        }
+                    }
+                }
+            }
+        }
+
+        public int get_size () {
+            return tracks_queue.size - 1;
+        }
+
+        public uint get_first () {
+            return tracks_queue.size == 0 ? 0 : tracks_queue.@get (0);
+        }
+
+        public uint get_next_index () {
+            if (tracks_queue.size == 0) {
+                return 0;
+            }
+
+            var i = tracks_queue.remove_at (0);
+            past_tracks.add (i);
+
+            return tracks_queue.size == 0 ? 0 : tracks_queue.@get (0);
+        }
+
+        public uint get_prev_index () {
+            if (past_tracks.size == 0) {
+                return 0;
+            }
+
+            var i = past_tracks.remove_at (past_tracks.size - 1);
+            tracks_queue.insert (0, i);
+
+            return i;
+        }
+
+        public uint[] get_all () {
+            uint[] queue_all = {};
+
+            past_tracks.foreach ((past_tid) => {
+                queue_all += past_tid;
+                return true;
+            });
+
+            tracks_queue.foreach ((tid) => {
+                queue_all += tid;
+                return true;
+            });
+
+            return queue_all;
+        }
+
+        public void reset_queue () {
+            past_tracks.add_all (tracks_queue);
+            tracks_queue.clear ();
+            while (!past_tracks.is_empty) {
+                tracks_queue.add (past_tracks.remove_at (0));
+            }
+        }
+
+        public void clear_queue () {
+            past_tracks.clear ();
+            tracks_queue.clear ();
+        }
+    }
+}
