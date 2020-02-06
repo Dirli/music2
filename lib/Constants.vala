@@ -4,6 +4,8 @@ namespace Music2.Constants {
     public const string MPRIS_NAME = "org.mpris.MediaPlayer2.EMusic";
     public const string MPRIS_PATH = "/org/mpris/MediaPlayer2";
 
+    public const int64 MILI_INV = 1000;
+
     public const string[] MEDIA_CONTENT_TYPES = {
         "audio/3gpp",
         "audio/aac",

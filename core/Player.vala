@@ -2,6 +2,7 @@ namespace Music2 {
     public class Core.Player : GLib.Object {
         public signal void changed_track (CObjects.Media m);
         public signal void changed_state (string s);
+        public signal void changed_volume (double v);
         public signal void changed_duration (int64 d);
         public signal void tracklist_replaced (uint[] tracks_id);
 
@@ -134,6 +135,21 @@ namespace Music2 {
             if (last_state != Gst.State.PLAYING) {
                 pause ();
             }
+        }
+
+        public void set_volume (double val, bool emit = true) {
+            if (0.0 <= val && val <= 100.0) {
+                playbin.set_property ("volume", val);
+                if (emit) {
+                    changed_volume (val);
+                }
+            }
+        }
+
+        public double get_volume () {
+            var val = GLib.Value (typeof (double));
+            playbin.get_property ("volume", ref val);
+            return (double) val;
         }
 
         public Gst.State get_state () {
