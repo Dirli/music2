@@ -3,3 +3,8 @@ core_files = files (
     'CObjects/Media.vala',
     'Tools/String.vala',
 )
+
+client_files = core_files
+client_files += files (
+    'Interfaces/Client.vala',
+)
