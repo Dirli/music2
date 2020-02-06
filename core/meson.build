@@ -1,6 +1,7 @@
 executable(
     meson.project_name() + 'd',
     'Daemon.vala',
+    'Player.vala',
     'Queue.vala',
     'Server.vala',
     core_files,
