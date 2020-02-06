@@ -3,6 +3,7 @@ executable(
     'Daemon.vala',
     'MprisPlayer.vala',
     'MprisRoot.vala',
+    'MprisTrackList.vala',
     'Player.vala',
     'Queue.vala',
     'Server.vala',

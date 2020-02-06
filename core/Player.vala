@@ -4,6 +4,7 @@ namespace Music2 {
         public signal void changed_state (string s);
         public signal void changed_volume (double v);
         public signal void changed_duration (int64 d);
+        public signal void added_to_queue (CObjects.Media m);
         public signal void tracklist_replaced (uint[] tracks_id);
 
         private Gee.HashMap<uint, CObjects.Media> tracks_hash;

@@ -23,6 +23,8 @@ namespace Music2 {
         private void on_bus_acquired (DBusConnection connection, string name) {
             try {
                 connection.register_object (Constants.MPRIS_PATH, new Core.MprisRoot (this));
+                connection.register_object (Constants.MPRIS_PATH, new Core.MprisTrackList (player));
+                connection.register_object (Constants.MPRIS_PATH, new Core.MprisPlayer (connection, player));
             } catch (IOError e) {
                 warning ("could not create MPRIS player: %s\n", e.message);
             }
