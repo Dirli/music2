@@ -9,7 +9,7 @@ configure_file(
 )
 
 install_data (
-    meson.project_name() + 'd',
+    meson.project_name() + 'd.desktop',
     install_dir: join_paths(get_option('datadir'), 'applications')
 )
 

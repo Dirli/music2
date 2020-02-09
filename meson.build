@@ -9,6 +9,7 @@ vala_args = []
 dep_gio = dependency ('gio-2.0')
 dep_gst = dependency ('gstreamer-1.0')
 dep_gee = dependency ('gee-0.8')
+dep_dbus = dependency ('dbus-1')
 
 core_deps = [
     dep_gio,

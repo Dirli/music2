@@ -2,18 +2,24 @@ namespace Music2 {
     public class Core.Server : GLib.Object {
         private GLib.Application app;
 
+        private GLib.Settings settings;
         private Core.Player player;
 
         private uint owner_id;
 
         public Server (GLib.Application app) {
             this.app = app;
+            settings = new GLib.Settings (Constants.APP_NAME);
 
             player = new Core.Player ();
+            player.set_volume (settings.get_double ("volume"));
 
             init_mpris ();
 
             player.changed_track.connect (on_changed_track);
+            player.changed_volume.connect ((volume_value) => {
+                settings.set_double ("volume", volume_value);
+            });
         }
 
         private void on_changed_track (CObjects.Media m) {

@@ -138,12 +138,10 @@ namespace Music2 {
             }
         }
 
-        public void set_volume (double val, bool emit = true) {
+        public void set_volume (double val) {
             if (0.0 <= val && val <= 100.0) {
                 playbin.set_property ("volume", val);
-                if (emit) {
-                    changed_volume (val);
-                }
+                changed_volume (val);
             }
         }
 
