@@ -19,3 +19,5 @@ core_deps = [
 subdir ('data')
 subdir ('lib')
 subdir ('core')
+
+meson.add_install_script('meson/meson_post_install.py')

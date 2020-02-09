@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <enum id="io.elementary.music2.source">
+        <value value="0" nick="none"/>
+        <value value="1" nick="directory"/>
+    </enum>
+    <schema path="/io/elementary/music2/" id="io.elementary.music2">
+        <key enum="io.elementary.music2.source" name="source-type">
+            <default>'none'</default>
+            <summary>The name of the source type from the last launch</summary>
+            <description>The name of the source type from the last launch</description>
+        </key>
+        <key type="s" name="source-media">
+            <default>''</default>
+            <summary>The name of the original media that was used</summary>
+            <description>The name of the original media that was used</description>
+        </key>
+        <key type="d" name="volume">
+            <default>0.75</default>
+            <summary>Saves the volume level value</summary>
+            <description>Saves the volume level value</description>
+        </key>
+        <key type="b" name="close-while-playing">
+            <default>true</default>
+            <summary>Whether to close the player's window instead of hiding/minimizing it when a song is still playing. The window can be brought back by activating its desktop file.</summary>
+            <description>When enabled, the window will be closed even if a song is still being played (i.e. close = quit). Otherwise, if a song is being played, the application will not be closed, but minimized/hidden. The player is minimized or hidden depending on the values of the minimize-while-playing-shells key.</description>
+        </key>
+    </schema>
+</schemalist>
