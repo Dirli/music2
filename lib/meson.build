@@ -1,6 +1,7 @@
 core_files = files (
     'Constants.vala',
     'CObjects/Media.vala',
+    'Interfaces/GSTagger.vala',
     'Tools/String.vala',
 )
 
