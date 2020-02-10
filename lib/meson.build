@@ -1,11 +1,18 @@
-core_files = files (
+common_files = files (
     'Constants.vala',
     'CObjects/Media.vala',
     'Interfaces/GSTagger.vala',
+    'Tools/FileUtils.vala',
     'Tools/String.vala',
+    'Tools/TimeUtils.vala',
 )
 
-client_files = core_files
+core_files = common_files
+core_files += files (
+    'CObjects/Scanner.vala',
+)
+
+client_files = common_files
 client_files += files (
     'Interfaces/Client.vala',
 )

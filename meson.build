@@ -4,6 +4,11 @@ project(
     version: '0.1.0'
 )
 
+add_global_arguments(
+    '-DGETTEXT_PACKAGE="@0@"'.format(meson.project_name()),
+    language:'c'
+)
+
 vala_args = []
 
 dep_gio = dependency ('gio-2.0')
