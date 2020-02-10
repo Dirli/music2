@@ -1,4 +1,5 @@
 common_files = files (
+    'Enums.vala',
     'Constants.vala',
     'CObjects/Media.vala',
     'Interfaces/GSTagger.vala',
