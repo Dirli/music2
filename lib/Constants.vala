@@ -4,7 +4,10 @@ namespace Music2.Constants {
     public const string MPRIS_NAME = "org.mpris.MediaPlayer2.Music2";
     public const string MPRIS_PATH = "/org/mpris/MediaPlayer2";
 
+    public const int64 SEC_INV = 1;
     public const int64 MILI_INV = 1000;
+    public const int64 MICRO_INV = 1000000;
+    public const int64 NANO_INV = 1000000000;
 
     public const string[] MEDIA_CONTENT_TYPES = {
         "audio/3gpp",
