@@ -1,7 +1,7 @@
 namespace Music2 {
     public class Core.Server : GLib.Object {
         private GLib.Application app;
-// settings.changed["source-type"].connect (on_changed_source);
+
         private uint owner_id;
 
         private GLib.Settings settings;
@@ -10,7 +10,6 @@ namespace Music2 {
         private Enums.SourceType? active_source_type = null;
 
         private CObjects.Scanner? scanner = null;
-
 
         public Server (GLib.Application app) {
             this.app = app;

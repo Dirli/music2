@@ -199,7 +199,6 @@ namespace Music2 {
             var builder = new GLib.VariantBuilder (GLib.VariantType.ARRAY);
             var invalidated_builder = new GLib.VariantBuilder (new GLib.VariantType("as"));
             foreach (string name in property_list.get_keys ()) {
-                warning ("Send properties: name %s".printf (name));
                 GLib.Variant variant = property_list.lookup (name);
                 builder.add ("{sv}", name, variant);
             }

@@ -11,11 +11,13 @@ add_global_arguments(
 
 vala_args = []
 
+dep_glib = dependency('glib-2.0')
 dep_gio = dependency ('gio-2.0')
 dep_gst = dependency ('gstreamer-1.0')
 dep_pbutils = dependency ('gstreamer-pbutils-1.0')
 dep_gee = dependency ('gee-0.8')
 dep_dbus = dependency ('dbus-1')
+dep_posix = meson.get_compiler ('vala').find_library ('posix')
 
 core_deps = [
     dep_gio,
@@ -24,8 +26,17 @@ core_deps = [
     dep_pbutils,
 ]
 
+cli_deps = [
+    dep_glib,
+    dep_gio,
+    dep_gst,
+    dep_pbutils,
+    dep_posix,
+]
+
 subdir ('data')
 subdir ('lib')
+subdir ('cli')
 subdir ('core')
 
 meson.add_install_script('meson/meson_post_install.py')

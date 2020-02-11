@@ -22,6 +22,8 @@ namespace Music2 {
                     tracks_queue.set_index (value);
                     if (launch) {
                         set_track (value);
+                    } else {
+                        load_track (value);
                     }
                 }
             }
