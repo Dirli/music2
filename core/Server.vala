@@ -29,7 +29,13 @@ namespace Music2 {
         }
 
         private void on_changed_track (CObjects.Media m) {
+            string notification_body = m.get_display_artist ();
+            notification_body += "\n";
+            notification_body += m.get_display_album ();
 
+            show_notification (m.get_display_title (),
+                               notification_body,
+                               "");
         }
 
         private void on_changed_source () {
@@ -102,6 +108,28 @@ namespace Music2 {
             if (scanner.stop_scan ()) {
                 stop_scanner ();
             }
+        }
+
+        private void show_notification (string title,
+                                        string body,
+                                        string icon_path = "",
+                                        GLib.NotificationPriority priority = GLib.NotificationPriority.LOW,
+                                        string context = "music2") {
+
+           var notification = new GLib.Notification (title);
+           notification.set_body (body);
+           notification.set_priority (priority);
+           if (icon_path != "") {
+               try {
+                   notification.set_icon (GLib.Icon.new_for_string (icon_path));
+               } catch (Error e) {
+                   warning (e.message);
+               }
+           } else {
+               notification.set_icon (new GLib.ThemedIcon ("multimedia-audio-player"));
+           }
+
+           app.send_notification (context, notification);
         }
     }
 }
