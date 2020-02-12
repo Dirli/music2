@@ -7,11 +7,39 @@ namespace Music2 {
         private TrackListIface? dbus_tracklist = null;
         private DbusPropIface? dbus_prop = null;
 
+        public const string ACTION_PREFIX = "win.";
+        public const string ACTION_IMPORT = "action_import";
+        public const string ACTION_PLAY = "action_play";
+        public const string ACTION_PLAY_NEXT = "action_play_next";
+        public const string ACTION_PLAY_PREVIOUS = "action_play_previous";
+        public const string ACTION_QUIT = "action_quit";
+        public const string ACTION_SEARCH = "action_search";
+        public const string ACTION_VIEW_ALBUMS = "action_view_albums";
+        public const string ACTION_VIEW_LIST = "action_view_list";
+
+        private const GLib.ActionEntry[] ACTION_ENTRIES = {
+            { ACTION_IMPORT, action_import },
+            { ACTION_PLAY, action_play, null, "false" },
+            { ACTION_PLAY_NEXT, action_play_next },
+            { ACTION_PLAY_PREVIOUS, action_play_previous },
+            { ACTION_QUIT, action_quit },
+            { ACTION_SEARCH, action_search },
+            { ACTION_VIEW_ALBUMS, action_view_albums },
+            { ACTION_VIEW_LIST, action_view_list }
+        };
+
         public MainWindow (Gtk.Application application) {
             Object (application: application);
+
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_QUIT, {"<Control>q", "<Control>w"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_SEARCH, {"<Control>f"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_ALBUMS, {"<Control>1"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_LIST, {"<Control>2"});
         }
 
         construct {
+            add_action_entries (ACTION_ENTRIES, this);
+
             settings = new GLib.Settings (Constants.APP_NAME);
             settings_ui = new GLib.Settings (Constants.APP_NAME + ".ui");
 
@@ -50,6 +78,40 @@ namespace Music2 {
                 maximize ();
             }
         }
+
+        // actions
+        private void action_play () {
+            try {
+                dbus_player.play_pause ();
+            } catch (Error e) {
+                warning (e.message);
+            }
+        }
+
+        private void action_play_next () {
+            try {
+                dbus_player.next ();
+            } catch (Error e) {
+                warning (e.message);
+            }
+        }
+
+        private void action_play_previous () {
+            try {
+                dbus_player.previous ();
+            } catch (Error e) {
+                warning (e.message);
+            }
+        }
+
+        private void action_quit () {
+            destroy ();
+        }
+
+        private void action_search () {}
+        private void action_view_albums () {}
+        private void action_view_list () {}
+        private void action_import () {}
 
         // dbus signal handler
         private void on_properties_changed (string iface, GLib.HashTable<string, GLib.Variant> changed_prop, string[] invalid) {
