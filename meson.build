@@ -17,7 +17,6 @@ dep_gst = dependency ('gstreamer-1.0')
 dep_pbutils = dependency ('gstreamer-pbutils-1.0')
 dep_gee = dependency ('gee-0.8')
 dep_dbus = dependency ('dbus-1')
-dep_posix = meson.get_compiler ('vala').find_library ('posix')
 
 core_deps = [
     dep_gio,
@@ -31,7 +30,6 @@ cli_deps = [
     dep_gio,
     dep_gst,
     dep_pbutils,
-    dep_posix,
 ]
 
 subdir ('data')
