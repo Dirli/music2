@@ -7,6 +7,10 @@ namespace Music2 {
         private TrackListIface? dbus_tracklist = null;
         private DbusPropIface? dbus_prop = null;
 
+        private Gtk.Button play_button;
+        private Gtk.Button previous_button;
+        private Gtk.Button next_button;
+
         public const string ACTION_PREFIX = "win.";
         public const string ACTION_IMPORT = "action_import";
         public const string ACTION_PLAY = "action_play";
@@ -77,6 +81,42 @@ namespace Music2 {
             if (settings_ui.get_boolean ("window-maximized")) {
                 maximize ();
             }
+
+            var preferences_menuitem = new Gtk.MenuItem.with_label (_("Preferences"));
+            preferences_menuitem.activate.connect (on_preferences_click);
+
+            var menu = new Gtk.Menu ();
+            menu.append (preferences_menuitem);
+            menu.show_all ();
+
+            var menu_button = new Gtk.MenuButton ();
+            menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.LARGE_TOOLBAR);
+            menu_button.popup = menu;
+            menu_button.valign = Gtk.Align.CENTER;
+
+            previous_button = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
+            previous_button.action_name = ACTION_PREFIX + ACTION_PLAY_PREVIOUS;
+            previous_button.tooltip_text = _("Previous");
+
+            play_button = new Gtk.Button ();
+            play_button.action_name = ACTION_PREFIX + ACTION_PLAY;
+
+            next_button = new Gtk.Button.from_icon_name ("media-skip-forward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
+            next_button.action_name = ACTION_PREFIX + ACTION_PLAY_NEXT;
+            next_button.tooltip_text = _("Next");
+
+            var headerbar = new Gtk.HeaderBar ();
+            headerbar.show_close_button = true;
+            headerbar.pack_start (previous_button);
+            headerbar.pack_start (play_button);
+            headerbar.pack_start (next_button);
+            headerbar.pack_end (menu_button);
+            headerbar.set_title (_("Music"));
+            headerbar.show_all ();
+
+            set_titlebar (headerbar);
+
+            show ();
         }
 
         // actions
@@ -123,6 +163,11 @@ namespace Music2 {
         }
 
         private void on_track_list_replaced (uint[] tracks, uint cur_track) {
+
+        }
+
+        // signals
+        private void on_preferences_click () {
 
         }
 
