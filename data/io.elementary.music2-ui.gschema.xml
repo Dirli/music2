@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <schema path="/io/elementary/music2/ui/" id="io.elementary.music2.ui">
+        <key name="window-position" type="(ii)">
+            <default>(-1, -1)</default>
+            <summary>Window position</summary>
+            <description>Most recent window position (x, y)</description>
+        </key>
+        <key name="window-size" type="(ii)">
+            <default>(1100, 600)</default>
+            <summary>Most recent window size</summary>
+            <description>Most recent window size (width, height)</description>
+        </key>
+        <key type="b" name="window-maximized">
+            <default>false</default>
+            <summary>Open window maximized.</summary>
+            <description>Whether the main window of the application should open maximized or not.</description>
+        </key>
+        <key type="i" name="sidebar-width">
+            <default>200</default>
+            <summary>Sidebar width</summary>
+            <description>Sidebar width</description>
+        </key>
+        <key type="i" name="view-mode">
+            <default>1</default>
+            <summary>Index of which view type to use</summary>
+            <description>Index of which view type to use</description>
+        </key>
+    </schema>
+</schemalist>

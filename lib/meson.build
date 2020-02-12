@@ -17,3 +17,5 @@ client_files = common_files
 client_files += files (
     'Interfaces/Client.vala',
 )
+
+app_files = client_files

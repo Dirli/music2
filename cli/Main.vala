@@ -54,7 +54,7 @@ namespace Music2 {
         }
 
         private Daemon (string[] args) {
-            application_id = "io.elementary.music2d-cli";
+            application_id = "io.elementary.music2-cli";
 
             bool opt_error = false;
 

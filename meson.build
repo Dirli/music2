@@ -36,5 +36,14 @@ subdir ('data')
 subdir ('lib')
 subdir ('cli')
 subdir ('core')
+if get_option ('gtk')
+    app_deps = [
+        dep_gio,
+        dep_pbutils,
+        dependency ('gtk+-3.0'),
+    ]
+
+    subdir ('src')
+endif
 
 meson.add_install_script('meson/meson_post_install.py')
