@@ -9,6 +9,7 @@ namespace Music2 {
 
         private Widgets.SourceListView source_list_view;
         private Widgets.StatusBar status_bar;
+        private Widgets.TopDisplay top_display;
 
         private Gtk.Button play_button;
         private Gtk.Button previous_button;
@@ -108,6 +109,12 @@ namespace Music2 {
             next_button.action_name = ACTION_PREFIX + ACTION_PLAY_NEXT;
             next_button.tooltip_text = _("Next");
 
+            top_display = new Widgets.TopDisplay ();
+            top_display.margin_start = 30;
+            top_display.margin_end = 30;
+            top_display.seek_position.connect (on_seek_position);
+            top_display.popup_media_menu.connect (on_popup_media_menu);
+
             var headerbar = new Gtk.HeaderBar ();
             headerbar.show_close_button = true;
             headerbar.pack_start (previous_button);
@@ -115,6 +122,7 @@ namespace Music2 {
             headerbar.pack_start (next_button);
             headerbar.pack_end (menu_button);
             headerbar.set_title (_("Music"));
+            headerbar.set_custom_title (top_display);
             headerbar.show_all ();
 
             source_list_view = new Widgets.SourceListView ();
@@ -195,6 +203,18 @@ namespace Music2 {
         }
 
         // signals
+        private void on_seek_position (int64 new_position) {
+            try {
+                dbus_player.seek (new_position);
+            } catch (Error e) {
+                warning (e.message);
+            }
+        }
+
+        private void on_popup_media_menu () {
+            
+        }
+
         private void on_preferences_click () {
 
         }

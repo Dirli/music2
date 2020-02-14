@@ -22,6 +22,7 @@ namespace Music2.Constants {
     public const string MPRIS_NAME = "org.mpris.MediaPlayer2.Music2";
     public const string MPRIS_PATH = "/org/mpris/MediaPlayer2";
 
+    public const uint INTERVAL = 250;
     public const int64 SEC_INV = 1;
     public const int64 MILI_INV = 1000;
     public const int64 MICRO_INV = 1000000;

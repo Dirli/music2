@@ -7,6 +7,7 @@ executable(
     'Views/SourceListRoot.vala',
     'Widgets/SourceListView.vala',
     'Widgets/StatusBar.vala',
+    'Widgets/TopDisplay.vala',
     app_files,
     vala_args: vala_args,
     dependencies: app_deps,
