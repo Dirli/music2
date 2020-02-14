@@ -7,6 +7,8 @@ namespace Music2 {
         private TrackListIface? dbus_tracklist = null;
         private DbusPropIface? dbus_prop = null;
 
+        private Widgets.SourceListView source_list_view;
+
         private Gtk.Button play_button;
         private Gtk.Button previous_button;
         private Gtk.Button next_button;
@@ -114,6 +116,23 @@ namespace Music2 {
             headerbar.set_title (_("Music"));
             headerbar.show_all ();
 
+            source_list_view = new Widgets.SourceListView ();
+            source_list_view.selection_changed.connect (on_selection_changed);
+            source_list_view.menu_activated.connect (on_menu_activated);
+            source_list_view.edited.connect (on_edited_playlist);
+
+            var left_grid = new Gtk.Grid ();
+            left_grid.orientation = Gtk.Orientation.VERTICAL;
+            left_grid.add (source_list_view);
+
+            var main_hpaned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
+            main_hpaned.pack1 (left_grid, false, false);
+
+            settings_ui.bind ("sidebar-width", main_hpaned, "position", GLib.SettingsBindFlags.DEFAULT);
+            main_hpaned.show_all ();
+
+            add (main_hpaned);
+
             set_titlebar (headerbar);
 
             show ();
@@ -169,6 +188,18 @@ namespace Music2 {
         // signals
         private void on_preferences_click () {
 
+        }
+
+        private void on_selection_changed (int pid, Enums.Hint hint) {
+
+        }
+
+        private void on_menu_activated (Views.SourceListItem item, string action_name) {
+
+        }
+
+        private void on_edited_playlist (int pid, string playlist_name) {
+            
         }
 
         public override bool delete_event (Gdk.EventAny event) {

@@ -41,6 +41,7 @@ if get_option ('gtk')
         dep_gio,
         dep_pbutils,
         dependency ('gtk+-3.0'),
+        dependency ('granite'),
     ]
 
     subdir ('src')

@@ -21,4 +21,14 @@ namespace Music2.Enums {
         NONE = 0,
         DIRECTORY,
     }
+
+    public enum Hint {
+        NONE,
+        MUSIC,
+        PLAYLIST,
+        READ_ONLY_PLAYLIST,
+        SMART_PLAYLIST,
+        ALBUM_LIST,
+        QUEUE;
+    }
 }
