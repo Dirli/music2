@@ -8,6 +8,7 @@ namespace Music2 {
         private DbusPropIface? dbus_prop = null;
 
         private Widgets.SourceListView source_list_view;
+        private Widgets.StatusBar status_bar;
 
         private Gtk.Button play_button;
         private Gtk.Button previous_button;
@@ -121,9 +122,17 @@ namespace Music2 {
             source_list_view.menu_activated.connect (on_menu_activated);
             source_list_view.edited.connect (on_edited_playlist);
 
+            status_bar = new Widgets.StatusBar ();
+            status_bar.create_new_pl.connect (() => {});
+            status_bar.show_pl_editor.connect (() => {});
+            status_bar.changed_volume.connect ((new_volume) => {
+                dbus_player.volume = new_volume;
+            });
+
             var left_grid = new Gtk.Grid ();
             left_grid.orientation = Gtk.Orientation.VERTICAL;
             left_grid.add (source_list_view);
+            left_grid.add (status_bar);
 
             var main_hpaned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             main_hpaned.pack1 (left_grid, false, false);
@@ -199,7 +208,7 @@ namespace Music2 {
         }
 
         private void on_edited_playlist (int pid, string playlist_name) {
-            
+
         }
 
         public override bool delete_event (Gdk.EventAny event) {
