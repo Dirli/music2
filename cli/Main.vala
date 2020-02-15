@@ -77,7 +77,7 @@ namespace Music2 {
 
                     if (path != null) {
                         settings.set_enum ("source-type", Enums.SourceType.NONE);
-                        settings.set_string ("source-media", path);
+                        settings.set_string ("source-media", "file://" + path);
                         settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
                     } else if (play) {
                         dbus_player.play_pause ();

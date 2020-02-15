@@ -2,6 +2,8 @@ executable(
     meson.project_name(),
     'Application.vala',
     'MainWindow.vala',
+    'Views/CustomButton.vala',
+    'Views/DnDSelection.vala',
     'Views/PlayListCategory.vala',
     'Views/SourceListItem.vala',
     'Views/SourceListRoot.vala',

@@ -64,6 +64,12 @@ namespace Music2 {
                 case Enums.SourceType.DIRECTORY:
                     play_from_directory ();
                     break;
+                case Enums.SourceType.NONE:
+                    uint[] zero_arr = {};
+
+                    player.current_index = 0;
+                    player.tracklist_replaced (zero_arr);
+                    break;
             }
         }
 

@@ -25,7 +25,7 @@ namespace Music2 {
         public void start_scan (string uri) {
             total_files = -1;
             total_scan = 0;
-            scan_directory ("file://" + uri);
+            scan_directory (uri);
         }
 
         public bool stop_scan () {

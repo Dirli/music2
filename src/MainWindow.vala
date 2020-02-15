@@ -3,6 +3,8 @@ namespace Music2 {
         private GLib.Settings settings_ui;
         private GLib.Settings settings;
 
+        private bool queue_reset = false;
+
         private PlayerIface? dbus_player = null;
         private TrackListIface? dbus_tracklist = null;
         private DbusPropIface? dbus_prop = null;
@@ -14,6 +16,11 @@ namespace Music2 {
         private Gtk.Button play_button;
         private Gtk.Button previous_button;
         private Gtk.Button next_button;
+        private Gtk.Box action_box;
+
+        private Views.DnDSelection? dnd_selection = null;
+
+        private Enums.SourceType active_source_type;
 
         public const string ACTION_PREFIX = "win.";
         public const string ACTION_IMPORT = "action_import";
@@ -63,7 +70,11 @@ namespace Music2 {
                 warning (e.message);
             }
 
+            on_changed_source ();
+
             build_ui ();
+
+            settings.changed["source-type"].connect (on_changed_source);
         }
 
         private void build_ui () {
@@ -130,6 +141,8 @@ namespace Music2 {
             source_list_view.menu_activated.connect (on_menu_activated);
             source_list_view.edited.connect (on_edited_playlist);
 
+            action_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
+
             status_bar = new Widgets.StatusBar ();
             status_bar.create_new_pl.connect (() => {});
             status_bar.show_pl_editor.connect (() => {});
@@ -140,7 +153,12 @@ namespace Music2 {
             var left_grid = new Gtk.Grid ();
             left_grid.orientation = Gtk.Orientation.VERTICAL;
             left_grid.add (source_list_view);
+            left_grid.add (action_box);
             left_grid.add (status_bar);
+
+            Gtk.TargetEntry target = {"text/uri-list", 0, 0};
+            Gtk.drag_dest_set (left_grid, Gtk.DestDefaults.ALL, {target}, Gdk.DragAction.COPY);
+            left_grid.drag_data_received.connect (on_drag_data_received);
 
             var main_hpaned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             main_hpaned.pack1 (left_grid, false, false);
@@ -199,10 +217,23 @@ namespace Music2 {
         }
 
         private void on_track_list_replaced (uint[] tracks, uint cur_track) {
+            if (tracks.length > 0) {
 
+            } else {
+                top_display.stop_progress ();
+                top_display.set_visible_child_name ("empty");
+                if (cur_track == 0) {
+                    queue_reset = true;
+                }
+            }
         }
 
         // signals
+        private void on_changed_source () {
+
+            active_source_type = (Enums.SourceType) settings.get_enum ("source-type");
+        }
+
         private void on_seek_position (int64 new_position) {
             try {
                 dbus_player.seek (new_position);
@@ -212,7 +243,7 @@ namespace Music2 {
         }
 
         private void on_popup_media_menu () {
-            
+
         }
 
         private void on_preferences_click () {
@@ -223,12 +254,82 @@ namespace Music2 {
 
         }
 
+        private void on_selected_row (uint row_id, Enums.SourceType activated_type) {
+            if (active_source_type != Enums.SourceType.NONE) {
+                queue_reset = false;
+                settings.set_enum ("source-type", Enums.SourceType.NONE);
+            } else {
+                queue_reset = true;
+            }
+
+            GLib.Timeout.add (Constants.INTERVAL, () => {
+                if (queue_reset) {
+                    queue_reset = false;
+
+                    run_selected_row (row_id);
+
+                    if (activated_type == Enums.SourceType.DIRECTORY) {
+                        settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
+                    }
+
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
         private void on_menu_activated (Views.SourceListItem item, string action_name) {
 
         }
 
         private void on_edited_playlist (int pid, string playlist_name) {
 
+        }
+
+        private void on_drag_data_received (Gdk.DragContext ctx, int x, int y, Gtk.SelectionData sel, uint info, uint time) {
+            var uris = sel.get_uris ();
+            if (uris.length > 0) {
+                var path_file = GLib.File.new_for_uri (uris[0]);
+                var file_type = path_file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
+
+                if (file_type == GLib.FileType.DIRECTORY) {
+                    if (dnd_selection != null) {
+                        dnd_selection.destroy ();
+                        dnd_selection = null;
+                    }
+                    dnd_selection = new Views.DnDSelection ();
+                    dnd_selection.button_clicked.connect ((btn_name) => {
+                        switch (btn_name) {
+                            case Enums.ActionType.PLAY:
+                                settings.set_string ("source-media", uris[0]);
+                                on_selected_row (0, Enums.SourceType.DIRECTORY);
+                                break;
+                            case Enums.ActionType.LOAD:
+                                break;
+                        }
+
+                        GLib.Idle.add (() => {
+                            dnd_selection.destroy ();
+                            return false;
+                        });
+                    });
+
+                    action_box.add (dnd_selection);
+                }
+
+                Gtk.drag_finish (ctx, true, false, time);
+            }
+        }
+
+        private void run_selected_row (uint row_id) {
+            if (row_id > 0) {
+                try {
+                    dbus_tracklist.go_to (row_id);
+                } catch (Error e) {
+                    warning (e.message);
+                }
+            }
         }
 
         public override bool delete_event (Gdk.EventAny event) {

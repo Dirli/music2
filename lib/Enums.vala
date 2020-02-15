@@ -22,6 +22,12 @@ namespace Music2.Enums {
         DIRECTORY,
     }
 
+    public enum ActionType {
+        NONE = 0,
+        PLAY,
+        LOAD,
+    }
+
     public enum Hint {
         NONE,
         MUSIC,
