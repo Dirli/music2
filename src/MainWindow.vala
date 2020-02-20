@@ -10,6 +10,7 @@ namespace Music2 {
         private DbusPropIface? dbus_prop = null;
 
         private Widgets.ViewStack view_stack;
+        private Widgets.QueueStack queue_stack;
 
         private Widgets.SourceListView source_list_view;
         private Widgets.StatusBar status_bar;
@@ -76,6 +77,9 @@ namespace Music2 {
 
             build_ui ();
 
+            source_list_view.add_item (1, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
+            source_list_view.update_badge (1, 0);
+
             settings.changed["source-type"].connect (on_changed_source);
         }
 
@@ -98,6 +102,10 @@ namespace Music2 {
             if (settings_ui.get_boolean ("window-maximized")) {
                 maximize ();
             }
+
+            queue_stack = new Widgets.QueueStack ();
+            queue_stack.selected_row.connect (on_selected_row);
+            queue_stack.popup_media_menu.connect (on_popup_media_menu);
 
             var preferences_menuitem = new Gtk.MenuItem.with_label (_("Preferences"));
             preferences_menuitem.activate.connect (on_preferences_click);
@@ -126,7 +134,11 @@ namespace Music2 {
             top_display.margin_start = 30;
             top_display.margin_end = 30;
             top_display.seek_position.connect (on_seek_position);
-            top_display.popup_media_menu.connect (on_popup_media_menu);
+            top_display.popup_media_menu.connect (() => {
+                uint[] tids = {};
+
+                on_popup_media_menu (Enums.Hint.QUEUE, tids);
+            });
 
             var headerbar = new Gtk.HeaderBar ();
             headerbar.show_close_button = true;
@@ -163,6 +175,7 @@ namespace Music2 {
             left_grid.drag_data_received.connect (on_drag_data_received);
 
             view_stack = new Widgets.ViewStack ();
+            view_stack.add_named (queue_stack, Constants.QUEUE);
 
             var main_hpaned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             main_hpaned.pack1 (left_grid, false, false);
@@ -222,6 +235,8 @@ namespace Music2 {
         }
 
         private void on_track_list_replaced (uint[] tracks, uint cur_track) {
+            queue_stack.clear_stack ();
+
             if (tracks.length > 0) {
 
             } else {
@@ -247,7 +262,7 @@ namespace Music2 {
             }
         }
 
-        private void on_popup_media_menu () {
+        private void on_popup_media_menu (Enums.Hint hint, uint[] tids) {
 
         }
 
@@ -256,7 +271,12 @@ namespace Music2 {
         }
 
         private void on_selection_changed (int pid, Enums.Hint hint) {
-
+            switch (hint) {
+                case Enums.Hint.QUEUE:
+                    queue_stack.show_view ();
+                    view_stack.set_visible_child_name (Constants.QUEUE);
+                    break;
+            }
         }
 
         private void on_selected_row (uint row_id, Enums.SourceType activated_type) {
