@@ -19,8 +19,10 @@
 namespace Music2.Constants {
     public const string APP_NAME = "io.elementary.music2";
     public const string UNKNOWN = "Unknown";
+    public const string NOT_AVAILABLE = "";
     public const string MPRIS_NAME = "org.mpris.MediaPlayer2.Music2";
     public const string MPRIS_PATH = "/org/mpris/MediaPlayer2";
+    public const string TYPE_DATA_KEY = "setup-list-column-type";
 
     public const uint INTERVAL = 250;
     public const int64 SEC_INV = 1;

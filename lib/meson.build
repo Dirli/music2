@@ -19,3 +19,8 @@ client_files += files (
 )
 
 app_files = client_files
+app_files += files (
+    'Interfaces/GenericList.vala',
+    'LViews/ListView.vala',
+    'Tools/CellDataHelper.vala',
+)
