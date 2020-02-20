@@ -4,8 +4,6 @@ namespace Music2 {
 
         public abstract void add_column (Gtk.TreeViewColumn column);
 
-        // protected GenericList () {}
-
         construct {
             get_selection ().set_mode (Gtk.SelectionMode.MULTIPLE);
         }
