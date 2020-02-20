@@ -112,6 +112,12 @@ namespace Music2 {
             }
         }
 
+        public void show_welcome () {
+            if (has_welcome_screen) {
+                visible_child_name = "welcome";
+            }
+        }
+
         public void show_alert () {
             if (has_alert_view) {
                 visible_child_name = "alert";

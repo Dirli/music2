@@ -9,6 +9,8 @@ namespace Music2 {
         private TrackListIface? dbus_tracklist = null;
         private DbusPropIface? dbus_prop = null;
 
+        private Widgets.ViewStack view_stack;
+
         private Widgets.SourceListView source_list_view;
         private Widgets.StatusBar status_bar;
         private Widgets.TopDisplay top_display;
@@ -160,8 +162,11 @@ namespace Music2 {
             Gtk.drag_dest_set (left_grid, Gtk.DestDefaults.ALL, {target}, Gdk.DragAction.COPY);
             left_grid.drag_data_received.connect (on_drag_data_received);
 
+            view_stack = new Widgets.ViewStack ();
+
             var main_hpaned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             main_hpaned.pack1 (left_grid, false, false);
+            main_hpaned.pack2 (view_stack, true, false);
 
             settings_ui.bind ("sidebar-width", main_hpaned, "position", GLib.SettingsBindFlags.DEFAULT);
             main_hpaned.show_all ();
