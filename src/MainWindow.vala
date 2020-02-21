@@ -95,6 +95,14 @@ namespace Music2 {
             source_list_view.update_badge (1, 0);
 
             settings.changed["source-type"].connect (on_changed_source);
+
+            try {
+                dbus_player.init_player ();
+            } catch (Error e) {
+                warning (e.message);
+            }
+
+            init_state ();
         }
 
         private void build_ui () {
@@ -208,6 +216,47 @@ namespace Music2 {
             show ();
         }
 
+        private void init_state () {
+            status_bar.set_new_volume (dbus_player.volume);
+
+            var metadata = dbus_player.metadata;
+            if (metadata != null && "mpris:trackid" in metadata) {
+                active_track = (uint) metadata["mpris:trackid"].get_int64 ();
+
+                string play_state = dbus_player.playback_status;
+                int64 play_position = 0;
+                try {
+                    int64 p = dbus_player.get_track_position ();
+                    play_position = Tools.TimeUtils.micro_to_nano (p);
+                } catch (Error e) {
+                    warning (e.message);
+                }
+
+                int64 duration = Tools.TimeUtils.micro_to_nano (dbus_player.duration);
+                top_display.duration = duration;
+
+                changed_state (play_state, play_position);
+
+                var tracks_id = dbus_tracklist.tracks;
+                if (tracks_id.length > 0) {
+                    queue_stack.show_view (true);
+                    if (active_source_type == Enums.SourceType.DIRECTORY) {
+                        try {
+                            var tracks_meta = dbus_tracklist.get_tracks_metadata (tracks_id);
+                            foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
+                                on_track_added (meta);
+                            }
+                        } catch (Error e) {
+                            warning (e.message);
+                        }
+                    }
+                }
+            } else {
+                play_button.sensitive = false;
+                play_button.image = new Gtk.Image.from_icon_name ("media-playback-start-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
+            }
+        }
+
         // actions
         private void action_play () {
             try {
@@ -294,7 +343,7 @@ namespace Music2 {
             queue_stack.clear_stack ();
 
             if (tracks.length > 0) {
-
+                queue_stack.show_view (true);
             } else {
                 top_display.stop_progress ();
                 top_display.set_visible_child_name ("empty");
@@ -329,7 +378,7 @@ namespace Music2 {
         private void on_selection_changed (int pid, Enums.Hint hint) {
             switch (hint) {
                 case Enums.Hint.QUEUE:
-                    queue_stack.show_view ();
+                    queue_stack.show_view (false);
                     view_stack.set_visible_child_name (Constants.QUEUE);
                     break;
             }

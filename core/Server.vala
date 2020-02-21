@@ -96,6 +96,18 @@ namespace Music2 {
             }
         }
 
+        public void init_player () {
+            if (active_source_type == null) {
+                active_source_type = (Enums.SourceType) settings.get_enum ("source-type");
+                player.clear_queue ();
+                switch (active_source_type) {
+                    case Enums.SourceType.DIRECTORY:
+                        play_from_directory ();
+                        break;
+                }
+            }
+        }
+
         public void close_player () {
             GLib.Bus.unown_name (owner_id);
 

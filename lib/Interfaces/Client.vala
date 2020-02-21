@@ -26,6 +26,7 @@
     public interface MprisIface : GLib.Object {
         public abstract void quit () throws GLib.Error;
         public abstract void raise () throws GLib.Error;
+        public abstract void init_player () throws GLib.Error;
         public abstract bool can_raise { get; }
         // public abstract string desktop_entry { owned get; }
     }
