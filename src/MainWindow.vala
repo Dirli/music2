@@ -25,6 +25,20 @@ namespace Music2 {
 
         private Enums.SourceType active_source_type;
 
+        private uint _active_track = 0;
+        public uint active_track {
+            set {
+                queue_stack.select_run_row (value);
+
+                _active_track = value;
+
+                update_title ();
+            }
+            get {
+                return _active_track;
+            }
+        }
+
         public const string ACTION_PREFIX = "win.";
         public const string ACTION_IMPORT = "action_import";
         public const string ACTION_PLAY = "action_play";
@@ -355,6 +369,47 @@ namespace Music2 {
                     warning (e.message);
                 }
             }
+        }
+
+        private CObjects.Media? get_active_media () {
+            var metadata = dbus_player.metadata;
+
+            CObjects.Media? m = metadata_to_media (metadata);
+
+            return m;
+        }
+
+        private void update_title () {
+            if (top_display.get_visible_child_name () != "time") {
+                top_display.set_visible_child_name ("time");
+            }
+
+            var m = get_active_media ();
+
+            if (m != null) {
+                top_display.set_title_markup (m);
+            }
+        }
+
+        private CObjects.Media? metadata_to_media (GLib.HashTable<string, GLib.Variant> metadata) {
+            if ("xesam:url" in metadata) {
+                CObjects.Media m = new CObjects.Media (metadata["xesam:url"].get_string ());
+
+                m.tid = (uint) metadata["mpris:trackid"].get_uint32 ();
+                m.length = (uint) metadata["mpris:length"].get_int64 ();
+                m.title = metadata["xesam:title"].get_string ();
+                m.album = metadata["xesam:album"].get_string ();
+                var artists = metadata["xesam:artist"].get_strv ();
+                m.artist = artists[0];
+                var genre = metadata["xesam:genre"].get_strv ();
+                m.genre = genre[0];
+                m.track = (uint) metadata["xesam:trackNumber"].get_int32 ();
+                m.year = metadata["music2:year"].get_uint16 (); // missing from the specification
+
+                return m;
+            }
+
+            return null;
         }
 
         public override bool delete_event (Gdk.EventAny event) {
