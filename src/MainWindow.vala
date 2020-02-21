@@ -151,7 +151,10 @@ namespace Music2 {
             top_display.popup_media_menu.connect (() => {
                 uint[] tids = {};
 
-                on_popup_media_menu (Enums.Hint.QUEUE, tids);
+                if (active_track > 0) {
+                    tids += active_track;
+                    on_popup_media_menu (Enums.Hint.QUEUE, tids);
+                }
             });
 
             var headerbar = new Gtk.HeaderBar ();
@@ -241,11 +244,50 @@ namespace Music2 {
 
         // dbus signal handler
         private void on_properties_changed (string iface, GLib.HashTable<string, GLib.Variant> changed_prop, string[] invalid) {
+            if (iface == "org.mpris.MediaPlayer2.Player") {
+                changed_prop.foreach ((k, v) => {
+                    if (k == "Metadata") {
+                        GLib.VariantIter iter = null;
+                        v.get ("a{sv}", out iter);
 
+                        if (iter != null) {
+                            GLib.Variant? val = null;
+                            string? key = null;
+                            while (iter.next ("{sv}", out key, out val)) {
+                                if (val == null) {continue;}
+                                if (key == "mpris:trackid") {
+                                    active_track = (uint) val.get_int64 ();
+                                    break;
+                                }
+
+                                val = null;
+                            }
+                        }
+                    } else if (k == "Volume") {
+                        status_bar.set_new_volume (v.get_double ());
+                    } else if (k == "Duration") {
+                        top_display.duration = Tools.TimeUtils.micro_to_nano (v.get_int64 ());
+                    } else if (k == "PlaybackStatus") {
+                        int64 play_position = 0;
+                        try {
+                            int64 p = dbus_player.get_track_position ();
+                            play_position = Tools.TimeUtils.micro_to_nano (p);
+                        } catch (Error e) {
+                            warning (e.message);
+                        }
+                        changed_state (v.get_string (), play_position);
+                    } else if (k == "CanGoNext" || k == "CanGoPrevious") {
+                        //
+                    }
+                });
+            }
         }
 
         private void on_track_added (GLib.HashTable<string, GLib.Variant> metadata, uint after_tid = 0) {
-
+            var m = metadata_to_media (metadata);
+            if (m != null) {
+                add_to_queue (m);
+            }
         }
 
         private void on_track_list_replaced (uint[] tracks, uint cur_track) {
@@ -294,6 +336,11 @@ namespace Music2 {
         }
 
         private void on_selected_row (uint row_id, Enums.SourceType activated_type) {
+            if (activated_type == Enums.SourceType.QUEUE) {
+                run_selected_row (row_id);
+                return;
+            }
+
             if (active_source_type != Enums.SourceType.NONE) {
                 queue_reset = false;
                 settings.set_enum ("source-type", Enums.SourceType.NONE);
@@ -361,6 +408,46 @@ namespace Music2 {
             }
         }
 
+        private void changed_state (string play_state, int64 p) {
+            if (p > 0) {
+                top_display.set_progress (p);
+            }
+
+            var icon_name = "media-playback-start-symbolic";
+            play_button.tooltip_text = _("Play");
+
+            switch (play_state) {
+                case "Playing":
+                    icon_name = "media-playback-pause-symbolic";
+                    play_button.tooltip_text = _("Pause");
+                    play_button.sensitive = true;
+                    top_display.start_progress ();
+                    break;
+                case "Paused":
+                    top_display.pause_progress ();
+                    break;
+                case "Stopped":
+                default:
+                    top_display.stop_progress ();
+                    var tid = _active_track;
+                    if (tid > 0) {
+                        queue_stack.remove_run_icon (tid);
+                    }
+                    break;
+            }
+
+            play_button.image = new Gtk.Image.from_icon_name (icon_name, Gtk.IconSize.LARGE_TOOLBAR);
+        }
+
+        private void add_to_queue (CObjects.Media m) {
+            var queue_size = queue_stack.add_iter (m);
+            source_list_view.update_badge (1, queue_size);
+
+            if (active_track >= 0 && m.tid == active_track) {
+                queue_stack.select_run_row (active_track);
+            }
+        }
+
         private void run_selected_row (uint row_id) {
             if (row_id > 0) {
                 try {
@@ -395,7 +482,7 @@ namespace Music2 {
             if ("xesam:url" in metadata) {
                 CObjects.Media m = new CObjects.Media (metadata["xesam:url"].get_string ());
 
-                m.tid = (uint) metadata["mpris:trackid"].get_uint32 ();
+                m.tid = (uint) metadata["mpris:trackid"].get_int64 ();
                 m.length = (uint) metadata["mpris:length"].get_int64 ();
                 m.title = metadata["xesam:title"].get_string ();
                 m.album = metadata["xesam:album"].get_string ();
