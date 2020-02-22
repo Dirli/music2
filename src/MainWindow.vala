@@ -129,16 +129,17 @@ namespace Music2 {
             queue_stack.selected_row.connect (on_selected_row);
             queue_stack.popup_media_menu.connect (on_popup_media_menu);
 
-            var preferences_menuitem = new Gtk.MenuItem.with_label (_("Preferences"));
-            preferences_menuitem.activate.connect (on_preferences_click);
+            var preferences_menuitem = new Gtk.ModelButton ();
+            preferences_menuitem.text = _("Preferences");
+            preferences_menuitem.clicked.connect (on_preferences_click);
+            preferences_menuitem.show ();
 
-            var menu = new Gtk.Menu ();
-            menu.append (preferences_menuitem);
-            menu.show_all ();
+            var menu_popover = new Gtk.Popover (null);
+            menu_popover.add (preferences_menuitem);
 
             var menu_button = new Gtk.MenuButton ();
             menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.LARGE_TOOLBAR);
-            menu_button.popup = menu;
+            menu_button.popover = menu_popover;
             menu_button.valign = Gtk.Align.CENTER;
 
             previous_button = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
