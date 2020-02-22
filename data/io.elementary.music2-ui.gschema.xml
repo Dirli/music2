@@ -26,5 +26,10 @@
             <summary>Index of which view type to use</summary>
             <description>Index of which view type to use</description>
         </key>
+        <key type="i" name="column-browser-height">
+            <default>200</default>
+            <summary>column-browser column height</summary>
+            <description>column-browser column height</description>
+        </key>
     </schema>
 </schemalist>

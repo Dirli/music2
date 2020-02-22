@@ -20,6 +20,7 @@ client_files += files (
 
 app_files = client_files
 app_files += files (
+    'Structs.vala',
     'Interfaces/GenericList.vala',
     'Interfaces/StackWrapper.vala',
     'LViews/ListView.vala',

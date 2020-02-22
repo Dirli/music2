@@ -20,6 +20,7 @@ namespace Music2.Enums {
     public enum SourceType {
         NONE = 0,
         DIRECTORY,
+        LIBRARY,
         QUEUE,
     }
 
@@ -138,6 +139,35 @@ namespace Music2.Enums {
             }
 
             return types;
+        }
+    }
+
+    public enum Category {
+        GENRE = 0,
+        ARTIST,
+        ALBUM,
+        N_CATEGORIES;
+
+        public string to_string () {
+            switch (this) {
+                case Category.GENRE:
+                    return _("Genres");
+                case Category.ARTIST:
+                    return _("Artists");
+                case Category.ALBUM:
+                    return _("Albums");
+                default:
+                    GLib.assert_not_reached ();
+            }
+        }
+
+        public static Category[] get_all () {
+            Category[] list = {};
+            for (int i = 0; i < N_CATEGORIES; i++) {
+                list += (Category) i;
+            }
+
+            return list;
         }
     }
 }

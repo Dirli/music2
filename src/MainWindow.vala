@@ -10,6 +10,7 @@ namespace Music2 {
         private DbusPropIface? dbus_prop = null;
 
         private Widgets.ViewStack view_stack;
+        private Widgets.MusicStack music_stack;
         private Widgets.QueueStack queue_stack;
 
         private Widgets.SourceListView source_list_view;
@@ -29,6 +30,7 @@ namespace Music2 {
         public uint active_track {
             set {
                 queue_stack.select_run_row (value);
+                music_stack.select_run_row (value);
 
                 _active_track = value;
 
@@ -91,6 +93,7 @@ namespace Music2 {
 
             build_ui ();
 
+            source_list_view.select_active_item (-1);
             source_list_view.add_item (1, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
             source_list_view.update_badge (1, 0);
 
@@ -128,6 +131,10 @@ namespace Music2 {
             queue_stack = new Widgets.QueueStack ();
             queue_stack.selected_row.connect (on_selected_row);
             queue_stack.popup_media_menu.connect (on_popup_media_menu);
+
+            music_stack = new Widgets.MusicStack (this, settings_ui);
+            music_stack.selected_row.connect (on_selected_row);
+            music_stack.popup_media_menu.connect (on_popup_media_menu);
 
             var preferences_menuitem = new Gtk.ModelButton ();
             preferences_menuitem.text = _("Preferences");
@@ -202,6 +209,7 @@ namespace Music2 {
 
             view_stack = new Widgets.ViewStack ();
             view_stack.add_named (queue_stack, Constants.QUEUE);
+            view_stack.add_named (music_stack, "music");
 
             var main_hpaned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             main_hpaned.pack1 (left_grid, false, false);
@@ -382,6 +390,9 @@ namespace Music2 {
                     queue_stack.show_view (false);
                     view_stack.set_visible_child_name (Constants.QUEUE);
                     break;
+                case Enums.Hint.MUSIC:
+                    view_stack.set_visible_child_name ("music");
+                    break;
             }
         }
 
@@ -482,6 +493,7 @@ namespace Music2 {
                     var tid = _active_track;
                     if (tid > 0) {
                         queue_stack.remove_run_icon (tid);
+                        music_stack.remove_run_icon (tid);
                     }
                     break;
             }
