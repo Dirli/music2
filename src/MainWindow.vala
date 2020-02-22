@@ -416,6 +416,7 @@ namespace Music2 {
                     run_selected_row (row_id);
 
                     if (activated_type == Enums.SourceType.DIRECTORY) {
+                        music_stack.active_album = -1;
                         settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
                     }
 

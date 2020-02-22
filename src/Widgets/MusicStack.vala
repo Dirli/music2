@@ -1,6 +1,32 @@
+/*
+ * Copyright (c) 2020 Dirli <litandrej85@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 namespace Music2 {
     public class Widgets.MusicStack : Interfaces.StackWrapper {
+        public signal void filter_view (Enums.Category cat, int filter_id, Enums.ViewMode view_mode);
+
         private Widgets.ColumnsView columns_view;
+
+        private LViews.GridView albums_view;
+        private Views.AlbumView album_view;
+        private Gtk.ListStore albums_store;
+
+        public int active_album = -1;
 
         public MusicStack (Gtk.Window win, GLib.Settings settings_ui) {
             source_type = Enums.SourceType.LIBRARY;
@@ -10,8 +36,6 @@ namespace Music2 {
             welcome_screen.append ("folder-music", _("Change Music Folder"), _("Load music from a folder, a network or an external disk."));
             welcome_screen.activated.connect (on_welcome_activated);
 
-            add_named (welcome_screen, "welcome");
-
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
 
             columns_view = new Widgets.ColumnsView ();
@@ -19,6 +43,7 @@ namespace Music2 {
                 columns_view.clear_columns (category);
                 list_store.clear ();
                 iter_hash.clear ();
+                filter_view (category, val, Enums.ViewMode.COLUMN);
             });
 
             var browser_pane = new Gtk.Paned (Gtk.Orientation.VERTICAL);
@@ -30,11 +55,68 @@ namespace Music2 {
 
             list_store.set_sort_column_id (Enums.ListColumn.ARTIST, Gtk.SortType.ASCENDING);
             list_store.set_sort_func (0, list_sort_func);
-            tree_sel = list_view.get_selection ();
 
+            albums_store = new Gtk.ListStore (2, typeof (Structs.Album), typeof (string));
+            albums_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
+            albums_store.set_sort_func (0, grid_sort_func);
 
+            albums_view = new LViews.GridView ();
+            albums_view.set_columns (-1);
+            albums_view.set_model (albums_store);
+            albums_view.selection_changed.connect (grid_selection_changed);
+
+            var grid_scrolled = new Gtk.ScrolledWindow (null, null);
+            grid_scrolled.set_policy (Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
+            grid_scrolled.add (albums_view);
+
+            album_view = new Views.AlbumView (win);
+            album_view.selected_row.connect ((row_id) => {
+                if (active_album > 0 && active_album == album_view.active_album_id) {
+                    selected_row (row_id, Enums.SourceType.QUEUE);
+                } else {
+                    active_album = album_view.active_album_id;
+                    selected_row (row_id, source_type);
+                }
+            });
+
+            var grid_pane = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
+            grid_pane.pack1 (grid_scrolled, true, false);
+            grid_pane.pack2 (album_view, false, false);
+
+            add_named (welcome_screen, "welcome");
             add_named (browser_pane, "listview");
+            add_named (grid_pane, "gridview");
             visible_child_name = "welcome";
+
+            GLib.Idle.add (() => {
+                grid_item_activated (null);
+                return false;
+            });
+        }
+
+        protected new void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
+            var filter = columns_view.get_filter ();
+            active_album = -1;
+
+            if (filter.field == Enums.Category.ALBUM) {
+                if (filter.val > 0) {
+                    active_album = filter.val;
+                }
+            }
+
+            (this as Interfaces.StackWrapper).on_row_activated (path, column);
+        }
+
+        public new void select_run_row (uint tid) {
+            album_view.select_run_row (tid);
+
+            (this as Interfaces.StackWrapper).select_run_row (tid);
+        }
+
+        public new void remove_run_icon (uint tid) {
+            (this as Interfaces.StackWrapper).remove_run_icon (tid);
+
+            album_view.remove_run_icon (tid);
         }
 
         public void init_selections (Enums.Category? select_category) {
@@ -49,23 +131,68 @@ namespace Music2 {
             iter_hash.clear ();
         }
 
-        public bool add_iter (CObjects.Media m) {
+        public Structs.Filter? get_filter (Enums.ViewMode view_mode) {
+            if (view_mode == Enums.ViewMode.COLUMN) {
+                return columns_view.get_filter ();
+            } else if (view_mode == Enums.ViewMode.GRID) {
+                GLib.List<Gtk.TreePath> path = albums_view.get_selected_items ();
+                if (path != null) {
+                    Gtk.TreeIter selected_iter;
+                    if (albums_store.get_iter (out selected_iter, path.data)) {
+                        Structs.Album? struct_album;
+                        albums_store.@get (selected_iter, 0, out struct_album);
+
+                        Structs.Filter f = {};
+                        f.field = Enums.Category.ALBUM;
+                        f.val = struct_album.album_id;
+
+                        return f;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public bool add_iter (CObjects.Media m, Enums.ViewMode view_mode) {
+            if (view_mode == Enums.ViewMode.COLUMN) {
+                GLib.Mutex mutex = GLib.Mutex ();
+                mutex.lock ();
+
+                Gtk.TreeIter iter;
+                list_store.insert_with_values (out iter, -1,
+                     Enums.ListColumn.TRACKID, m.tid,
+                     Enums.ListColumn.TRACK, m.track,
+                     Enums.ListColumn.ALBUM, m.album,
+                     Enums.ListColumn.LENGTH, m.length,
+                     Enums.ListColumn.TITLE, m.title,
+                     Enums.ListColumn.ARTIST, m.artist);
+
+                iter_hash[m.tid] = iter;
+
+                mutex.unlock ();
+                return true;
+            } else if (view_mode == Enums.ViewMode.GRID) {
+                album_view.add_track (m);
+                return true;
+            }
+
+            return false;
+        }
+
+        public void add_grid_item (Structs.Album a_iter) {
+            string custom_tooltip = a_iter.artists;
+            custom_tooltip += "\n<span size=\"large\">%u, %s</span>".printf (a_iter.year, Markup.escape_text (a_iter.genre));
+
             GLib.Mutex mutex = GLib.Mutex ();
             mutex.lock ();
 
             Gtk.TreeIter iter;
-            list_store.insert_with_values (out iter, -1,
-                 Enums.ListColumn.TRACKID, m.tid,
-                 Enums.ListColumn.TRACK, m.track,
-                 Enums.ListColumn.ALBUM, m.album,
-                 Enums.ListColumn.LENGTH, m.length,
-                 Enums.ListColumn.TITLE, m.title,
-                 Enums.ListColumn.ARTIST, m.artist);
-
-            iter_hash[m.tid] = iter;
+            albums_store.insert_with_values (out iter, -1,
+                                             0, a_iter,
+                                             1, custom_tooltip);
 
             mutex.unlock ();
-            return true;
         }
 
         public void add_column_item (Structs.Iter iter) {
@@ -80,6 +207,36 @@ namespace Music2 {
             } else {
 
             }
+        }
+
+        private void grid_item_activated (Structs.Album? album_struct) {
+            if (album_struct == null) {
+                album_view.hide ();
+                return;
+            }
+
+            if (album_view.active_album_id != album_struct.album_id) {
+                album_view.set_album (album_struct);
+                filter_view (Enums.Category.ALBUM, album_struct.album_id, Enums.ViewMode.GRID);
+            }
+
+            album_view.show_all ();
+        }
+
+        private void grid_selection_changed () {
+            GLib.List<Gtk.TreePath> path = albums_view.get_selected_items ();
+            if (path != null) {
+                Gtk.TreeIter selected_iter;
+                if (albums_store.get_iter (out selected_iter, path.data)) {
+                    Structs.Album? struct_album;
+                    albums_store.@get (selected_iter, 0, out struct_album);
+                    grid_item_activated (struct_album);
+
+                    return;
+                }
+            }
+
+            grid_item_activated (null);
         }
 
         public int list_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
@@ -111,6 +268,22 @@ namespace Music2 {
 
             if (sort_direction == Gtk.SortType.DESCENDING) {
                 rv = (rv > 0) ? -1 : 1;
+            }
+
+            return rv;
+        }
+
+        private int grid_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
+            int rv = 1;
+
+            Structs.Album? struct_a;
+            store.@get (a, 0, out struct_a);
+
+            Structs.Album? struct_b;
+            store.@get (b, 0, out struct_b);
+
+            if (struct_a != null && struct_b != null) {
+                rv = Tools.String.compare (struct_a.title, struct_b.title);
             }
 
             return rv;

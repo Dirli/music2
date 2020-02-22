@@ -17,6 +17,11 @@
  */
 
 namespace Music2.Enums {
+    public enum ViewMode {
+        GRID = 0,
+        COLUMN = 1;
+    }
+
     public enum SourceType {
         NONE = 0,
         DIRECTORY,

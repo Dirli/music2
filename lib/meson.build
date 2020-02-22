@@ -23,6 +23,9 @@ app_files += files (
     'Structs.vala',
     'Interfaces/GenericList.vala',
     'Interfaces/StackWrapper.vala',
+    'LViews/GridView.vala',
     'LViews/ListView.vala',
+    'LViews/TileRenderer.vala',
     'Tools/CellDataHelper.vala',
+    'Tools/GuiUtils.vala',
 )
