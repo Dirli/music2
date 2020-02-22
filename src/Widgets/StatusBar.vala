@@ -11,17 +11,22 @@ namespace Music2 {
         private Gtk.Scale volume_scale;
 
         public StatusBar () {
-            var add_pl_menuitem = new Gtk.MenuItem.with_label (_("Add Playlist"));
-            var add_spl_menuitem = new Gtk.MenuItem.with_label (_("Add Smart Playlist"));
+            var pl_button = new Gtk.ModelButton ();
+            pl_button.text = _("Add Playlist");
+            var spl_button = new Gtk.ModelButton ();
+            spl_button.text = _("Add Smart Playlist");
 
-            var menu = new Gtk.Menu ();
-            menu.append (add_pl_menuitem);
-            menu.append (add_spl_menuitem);
-            menu.show_all ();
+            var pl_menu_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
+            pl_menu_box.add (pl_button);
+            pl_menu_box.add (spl_button);
+            pl_menu_box.show_all ();
+
+            var pl_popover = new Gtk.Popover (null);
+            pl_popover.add (pl_menu_box);
 
             playlist_menubutton = new Gtk.MenuButton ();
             playlist_menubutton.direction = Gtk.ArrowType.UP;
-            playlist_menubutton.popup = menu;
+            playlist_menubutton.popover = pl_popover;
             playlist_menubutton.tooltip_text = _("Add Playlist");
             playlist_menubutton.add (new Gtk.Image.from_icon_name ("list-add-symbolic", Gtk.IconSize.MENU));
             playlist_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
@@ -56,11 +61,11 @@ namespace Music2 {
             pack_end (eq_menubutton);
             pack_end (volume_menubutton);
 
-            add_pl_menuitem.activate.connect (() => {
+            pl_button.clicked.connect (() => {
                 create_new_pl ();
             });
 
-            add_spl_menuitem.activate.connect (() => {
+            spl_button.clicked.connect (() => {
                 show_pl_editor ();
             });
         }
