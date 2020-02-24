@@ -15,6 +15,7 @@ dep_glib = dependency('glib-2.0')
 dep_gio = dependency ('gio-2.0')
 dep_gst = dependency ('gstreamer-1.0')
 dep_pbutils = dependency ('gstreamer-pbutils-1.0')
+dep_gsttag = dependency ('gstreamer-tag-1.0')
 dep_gee = dependency ('gee-0.8')
 dep_dbus = dependency ('dbus-1')
 
@@ -48,6 +49,8 @@ if get_option ('gtk')
     app_deps = [
         dep_gio,
         dep_pbutils,
+        dep_gsttag,
+        dependency ('taglib_c'),
         dependency ('gtk+-3.0'),
         dependency ('granite'),
     ]

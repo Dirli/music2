@@ -10,11 +10,18 @@ namespace Music2 {
             }
         }
 
-        private Sqlite.Database db;
+        private Sqlite.Database? db;
         private string errormsg;
 
+        public bool check_db {
+            get {return db != null;}
+        }
+
         private DataBaseManager () {
-            open_database ();
+            if (!open_database ()) {
+                db = null;
+            }
+
             errormsg = "";
         }
 

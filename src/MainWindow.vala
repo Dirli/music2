@@ -24,6 +24,8 @@ namespace Music2 {
 
         private Views.DnDSelection? dnd_selection = null;
 
+        private Services.LibraryManager library_manager;
+
         private Enums.SourceType active_source_type;
 
         private uint _active_track = 0;
@@ -89,6 +91,8 @@ namespace Music2 {
                 warning (e.message);
             }
 
+            library_manager = new Services.LibraryManager ();
+
             on_changed_source ();
 
             build_ui ();
@@ -96,6 +100,23 @@ namespace Music2 {
             source_list_view.select_active_item (-1);
             source_list_view.add_item (1, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
             source_list_view.update_badge (1, 0);
+
+            library_manager.added_category.connect (music_stack.add_column_item);
+            library_manager.cleared_library.connect (music_stack.clear_stack);
+            library_manager.progress_scan.connect ((progress_val) => {
+
+            });
+            library_manager.prepare_scan.connect (() => {
+
+            });
+            library_manager.loaded_category.connect (music_stack.init_selections);
+            library_manager.started_scan.connect (() => {
+
+            });
+            library_manager.finished_scan.connect ((msg) => {
+
+            });
+            library_manager.add_view.connect (music_stack.add_iter);
 
             settings.changed["source-type"].connect (on_changed_source);
 
@@ -134,6 +155,7 @@ namespace Music2 {
 
             music_stack = new Widgets.MusicStack (this, settings_ui);
             music_stack.selected_row.connect (on_selected_row);
+            music_stack.filter_view.connect (library_manager.filter_library);
             music_stack.popup_media_menu.connect (on_popup_media_menu);
 
             var preferences_menuitem = new Gtk.ModelButton ();
