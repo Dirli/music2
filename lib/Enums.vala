@@ -26,6 +26,7 @@ namespace Music2.Enums {
         NONE = 0,
         DIRECTORY,
         LIBRARY,
+        PLAYLIST,
         QUEUE,
     }
 

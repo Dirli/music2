@@ -1,1 +1,2 @@
 option ('gtk', type : 'boolean', value : true)
+option ('sqlite', type : 'boolean', value : true)

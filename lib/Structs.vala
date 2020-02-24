@@ -26,6 +26,13 @@ namespace Music2.Structs {
         public string artists;
     }
 
+    public struct Playlist {
+        public int id;
+        public string name;
+        public Enums.SourceType type;
+        public Gee.ArrayList<uint> tracks;
+    }
+
     public struct Filter {
         public int val;
         public Enums.Category field;

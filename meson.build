@@ -18,12 +18,20 @@ dep_pbutils = dependency ('gstreamer-pbutils-1.0')
 dep_gee = dependency ('gee-0.8')
 dep_dbus = dependency ('dbus-1')
 
+if get_option ('sqlite')
+    dep_sqlite = dependency ('sqlite3')
+endif
+
 core_deps = [
     dep_gio,
     dep_gst,
     dep_gee,
     dep_pbutils,
 ]
+
+if get_option ('sqlite')
+    core_deps += dep_sqlite
+endif
 
 cli_deps = [
     dep_glib,
@@ -43,6 +51,10 @@ if get_option ('gtk')
         dependency ('gtk+-3.0'),
         dependency ('granite'),
     ]
+
+    if get_option ('sqlite')
+        app_deps += dep_sqlite
+    endif
 
     subdir ('src')
 endif

@@ -18,6 +18,7 @@
 
 namespace Music2.Constants {
     public const string APP_NAME = "io.elementary.music2";
+    public const string DB_VERSION = "1.0";
     public const string UNKNOWN = "Unknown";
     public const string NOT_AVAILABLE = "";
     public const string QUEUE = "queue";

@@ -28,6 +28,7 @@ namespace Music2 {
         private Enums.SourceType? active_source_type = null;
 
         private CObjects.Scanner? scanner = null;
+        private DataBaseManager? db_manager = null;
 
         public Server (GLib.Application app) {
             this.app = app;

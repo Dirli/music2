@@ -18,8 +18,10 @@
 
 namespace Music2.Tools.FileUtils {
     public GLib.File get_cache_directory (string child_dir = "") {
-        string data_dir = GLib.Environment.get_user_cache_dir ();
-        string dir_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S, data_dir, Constants.APP_NAME, child_dir);
+        string dir_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
+                                                GLib.Environment.get_user_cache_dir (),
+                                                Constants.APP_NAME,
+                                                child_dir);
 
         var cache_dir = GLib.File.new_for_path (dir_path);
 
