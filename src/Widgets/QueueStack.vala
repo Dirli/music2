@@ -47,15 +47,6 @@ namespace Music2 {
             iter_hash.clear ();
         }
 
-        public void show_view (bool forced) {
-            if (iter_hash.size > 0 || forced) {
-                visible_child_name = "listview";
-                return;
-            }
-
-            show_alert ();
-        }
-
         public int add_iter (CObjects.Media m) {
             tracks_queue.offer (m);
 

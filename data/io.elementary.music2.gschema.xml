@@ -3,8 +3,14 @@
     <enum id="io.elementary.music2.source">
         <value value="0" nick="none"/>
         <value value="1" nick="directory"/>
+        <value value="2" nick="library"/>
     </enum>
     <schema path="/io/elementary/music2/" id="io.elementary.music2">
+        <key type="s" name="music-folder">
+            <default>''</default>
+            <summary>Path to music folder</summary>
+            <description>Where music is copied to, saved, and managed</description>
+        </key>
         <key enum="io.elementary.music2.source" name="source-type">
             <default>'none'</default>
             <summary>The name of the source type from the last launch</summary>

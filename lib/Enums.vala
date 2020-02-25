@@ -34,6 +34,13 @@ namespace Music2.Enums {
         NONE = 0,
         PLAY,
         LOAD,
+        CLEAR,
+        EDIT,
+        EXPORT,
+        REMOVE,
+        RENAME,
+        SAVE,
+        SCAN,
     }
 
     public enum Hint {

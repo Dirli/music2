@@ -130,15 +130,31 @@ namespace Music2 {
             }
         }
 
+        private void on_row_inserted (Gtk.TreePath path, Gtk.TreeIter iter) {
+            list_store.row_inserted.disconnect (on_row_inserted);
+            visible_child_name = "listview";
+        }
+
         public void show_welcome () {
-            if (has_welcome_screen) {
+            if (has_welcome_screen && visible_child_name != "welcome") {
                 visible_child_name = "welcome";
+
+                if (has_list_view) {
+                    list_store.row_inserted.disconnect (on_row_inserted);
+                    list_store.row_inserted.connect (on_row_inserted);
+                }
             }
         }
 
         public void show_alert () {
-            if (has_alert_view) {
+            if (has_alert_view && visible_child_name != "alert") {
+                current_view = visible_child_name;
                 visible_child_name = "alert";
+
+                if (has_list_view) {
+                    list_store.row_inserted.disconnect (on_row_inserted);
+                    list_store.row_inserted.connect (on_row_inserted);
+                }
             }
         }
 

@@ -19,7 +19,7 @@
 namespace Music2 {
     public class Widgets.SourceListView : Granite.Widgets.SourceList {
         public signal void selection_changed (int pid, Enums.Hint hint);
-        public signal void menu_activated (Views.SourceListItem menu_item, string action_name);
+        public signal void menu_activated (Views.SourceListItem menu_item, Enums.ActionType action_type);
         public signal void edited (int pid, string new_name);
 
         private Granite.Widgets.SourceList.ExpandableItem library_category;
@@ -45,12 +45,6 @@ namespace Music2 {
             root.add (playlists_category);
             root.expand_all (false, false);
 
-            add_item (-1,
-                      _("Music"),
-                      Enums.Hint.MUSIC,
-                      new ThemedIcon ("library-music")
-            );
-
             Gtk.TargetEntry uri_list_entry = { "text/uri-list", Gtk.TargetFlags.SAME_APP, 0 };
             enable_drag_dest ({ uri_list_entry }, Gdk.DragAction.COPY);
         }
@@ -71,6 +65,10 @@ namespace Music2 {
                                                          GLib.Icon icon,
                                                          GLib.Icon? activatable_icon = null) {
 
+            if (items_hash.has_key (pid)) {
+                return items_hash[pid];
+            }
+
             var sourcelist_item = new Views.SourceListItem (pid, name, hint, icon, activatable_icon);
 
             sourcelist_item.edited.connect ((new_name) => {
@@ -79,9 +77,9 @@ namespace Music2 {
 
             sourcelist_item.menu_item_activated.connect ((item, action) => {
                 menu_activated (item, action);
-                if (action == "edit") {
+                if (action == Enums.ActionType.EDIT) {
                     start_editing_item (item);
-                } else if (action == "rename") {
+                } else if (action == Enums.ActionType.RENAME) {
                     start_editing_item (item);
                 }
             });
@@ -120,12 +118,15 @@ namespace Music2 {
             }
         }
 
-        public void remove_playlist (int pid) {
+        public void remove_item (int pid) {
             if (items_hash.has_key (pid)) {
                 var removed_item = items_hash[pid];
                 switch (removed_item.hint) {
                     case Enums.Hint.PLAYLIST:
                         playlists_category.remove (removed_item);
+                        break;
+                    case Enums.Hint.MUSIC:
+                        library_category.remove (removed_item);
                         break;
                 }
             }

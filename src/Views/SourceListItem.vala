@@ -19,7 +19,7 @@
 namespace Music2 {
     public class Views.SourceListItem : Granite.Widgets.SourceList.Item,
                                         Granite.Widgets.SourceListDragDest {
-        public signal void menu_item_activated (Views.SourceListItem menu_item, string action_name);
+        public signal void menu_item_activated (Views.SourceListItem menu_item, Enums.ActionType action_type);
 
         public int pid { get; construct; }
         public Enums.Hint hint { get; construct; }
@@ -46,9 +46,9 @@ namespace Music2 {
                     playlist_menu.append (playlist_rename);
                     playlist_menu.append (playlist_remove);
                     playlist_menu.append (playlist_export);
-                    playlist_rename.activate.connect (() => {menu_item_activated (this, "rename");});
-                    playlist_remove.activate.connect (() => {menu_item_activated (this, "remove");});
-                    playlist_export.activate.connect (() => {menu_item_activated (this, "export");});
+                    playlist_rename.activate.connect (() => {menu_item_activated (this, Enums.ActionType.RENAME);});
+                    playlist_remove.activate.connect (() => {menu_item_activated (this, Enums.ActionType.REMOVE);});
+                    playlist_export.activate.connect (() => {menu_item_activated (this, Enums.ActionType.EXPORT);});
                     break;
                 case Enums.Hint.SMART_PLAYLIST:
                     var playlist_rename = new Gtk.MenuItem.with_label (_("Rename"));
@@ -61,10 +61,10 @@ namespace Music2 {
                     playlist_menu.append (playlist_remove);
                     playlist_menu.append (playlist_export);
 
-                    playlist_rename.activate.connect (() => {menu_item_activated (this, "rename");});
-                    playlist_edit.activate.connect (() => {menu_item_activated (this, "edit");});
-                    playlist_remove.activate.connect (() => {menu_item_activated (this, "remove");});
-                    playlist_export.activate.connect (() => {menu_item_activated (this, "export");});
+                    playlist_rename.activate.connect (() => {menu_item_activated (this, Enums.ActionType.RENAME);});
+                    playlist_edit.activate.connect (() => {menu_item_activated (this, Enums.ActionType.EDIT);});
+                    playlist_remove.activate.connect (() => {menu_item_activated (this, Enums.ActionType.REMOVE);});
+                    playlist_export.activate.connect (() => {menu_item_activated (this, Enums.ActionType.EXPORT);});
                     break;
                 case Enums.Hint.QUEUE:
                 case Enums.Hint.READ_ONLY_PLAYLIST:
@@ -74,14 +74,14 @@ namespace Music2 {
                     playlist_menu.append (playlist_export);
                     var playlist_clear = new Gtk.MenuItem.with_label (_("Clear…"));
                     playlist_menu.append (playlist_clear);
-                    playlist_save.activate.connect (() => {menu_item_activated (this, "save");});
-                    playlist_export.activate.connect (() => {menu_item_activated (this, "export");});
-                    playlist_clear.activate.connect (() => {menu_item_activated (this, "clear");});
+                    playlist_save.activate.connect (() => {menu_item_activated (this, Enums.ActionType.SAVE);});
+                    playlist_export.activate.connect (() => {menu_item_activated (this, Enums.ActionType.EXPORT);});
+                    playlist_clear.activate.connect (() => {menu_item_activated (this, Enums.ActionType.CLEAR);});
                     break;
                 case Enums.Hint.MUSIC:
                     var full_scan = new Gtk.MenuItem.with_label (_("Scan music library"));
                     playlist_menu.append (full_scan);
-                    full_scan.activate.connect (() => {menu_item_activated (this, "fscan");});
+                    full_scan.activate.connect (() => {menu_item_activated (this, Enums.ActionType.SCAN);});
                     break;
             }
 
