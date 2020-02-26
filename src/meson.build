@@ -2,6 +2,8 @@ executable(
     meson.project_name(),
     'Application.vala',
     'MainWindow.vala',
+    'Dialogs/MusicFolderConfirmation.vala',
+    'Dialogs/PreferencesWindow.vala',
     'Objects/LibraryTagger.vala',
     'Services/LibraryManager.vala',
     'Services/LibraryScanner.vala',

@@ -19,7 +19,7 @@
 namespace Music2 {
     public class MainWindow : Gtk.ApplicationWindow {
         private GLib.Settings settings_ui;
-        private GLib.Settings settings;
+        public GLib.Settings settings;
 
         private bool queue_reset = false;
         private bool scans_library = false;
@@ -433,7 +433,17 @@ namespace Music2 {
         }
 
         private void on_preferences_click () {
+            var filename = "";
+            var preferences = new Dialogs.PreferencesWindow (this);
+            preferences.changed_music_folder.connect ((f) => {
+                filename = f;
+            });
+            preferences.destroy.connect (() => {
+                set_music_folder (filename);
+            });
 
+            preferences.show_all ();
+            preferences.run ();
         }
 
         private void on_selection_changed (int pid, Enums.Hint hint) {
@@ -590,6 +600,33 @@ namespace Music2 {
             if (active_track >= 0 && m.tid == active_track) {
                 queue_stack.select_run_row (active_track);
             }
+        }
+
+        public void set_music_folder (string new_folder) {
+            if (new_folder == "" || new_folder == settings.get_string ("music-folder")) {
+                return;
+            }
+
+            var context_text = "";
+            if (library_manager.dirty_library ()) {
+                context_text = _("Are you sure you want to set the music folder to %s? This will reset your library, remove your playlists and run the scanner.").printf ("<b>" + Markup.escape_text (new_folder) + "</b>");
+            } else {
+                context_text = _("You have a music folder %s. Scan this folder?").printf ("<b>" + Markup.escape_text (new_folder) + "</b>");
+            }
+
+            GLib.Idle.add (() => {
+                var confirm_dialog = new Dialogs.MusicFolderConfirmation (this, context_text);
+                confirm_dialog.response.connect ((response_id) => {
+                    if (response_id == Gtk.ResponseType.APPLY) {
+                        settings.set_string ("music-folder", new_folder);
+                        on_changed_folder ();
+                    }
+
+                    confirm_dialog.destroy ();
+                });
+
+                return false;
+            });
         }
 
         private void run_selected_row (uint row_id) {

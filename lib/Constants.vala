@@ -26,6 +26,9 @@ namespace Music2.Constants {
     public const string MPRIS_PATH = "/org/mpris/MediaPlayer2";
     public const string TYPE_DATA_KEY = "setup-list-column-type";
 
+    public const int DIALOG_MIN_WIDTH = 420;
+    public const int DIALOG_MIN_HEIGHT = 300;
+
     public const uint INTERVAL = 250;
     public const int64 SEC_INV = 1;
     public const int64 MILI_INV = 1000;
