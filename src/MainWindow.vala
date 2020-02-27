@@ -42,6 +42,7 @@ namespace Music2 {
         private Gtk.Box action_box;
 
         private Views.DnDSelection? dnd_selection = null;
+        private Views.ProgressBox? progress_box = null;
 
         private Services.LibraryManager library_manager;
 
@@ -132,10 +133,18 @@ namespace Music2 {
             library_manager.added_category.connect (music_stack.add_column_item);
             library_manager.cleared_library.connect (music_stack.clear_stack);
             library_manager.progress_scan.connect ((progress_val) => {
-
+                if (progress_box != null) {
+                    progress_box.update_progress (progress_val);
+                }
             });
             library_manager.prepare_scan.connect (() => {
+                if (progress_box != null) {
+                    progress_box.destroy ();
+                }
 
+                progress_box = new Views.ProgressBox ();
+                progress_box.cancelled_scan.connect (library_manager.stop_scanner);
+                action_box.add (progress_box);
             });
             library_manager.loaded_category.connect (music_stack.init_selections);
             library_manager.started_scan.connect (() => {
@@ -143,6 +152,12 @@ namespace Music2 {
             });
             library_manager.finished_scan.connect ((msg) => {
                 scans_library = false;
+
+                if (progress_box != null) {
+                    progress_box.cancelled_scan.disconnect (library_manager.stop_scanner);
+                    progress_box.destroy ();
+                    progress_box = null;
+                }
 
                 music_stack.init_selections (null);
             });

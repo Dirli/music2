@@ -13,6 +13,7 @@ executable(
     'Views/CustomButton.vala',
     'Views/DnDSelection.vala',
     'Views/PlayListCategory.vala',
+    'Views/ProgressBox.vala',
     'Views/SourceListItem.vala',
     'Views/SourceListRoot.vala',
     'Widgets/ColumnsView.vala',
