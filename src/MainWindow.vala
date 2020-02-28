@@ -167,13 +167,30 @@ namespace Music2 {
             // sometimes this event is triggered at startup, which is not the desired behavior
             // settings.changed["music-folder"].connect (on_changed_folder);
 
-            try {
-                dbus_player.init_player ();
-            } catch (Error e) {
-                warning (e.message);
-            }
+            library_manager.load_library ();
 
-            init_state ();
+            GLib.Timeout.add (Constants.INTERVAL, () => {
+                if (library_manager.loaded) {
+                    try {
+                        dbus_player.init_player ();
+                    } catch (Error e) {
+                        warning (e.message);
+                    }
+
+                    init_state ();
+
+                    if (library_manager.dirty_library ()) {
+                        music_stack.init_selections (null);
+                    }
+
+                    load_albums_grid ();
+
+                    return false;
+                }
+
+                return true;
+            });
+
         }
 
         private void build_ui () {
@@ -317,20 +334,44 @@ namespace Music2 {
 
                 var tracks_id = dbus_tracklist.tracks;
                 if (tracks_id.length > 0) {
-                    if (active_source_type == Enums.SourceType.DIRECTORY) {
-                        try {
-                            var tracks_meta = dbus_tracklist.get_tracks_metadata (tracks_id);
-                            foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
-                                on_track_added (meta);
+                    switch (active_source_type) {
+                        case Enums.SourceType.DIRECTORY:
+                            try {
+                                var tracks_meta = dbus_tracklist.get_tracks_metadata (tracks_id);
+                                foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
+                                    on_track_added (meta);
+                                }
+                            } catch (Error e) {
+                                warning (e.message);
                             }
-                        } catch (Error e) {
-                            warning (e.message);
-                        }
+                            break;
+                        case Enums.SourceType.LIBRARY:
+                            foreach (var tid in tracks_id) {
+                                var m = library_manager.get_media (tid);
+                                if (m != null) {
+                                    add_to_queue (m);
+                                }
+                            }
+                            break;
+
                     }
                 }
             } else {
                 play_button.sensitive = false;
                 play_button.image = new Gtk.Image.from_icon_name ("media-playback-start-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
+            }
+        }
+
+        private void load_albums_grid () {
+            if (library_manager.albums_hash.size > 0) {
+                new Thread<void*> ("load_albums_grid", () => {
+                    library_manager.albums_hash.foreach ((entry) => {
+                        music_stack.add_grid_item (entry.value);
+                        return true;
+                    });
+
+                    return null;
+                });
             }
         }
 
@@ -420,7 +461,17 @@ namespace Music2 {
             queue_stack.clear_stack ();
 
             if (tracks.length > 0) {
+                switch (active_source_type) {
+                    case Enums.SourceType.LIBRARY:
+                        foreach (var tid in tracks) {
+                            var m = library_manager.get_media (tid);
+                            if (m != null) {
+                                add_to_queue (m);
+                            }
+                        }
 
+                        break;
+                }
             } else {
                 top_display.stop_progress ();
                 top_display.set_visible_child_name ("empty");
@@ -494,6 +545,28 @@ namespace Music2 {
                     if (activated_type == Enums.SourceType.DIRECTORY) {
                         music_stack.active_album = -1;
                         settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
+                    } else if (activated_type == Enums.SourceType.LIBRARY) {
+                        if (scans_library) {
+                            //
+                        } else {
+                            var f = music_stack.get_filter (Enums.ViewMode.COLUMN);
+                            if (f == null) {return false;}
+
+                            if (f.val > 0) {
+                                int category_type = (int) f.field;
+                                string filter_str = "";
+
+                                if (f.field == Enums.Category.GENRE) {
+                                    filter_str = library_manager.get_genre (f.val);
+                                } else {
+                                    filter_str = f.val.to_string ();
+                                }
+
+                                settings.set_string ("source-media", category_type.to_string () + "::" + filter_str);
+                            }
+
+                            settings.set_enum ("source-type", Enums.SourceType.LIBRARY);
+                        }
                     }
 
                     return false;

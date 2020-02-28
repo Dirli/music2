@@ -57,8 +57,8 @@ namespace Music2 {
             list_store.set_sort_func (0, list_sort_func);
 
             albums_store = new Gtk.ListStore (2, typeof (Structs.Album), typeof (string));
-            albums_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
-            albums_store.set_sort_func (0, grid_sort_func);
+            // albums_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
+            // albums_store.set_sort_func (0, grid_sort_func);
 
             albums_view = new LViews.GridView ();
             albums_view.set_columns (-1);
@@ -86,7 +86,7 @@ namespace Music2 {
             add_named (welcome_screen, "welcome");
             add_named (browser_pane, "listview");
             add_named (grid_pane, "gridview");
-            visible_child_name = "welcome";
+            show_welcome ();
 
             GLib.Idle.add (() => {
                 grid_item_activated (null);

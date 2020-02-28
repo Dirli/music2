@@ -141,7 +141,7 @@ namespace Music2 {
             return true;
         }
 
-        private string get_db_path () {
+        public static string get_db_path () {
             return GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
                                          GLib.Environment.get_user_cache_dir (),
                                          Constants.APP_NAME,

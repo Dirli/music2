@@ -21,6 +21,7 @@ namespace Music2 {
         private GLib.Application app;
 
         private uint owner_id;
+        private int queue_id;
 
         private GLib.Settings settings;
         private Core.Player player;
@@ -54,7 +55,7 @@ namespace Music2 {
 
             show_notification (m.get_display_title (),
                                notification_body,
-                               "");
+                               Tools.FileUtils.get_cover_path (m.year, m.album));
         }
 
         private void on_changed_source () {
@@ -65,11 +66,19 @@ namespace Music2 {
                 case Enums.SourceType.DIRECTORY:
                     play_from_directory ();
                     break;
+                case Enums.SourceType.LIBRARY:
+                    play_from_library ();
+                    break;
                 case Enums.SourceType.NONE:
                     uint[] zero_arr = {};
 
                     player.current_index = 0;
                     player.tracklist_replaced (zero_arr);
+
+                    if (db_manager != null) {
+                        db_manager = null;
+                    }
+
                     break;
             }
         }
@@ -81,6 +90,7 @@ namespace Music2 {
                 connection.register_object (Constants.MPRIS_PATH, new Core.MprisPlayer (connection, player));
             } catch (IOError e) {
                 warning ("could not create MPRIS player: %s\n", e.message);
+                close_player ();
             }
         }
 
@@ -94,6 +104,7 @@ namespace Music2 {
 
             if (owner_id == 0) {
                 warning ("Could not initialize MPRIS session.\n");
+                close_player ();
             }
         }
 
@@ -105,8 +116,28 @@ namespace Music2 {
                     case Enums.SourceType.DIRECTORY:
                         play_from_directory ();
                         break;
+                    case Enums.SourceType.LIBRARY:
+                        if (init_db ()) {
+                            var tracks_queue = db_manager.get_playlist_tracks (queue_id);
+                            player.adds_to_queue (tracks_queue);
+                        }
+
+                        break;
                 }
             }
+        }
+
+        private bool init_db () {
+            if (db_manager == null) {
+                db_manager = DataBaseManager.instance;
+                if (!db_manager.check_db) {
+                    settings.set_enum ("source-type", Enums.SourceType.NONE);
+                    return false;
+                }
+                queue_id = db_manager.get_playlist_id (Constants.QUEUE);
+            }
+
+            return true;
         }
 
         public void close_player () {
@@ -120,6 +151,28 @@ namespace Music2 {
             scanner.discovered_new_item.disconnect (on_new_item);
             scanner.stop_discovered ();
             scanner = null;
+        }
+
+        private void play_from_library () {
+            if (!init_db ()) {
+                return;
+            }
+
+            string[] filter = settings.get_string ("source-media").split ("::");
+
+            Gee.ArrayQueue<CObjects.Media>? tracks_queue = null;
+            if (filter.length == 2) {
+                tracks_queue = db_manager.get_tracks ((Enums.Category) int.parse (filter[0]),
+                                                      filter[1]);
+            }
+
+            if (tracks_queue == null) {
+                tracks_queue = db_manager.get_tracks (null);
+            }
+
+            settings.set_string ("source-media", "");
+            player.adds_to_queue (tracks_queue);
+            db_manager.update_playlist (queue_id, player.get_queue ());
         }
 
         private void play_from_directory () {
