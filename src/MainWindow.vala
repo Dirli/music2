@@ -41,6 +41,7 @@ namespace Music2 {
         private Gtk.Button next_button;
         private Gtk.Box action_box;
 
+        private Views.ViewSelector view_selector;
         private Views.DnDSelection? dnd_selection = null;
         private Views.ProgressBox? progress_box = null;
 
@@ -180,10 +181,13 @@ namespace Music2 {
                     init_state ();
 
                     if (library_manager.dirty_library ()) {
+                        view_selector.sensitive = true;
                         music_stack.init_selections (null);
                     }
 
                     load_albums_grid ();
+
+                    view_selector.mode_button.mode_changed.connect (on_mode_changed);
 
                     return false;
                 }
@@ -259,11 +263,15 @@ namespace Music2 {
                 }
             });
 
+            view_selector = new Views.ViewSelector ();
+            view_selector.sensitive = false;
+
             var headerbar = new Gtk.HeaderBar ();
             headerbar.show_close_button = true;
             headerbar.pack_start (previous_button);
             headerbar.pack_start (play_button);
             headerbar.pack_start (next_button);
+            headerbar.pack_start (view_selector);
             headerbar.pack_end (menu_button);
             headerbar.set_title (_("Music"));
             headerbar.set_custom_title (top_display);
@@ -512,6 +520,11 @@ namespace Music2 {
             preferences.run ();
         }
 
+        private void on_mode_changed () {
+            music_stack.show_view ((Enums.ViewMode) view_selector.mode_button.selected);
+            source_list_view.select_active_item (-1);
+        }
+
         private void on_selection_changed (int pid, Enums.Hint hint) {
             switch (hint) {
                 case Enums.Hint.QUEUE:
@@ -549,7 +562,7 @@ namespace Music2 {
                         if (scans_library) {
                             //
                         } else {
-                            var f = music_stack.get_filter (Enums.ViewMode.COLUMN);
+                            var f = music_stack.get_filter ((Enums.ViewMode) view_selector.mode_button.selected);
                             if (f == null) {return false;}
 
                             if (f.val > 0) {

@@ -16,6 +16,7 @@ executable(
     'Views/ProgressBox.vala',
     'Views/SourceListItem.vala',
     'Views/SourceListRoot.vala',
+    'Views/ViewSelector.vala',
     'Widgets/ColumnsView.vala',
     'Widgets/MusicStack.vala',
     'Widgets/QueueStack.vala',

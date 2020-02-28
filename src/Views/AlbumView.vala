@@ -69,6 +69,8 @@ namespace Music2 {
             album_label.get_style_context ().add_class (Granite.STYLE_CLASS_H2_LABEL);
 
             tracks_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
+            tracks_store.set_sort_column_id (Enums.ListColumn.TRACK, Gtk.SortType.ASCENDING);
+            tracks_store.set_sort_func (Enums.ListColumn.TRACK, tracks_sort_func);
 
             var tracks_view = new LViews.ListView (Enums.Hint.ALBUM_LIST);
             tracks_view.expand = true;
@@ -98,7 +100,7 @@ namespace Music2 {
 
             if (iter != null) {
                 uint tid;
-                tracks_store.@get (iter, Enums.ListColumn.TRACKID, out tid);
+                tracks_store.@get (iter, Enums.ListColumn.TRACKID, out tid, -1);
                 selected_row (tid);
             }
         }
@@ -115,7 +117,6 @@ namespace Music2 {
             tracks_store.clear ();
             tracks_hash.clear ();
             album_label.set_label ("");
-            // exist_cover = false;
         }
 
         public void add_track (CObjects.Media m) {
@@ -125,6 +126,7 @@ namespace Music2 {
             Gtk.TreeIter iter;
             tracks_store.insert_with_values (out iter, -1,
                                              Enums.ListColumn.TRACKID, m.tid,
+                                             Enums.ListColumn.TRACK, m.track,
                                              Enums.ListColumn.TITLE, m.title,
                                              Enums.ListColumn.ARTIST, m.artist,
                                              Enums.ListColumn.LENGTH, m.length);
@@ -204,6 +206,22 @@ namespace Music2 {
                     return false;
                 });
             }
+        }
+
+        private int tracks_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
+            GLib.Value? a_val;
+            store.get_value (a, Enums.ListColumn.TRACK, out a_val);
+
+            GLib.Value? b_val;
+            store.get_value (b, Enums.ListColumn.TRACK, out b_val);
+
+            if (a_val != null && b_val != null) {
+                uint a_uint = a_val.get_uint ();
+                uint b_uint = b_val.get_uint ();
+                return a_uint == b_uint ? 0 : a_uint > b_uint ? 1 : -1;
+            }
+
+            return 1;
         }
     }
 }

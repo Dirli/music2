@@ -36,12 +36,14 @@ namespace Music2 {
                 case Enums.Hint.ALBUM_LIST:
                     columns.add (create_column (Enums.ListColumn.ICON));
                     columns.add (create_column (Enums.ListColumn.TITLE));
+                    columns.add (create_column (Enums.ListColumn.LENGTH));
+                    columns.add (create_column (Enums.ListColumn.ARTIST, false));
                     break;
                 case Enums.Hint.QUEUE:
                 default:
                     columns.add (create_column (Enums.ListColumn.ICON));
                     bool num_column_visible = hint == Enums.Hint.PLAYLIST;
-                    columns.add (create_column (Enums.ListColumn.NUMBER, num_column_visible));
+                    columns.add (create_column (Enums.ListColumn.TRACK, num_column_visible));
                     columns.add (create_column (Enums.ListColumn.TITLE));
                     columns.add (create_column (Enums.ListColumn.LENGTH));
                     columns.add (create_column (Enums.ListColumn.ARTIST));

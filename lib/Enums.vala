@@ -56,7 +56,6 @@ namespace Music2.Enums {
     public enum ListColumn {
         ICON = 0,
         TRACKID,
-        NUMBER,
         TRACK,
         TITLE,
         LENGTH,
@@ -73,10 +72,8 @@ namespace Music2.Enums {
                     return " ";
                 case TRACKID:
                     return C_("List column title", "ID");
-                case NUMBER:
-                    return C_("List column title", "#");
                 case TRACK:
-                    return C_("List column title", "Track");
+                    return C_("List column title", "#");
                 case TITLE:
                     return C_("List column title", "Title");
                 case LENGTH:
@@ -106,7 +103,6 @@ namespace Music2.Enums {
                 case GENRE:
                     return typeof (string);
                 case TRACKID:
-                case NUMBER:
                 case LENGTH:
                 case TRACK:
                 case YEAR:

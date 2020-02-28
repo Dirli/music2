@@ -61,7 +61,6 @@ namespace Music2 {
                     renderer = icon_renderer;
                     break;
                 case Enums.ListColumn.TRACKID:
-                case Enums.ListColumn.NUMBER:
                 case Enums.ListColumn.TRACK:
                     renderer = new Gtk.CellRendererText ();
                     column.set_cell_data_func (renderer, Tools.CellDataHelper.intelligent_func);

@@ -57,8 +57,8 @@ namespace Music2 {
             list_store.set_sort_func (0, list_sort_func);
 
             albums_store = new Gtk.ListStore (2, typeof (Structs.Album), typeof (string));
-            // albums_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
-            // albums_store.set_sort_func (0, grid_sort_func);
+            albums_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
+            albums_store.set_sort_func (0, grid_sort_func);
 
             albums_view = new LViews.GridView ();
             albums_view.set_columns (-1);
@@ -123,8 +123,12 @@ namespace Music2 {
             columns_view.init_selections (select_category);
         }
 
+        public void show_view (Enums.ViewMode view_mode) {
+            set_visible_child_name (view_mode == Enums.ViewMode.COLUMN ? "listview" : "gridview");
+        }
+
         public override void clear_stack () {
-            set_visible_child_name ("welcome");
+            show_welcome ();
 
             columns_view.clear_columns (null);
             list_store.clear ();
@@ -239,32 +243,38 @@ namespace Music2 {
             grid_item_activated (null);
         }
 
+        private int sort_column_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b, Enums.ListColumn col_id) {
+            GLib.Value? val_a;
+            store.get_value (a, col_id, out val_a);
+
+            GLib.Value? val_b;
+            store.get_value (b, col_id, out val_b);
+
+            if (val_a != null && val_b != null) {
+                var col_type = col_id.get_data_type ();
+                if (col_type == GLib.Type.STRING) {
+                    string a_str = val_a.get_string ();
+                    string b_str = val_b.get_string ();
+                    return Tools.String.compare (a_str, b_str);
+                } else if (col_type == GLib.Type.UINT) {
+                    uint a_uint = val_a.get_uint ();
+                    uint b_uint = val_b.get_uint ();
+                    return a_uint == b_uint ? 0 : a_uint > b_uint ? 1 : -1;
+                }
+            }
+
+            return 0;
+        }
+
         public int list_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
-            int rv = 1;
             int sort_column_id;
             Gtk.SortType sort_direction;
             list_store.get_sort_column_id (out sort_column_id, out sort_direction);
 
             if (sort_column_id < 1) {return 0;}
 
-            GLib.Value? val_a;
-            store.get_value (a, sort_column_id, out val_a);
-
-            GLib.Value? val_b;
-            store.get_value (b, sort_column_id, out val_b);
-
-            if (val_a != null && val_b != null) {
-                switch (sort_column_id) {
-                    case Enums.ListColumn.ARTIST:
-                    case Enums.ListColumn.ALBUM:
-                    case Enums.ListColumn.TITLE:
-                        string a_str = val_a.get_string ();
-                        string b_str = val_b.get_string ();
-                        rv = Tools.String.compare (a_str, b_str);
-                        break;
-                }
-
-            }
+            int rv = 1;
+            rv = sort_column_func (store, a, b, (Enums.ListColumn) sort_column_id);
 
             if (sort_direction == Gtk.SortType.DESCENDING) {
                 rv = (rv > 0) ? -1 : 1;
@@ -277,10 +287,10 @@ namespace Music2 {
             int rv = 1;
 
             Structs.Album? struct_a;
-            store.@get (a, 0, out struct_a);
+            store.@get (a, 0, out struct_a, -1);
 
             Structs.Album? struct_b;
-            store.@get (b, 0, out struct_b);
+            store.@get (b, 0, out struct_b, -1);
 
             if (struct_a != null && struct_b != null) {
                 rv = Tools.String.compare (struct_a.title, struct_b.title);
