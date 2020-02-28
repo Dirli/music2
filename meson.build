@@ -19,10 +19,6 @@ dep_gsttag = dependency ('gstreamer-tag-1.0')
 dep_gee = dependency ('gee-0.8')
 dep_dbus = dependency ('dbus-1')
 
-if get_option ('sqlite')
-    dep_sqlite = dependency ('sqlite3')
-endif
-
 core_deps = [
     dep_gio,
     dep_gst,
@@ -31,6 +27,7 @@ core_deps = [
 ]
 
 if get_option ('sqlite')
+    dep_sqlite = dependency ('sqlite3')
     core_deps += dep_sqlite
 endif
 
@@ -46,6 +43,14 @@ subdir ('lib')
 subdir ('cli')
 subdir ('core')
 if get_option ('gtk')
+    gnome = import ('gnome')
+
+    cssresources = gnome.compile_resources(
+        'css-resources',
+        join_paths('data', meson.project_name() + '.gresource.xml'),
+        source_dir: 'data'
+    )
+
     app_deps = [
         dep_gio,
         dep_pbutils,

@@ -25,6 +25,7 @@ executable(
     'Widgets/TopDisplay.vala',
     'Widgets/ViewStack.vala',
     app_files,
+    cssresources,
     vala_args: vala_args,
     dependencies: app_deps,
     install : true

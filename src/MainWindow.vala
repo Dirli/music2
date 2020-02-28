@@ -118,6 +118,10 @@ namespace Music2 {
                 warning (e.message);
             }
 
+            var provider = new Gtk.CssProvider ();
+            provider.load_from_resource ("io/elementary/music2/application.css");
+            Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+
             library_manager = new Services.LibraryManager ();
 
             on_changed_source ();
