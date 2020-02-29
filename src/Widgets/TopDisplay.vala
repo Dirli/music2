@@ -39,8 +39,13 @@ namespace Music2 {
             pause_progress ();
         }
 
-        public TopDisplay (int repeat_mode) {
+        public TopDisplay (int repeat_mode, int shuffle_mode) {
             seek_bar = new Granite.SeekBar (0.0);
+
+            var shuffle_chooser = new Views.OptionChooser ();
+            shuffle_chooser.append_item ("media-playlist-consecutive-symbolic", _("Enable Shuffle"));
+            shuffle_chooser.append_item ("media-playlist-shuffle-symbolic", _("Disable Shuffle"));
+            shuffle_chooser.set_option (shuffle_mode);
 
             var repeat_chooser = new Views.OptionChooser ();
             repeat_chooser.append_item ("media-playlist-no-repeat-symbolic", _("Enable Repeat"));
@@ -61,9 +66,10 @@ namespace Music2 {
 
             var time_grid = new Gtk.Grid ();
             time_grid.column_spacing = 12;
-            time_grid.attach (track_eventbox,  0, 0, 1, 1);
-            time_grid.attach (repeat_chooser,  1, 0, 1, 1);
-            time_grid.attach (seek_bar,        0, 1, 2, 1);
+            time_grid.attach (shuffle_chooser, 0, 0, 1, 1);
+            time_grid.attach (track_eventbox,  1, 0, 1, 1);
+            time_grid.attach (repeat_chooser,  2, 0, 1, 1);
+            time_grid.attach (seek_bar,        0, 1, 3, 1);
 
             var empty_grid = new Gtk.Grid ();
             transition_type = Gtk.StackTransitionType.CROSSFADE;
@@ -71,6 +77,9 @@ namespace Music2 {
             add_named (time_grid, "time");
             add_named (empty_grid, "empty");
 
+            shuffle_chooser.option_changed.connect ((option_val) => {
+                mode_option_changed ("shuffle-mode", option_val);
+            });
             repeat_chooser.option_changed.connect ((option_val) => {
                 mode_option_changed ("repeat-mode", option_val);
             });

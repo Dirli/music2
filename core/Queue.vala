@@ -19,6 +19,7 @@
 namespace Music2 {
     public class Core.Queue : GLib.Object {
         public int repeat_mode = 0;
+        public int shuffle_mode = 0;
 
         private Gee.ArrayList<uint> tracks_queue;
         private Gee.ArrayList<uint> past_tracks;
@@ -40,11 +41,16 @@ namespace Music2 {
             if (tracks_queue.size > 0 && i != tracks_queue[0]) {
                 var index = tracks_queue.index_of (i);
                 if (index >= 0) {
-                    past_tracks.add_all (tracks_queue.slice (0, index));
-                    tracks_queue = tracks_queue.slice (index, tracks_queue.size) as Gee.ArrayList<uint>;
-                    if (repeat_mode == Enums.RepeatMode.ON) {
-                        tracks_queue.add_all (past_tracks);
-                        past_tracks.clear ();
+                    if (shuffle_mode == Enums.ShuffleMode.ON) {
+                        var random_val = tracks_queue.remove_at (index);
+                        tracks_queue.insert (0, random_val);
+                    } else {
+                        past_tracks.add_all (tracks_queue.slice (0, index));
+                        tracks_queue = tracks_queue.slice (index, tracks_queue.size) as Gee.ArrayList<uint>;
+                        if (repeat_mode == Enums.RepeatMode.ON) {
+                            tracks_queue.add_all (past_tracks);
+                            past_tracks.clear ();
+                        }
                     }
                 } else {
                     var past_index = past_tracks.index_of (i);
@@ -84,6 +90,11 @@ namespace Music2 {
                 past_tracks.clear ();
             }
 
+            if (shuffle_mode == Enums.ShuffleMode.ON && tracks_queue.size > 1) {
+                var random_val = tracks_queue.remove_at (GLib.Random.int_range (0, tracks_queue.size));
+                tracks_queue.insert (0, random_val);
+            }
+
             return tracks_queue.size == 0 ? 0 : tracks_queue.@get (0);
         }
 
@@ -98,27 +109,10 @@ namespace Music2 {
             return i;
         }
 
-        public uint[] get_all () {
-            uint[] queue_all = {};
-
-            past_tracks.foreach ((past_tid) => {
-                queue_all += past_tid;
-                return true;
-            });
-
-            tracks_queue.foreach ((tid) => {
-                queue_all += tid;
-                return true;
-            });
-
-            return queue_all;
-        }
-
-        public void reset_queue () {
-            past_tracks.add_all (tracks_queue);
-            tracks_queue.clear ();
-            while (!past_tracks.is_empty) {
-                tracks_queue.add (past_tracks.remove_at (0));
+        public void reset_queue (uint[] tracks) {
+            clear_queue ();
+            foreach (var t in tracks) {
+                tracks_queue.add (t);
             }
         }
 

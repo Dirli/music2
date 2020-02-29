@@ -78,7 +78,7 @@ namespace Music2 {
         public const string ACTION_QUIT = "action_quit";
         public const string ACTION_SEARCH = "action_search";
         public const string ACTION_VIEW_ALBUMS = "action_view_albums";
-        public const string ACTION_VIEW_LIST = "action_view_list";
+        public const string ACTION_VIEW_COLUMNS = "action_view_columns";
 
         private const GLib.ActionEntry[] ACTION_ENTRIES = {
             { ACTION_IMPORT, action_import },
@@ -88,7 +88,7 @@ namespace Music2 {
             { ACTION_QUIT, action_quit },
             { ACTION_SEARCH, action_search },
             { ACTION_VIEW_ALBUMS, action_view_albums },
-            { ACTION_VIEW_LIST, action_view_list }
+            { ACTION_VIEW_COLUMNS, action_view_columns }
         };
 
         public MainWindow (Gtk.Application application) {
@@ -97,7 +97,7 @@ namespace Music2 {
             application.set_accels_for_action (ACTION_PREFIX + ACTION_QUIT, {"<Control>q", "<Control>w"});
             application.set_accels_for_action (ACTION_PREFIX + ACTION_SEARCH, {"<Control>f"});
             application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_ALBUMS, {"<Control>1"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_LIST, {"<Control>2"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_COLUMNS, {"<Control>2"});
         }
 
         construct {
@@ -164,7 +164,11 @@ namespace Music2 {
                     progress_box = null;
                 }
 
-                music_stack.init_selections (null);
+                if (library_manager.dirty_library ()) {
+                    view_selector.sensitive = true;
+                    view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
+                    music_stack.init_selections (null);
+                }
             });
             library_manager.add_view.connect (music_stack.add_iter);
 
@@ -186,6 +190,7 @@ namespace Music2 {
 
                     if (library_manager.dirty_library ()) {
                         view_selector.sensitive = true;
+                        view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
                         music_stack.init_selections (null);
                     }
 
@@ -254,7 +259,8 @@ namespace Music2 {
             next_button.action_name = ACTION_PREFIX + ACTION_PLAY_NEXT;
             next_button.tooltip_text = _("Next");
 
-            top_display = new Widgets.TopDisplay (settings.get_enum ("repeat-mode"));
+            top_display = new Widgets.TopDisplay (settings.get_enum ("repeat-mode"),
+                                                  settings.get_enum ("shuffle-mode"));
             top_display.margin_start = 30;
             top_display.margin_end = 30;
             top_display.seek_position.connect (on_seek_position);
@@ -420,9 +426,15 @@ namespace Music2 {
         }
 
         private void action_search () {}
-        private void action_view_albums () {}
-        private void action_view_list () {}
         private void action_import () {}
+
+        private void action_view_albums () {
+            view_selector.mode_button.selected = Enums.ViewMode.GRID;
+        }
+
+        private void action_view_columns () {
+            view_selector.mode_button.selected = Enums.ViewMode.COLUMN;
+        }
 
         // dbus signal handler
         private void on_properties_changed (string iface, GLib.HashTable<string, GLib.Variant> changed_prop, string[] invalid) {
@@ -528,7 +540,9 @@ namespace Music2 {
         }
 
         private void on_mode_changed () {
-            music_stack.show_view ((Enums.ViewMode) view_selector.mode_button.selected);
+            var view_mode = (Enums.ViewMode) view_selector.mode_button.selected;
+            music_stack.show_view (view_mode);
+            settings_ui.set_enum ("view-mode", view_mode);
             source_list_view.select_active_item (-1);
         }
 
@@ -597,16 +611,13 @@ namespace Music2 {
         }
 
         private void on_menu_activated (Views.SourceListItem item, Enums.ActionType action_type) {
-            switch (item.hint) {
-                case Enums.Hint.MUSIC:
-                    if (action_type == Enums.ActionType.SCAN) {
-                        if (active_source_type == Enums.SourceType.LIBRARY) {
-                            settings.set_enum ("source-type", Enums.SourceType.NONE);
-                        }
-
+            switch (action_type) {
+                case Enums.ActionType.SCAN:
+                    if (item.hint == Enums.Hint.MUSIC) {
                         on_changed_folder ();
                     }
                     break;
+
             }
         }
 
@@ -620,11 +631,19 @@ namespace Music2 {
                 library_manager.stop_scanner ();
             }
 
+            if (library_manager.dirty_library ()) {
+                library_manager.clear_library ();
+                view_selector.sensitive = false;
+            }
+
+            if (active_source_type == Enums.SourceType.LIBRARY) {
+                settings.set_enum ("source-type", Enums.SourceType.NONE);
+            }
+
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
 
                 var music_dir = GLib.File.new_for_path (music_folder);
-                library_manager.clear_library ();
                 library_manager.scan_library (music_dir.get_uri ());
 
                 source_list_view.select_active_item (-1);

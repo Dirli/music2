@@ -46,8 +46,10 @@ namespace Music2 {
             });
 
             on_changed_repeat ();
+            on_changed_shuffle ();
 
             settings.changed["repeat-mode"].connect (on_changed_repeat);
+            settings.changed["shuffle-mode"].connect (on_changed_shuffle);
             settings.changed["source-type"].connect (on_changed_source);
         }
 
@@ -63,6 +65,10 @@ namespace Music2 {
 
         private void on_changed_repeat () {
             player.repeat_mode = settings.get_enum ("repeat-mode");
+        }
+
+        private void on_changed_shuffle () {
+            player.shuffle_mode = settings.get_enum ("shuffle-mode");
         }
 
         private void on_changed_source () {

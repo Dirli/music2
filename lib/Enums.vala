@@ -28,6 +28,11 @@ namespace Music2.Enums {
         ON = 2
     }
 
+    public enum ShuffleMode {
+        OFF = 0,
+        ON = 1
+    }
+
     public enum SourceType {
         NONE = 0,
         DIRECTORY,

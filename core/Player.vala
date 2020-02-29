@@ -27,6 +27,7 @@ namespace Music2 {
 
         private Gee.HashMap<uint, CObjects.Media> tracks_hash;
         private Core.Queue tracks_queue;
+        private uint[] tracks_list;
 
         public bool launch = false;
 
@@ -36,6 +37,21 @@ namespace Music2 {
             set {
                 _repeat_mode = value;
                 tracks_queue.repeat_mode = value;
+            }
+        }
+
+        private int _shuffle_mode;
+        public int shuffle_mode {
+            get {
+                return _shuffle_mode;
+            }
+            set {
+                _shuffle_mode = value;
+                tracks_queue.shuffle_mode = value;
+                if (_current_index > 0) {
+                    tracks_queue.reset_queue (tracks_list);
+                    tracks_queue.set_index (_current_index);
+                }
             }
         }
 
@@ -83,6 +99,7 @@ namespace Music2 {
 
             tracks_hash = new Gee.HashMap<uint, CObjects.Media> ();
             tracks_queue = new Core.Queue ();
+            tracks_list = {};
 
             playbin = Gst.ElementFactory.make ("playbin", "play");
 
@@ -202,6 +219,7 @@ namespace Music2 {
             var tid = m.tid;
             tracks_hash[tid] = m;
             tracks_queue.add_index (tid);
+            tracks_list += tid;
         }
 
         public void adds_to_queue (Gee.ArrayQueue<CObjects.Media> new_queue) {
@@ -238,6 +256,7 @@ namespace Music2 {
 
                 foreach (var t in past_tracks) {
                     tracks_id += t;
+                    tracks_list += t;
                 }
 
                 tracklist_replaced (tracks_id);
@@ -245,12 +264,12 @@ namespace Music2 {
         }
 
         public uint[] get_queue () {
-            return tracks_queue.get_all ();
+            return tracks_list;
         }
 
         private void reset_queue () {
             state_changed (Gst.State.NULL);
-            tracks_queue.reset_queue ();
+            tracks_queue.reset_queue (tracks_list);
 
             _current_index = tracks_queue.get_first ();
 
@@ -265,6 +284,7 @@ namespace Music2 {
             state_changed (Gst.State.NULL);
             tracks_hash.clear ();
             tracks_queue.clear_queue ();
+            tracks_list = {};
         }
 
         private bool bus_callback (Gst.Bus bus, Gst.Message message) {

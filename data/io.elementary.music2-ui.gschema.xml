@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
+    <enum id="io.elementary.music2.ui.viewtype">
+        <value value="0" nick="grid"/>
+        <value value="1" nick="column"/>
+    </enum>
     <schema path="/io/elementary/music2/ui/" id="io.elementary.music2.ui">
         <key name="window-position" type="(ii)">
             <default>(-1, -1)</default>
@@ -21,8 +25,8 @@
             <summary>Sidebar width</summary>
             <description>Sidebar width</description>
         </key>
-        <key type="i" name="view-mode">
-            <default>1</default>
+        <key enum="io.elementary.music2.ui.viewtype" name="view-mode">
+            <default>'column'</default>
             <summary>Index of which view type to use</summary>
             <description>Index of which view type to use</description>
         </key>
