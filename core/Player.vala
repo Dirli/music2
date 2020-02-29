@@ -30,6 +30,15 @@ namespace Music2 {
 
         public bool launch = false;
 
+        private int _repeat_mode;
+        public int repeat_mode {
+            get {return _repeat_mode;}
+            set {
+                _repeat_mode = value;
+                tracks_queue.repeat_mode = value;
+            }
+        }
+
         private uint _current_index;
         public uint current_index {
             get {return _current_index;}
@@ -270,8 +279,13 @@ namespace Music2 {
                     }
                     break;
                 case Gst.MessageType.EOS:
-                    if (tracks_queue.get_size () > 0) {
-                        next ();
+                    if (tracks_queue.get_size () > 0 || repeat_mode == Enums.RepeatMode.ON) {
+                        if (repeat_mode == Enums.RepeatMode.MEDIA) {
+                            stop ();
+                            play ();
+                        } else {
+                            next ();
+                        }
                     } else {
                         reset_queue ();
                     }

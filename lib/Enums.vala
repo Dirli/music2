@@ -22,6 +22,12 @@ namespace Music2.Enums {
         COLUMN = 1;
     }
 
+    public enum RepeatMode {
+        OFF = 0,
+        MEDIA = 1,
+        ON = 2
+    }
+
     public enum SourceType {
         NONE = 0,
         DIRECTORY,

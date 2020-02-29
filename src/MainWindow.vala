@@ -254,10 +254,13 @@ namespace Music2 {
             next_button.action_name = ACTION_PREFIX + ACTION_PLAY_NEXT;
             next_button.tooltip_text = _("Next");
 
-            top_display = new Widgets.TopDisplay ();
+            top_display = new Widgets.TopDisplay (settings.get_enum ("repeat-mode"));
             top_display.margin_start = 30;
             top_display.margin_end = 30;
             top_display.seek_position.connect (on_seek_position);
+            top_display.mode_option_changed.connect ((key, new_val) => {
+                settings.set_enum (key, new_val);
+            });
             top_display.popup_media_menu.connect (() => {
                 uint[] tids = {};
 
@@ -686,11 +689,13 @@ namespace Music2 {
                     break;
                 case "Stopped":
                 default:
-                    top_display.stop_progress ();
-                    var tid = _active_track;
-                    if (tid > 0) {
-                        queue_stack.remove_run_icon (tid);
-                        music_stack.remove_run_icon (tid);
+                    if (settings.get_enum ("repeat-mode") != Enums.RepeatMode.MEDIA) {
+                        top_display.stop_progress ();
+                        var tid = _active_track;
+                        if (tid > 0) {
+                            queue_stack.remove_run_icon (tid);
+                            music_stack.remove_run_icon (tid);
+                        }
                     }
                     break;
             }

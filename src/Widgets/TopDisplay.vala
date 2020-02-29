@@ -18,6 +18,7 @@
 
 namespace Music2 {
     public class Widgets.TopDisplay : Gtk.Stack {
+        public signal void mode_option_changed (string mode_name, int option_val);
         public signal void seek_position (int64 offset);
         public signal void popup_media_menu ();
 
@@ -38,8 +39,14 @@ namespace Music2 {
             pause_progress ();
         }
 
-        public TopDisplay () {
+        public TopDisplay (int repeat_mode) {
             seek_bar = new Granite.SeekBar (0.0);
+
+            var repeat_chooser = new Views.OptionChooser ();
+            repeat_chooser.append_item ("media-playlist-no-repeat-symbolic", _("Enable Repeat"));
+            repeat_chooser.append_item ("media-playlist-repeat-song-symbolic", _("Repeat Song"));
+            repeat_chooser.append_item ("media-playlist-repeat-symbolic", _("Disable Repeat"));
+            repeat_chooser.set_option (repeat_mode);
 
             track_label = new TitleLabel ("");
 
@@ -55,13 +62,18 @@ namespace Music2 {
             var time_grid = new Gtk.Grid ();
             time_grid.column_spacing = 12;
             time_grid.attach (track_eventbox,  0, 0, 1, 1);
-            time_grid.attach (seek_bar,        0, 1, 1, 1);
+            time_grid.attach (repeat_chooser,  1, 0, 1, 1);
+            time_grid.attach (seek_bar,        0, 1, 2, 1);
 
             var empty_grid = new Gtk.Grid ();
             transition_type = Gtk.StackTransitionType.CROSSFADE;
 
             add_named (time_grid, "time");
             add_named (empty_grid, "empty");
+
+            repeat_chooser.option_changed.connect ((option_val) => {
+                mode_option_changed ("repeat-mode", option_val);
+            });
 
             get_style_context ().add_class (Gtk.STYLE_CLASS_TITLE);
             show_all ();
@@ -86,6 +98,7 @@ namespace Music2 {
         public void stop_progress () {
             pause_progress ();
             progress = 0;
+            track_label.set_markup ("");
         }
 
         private bool change_progress () {
@@ -107,7 +120,6 @@ namespace Music2 {
             if (seek_timer > 0) {
                 Source.remove (seek_timer);
             }
-
 
             seek_timer = Timeout.add (300, () => {
                 if (!seek_bar.is_grabbing) {

@@ -12,6 +12,7 @@ executable(
     'Views/ColumnBrowser.vala',
     'Views/CustomButton.vala',
     'Views/DnDSelection.vala',
+    'Views/OptionChooser.vala',
     'Views/PlayListCategory.vala',
     'Views/ProgressBox.vala',
     'Views/SourceListItem.vala',

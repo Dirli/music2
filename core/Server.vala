@@ -45,6 +45,9 @@ namespace Music2 {
                 settings.set_double ("volume", volume_value);
             });
 
+            on_changed_repeat ();
+
+            settings.changed["repeat-mode"].connect (on_changed_repeat);
             settings.changed["source-type"].connect (on_changed_source);
         }
 
@@ -56,6 +59,10 @@ namespace Music2 {
             show_notification (m.get_display_title (),
                                notification_body,
                                Tools.FileUtils.get_cover_path (m.year, m.album));
+        }
+
+        private void on_changed_repeat () {
+            player.repeat_mode = settings.get_enum ("repeat-mode");
         }
 
         private void on_changed_source () {
@@ -141,6 +148,10 @@ namespace Music2 {
         }
 
         public void close_player () {
+            if (!settings.get_boolean ("close-while-playing") && player.get_state () == Gst.State.PLAYING) {
+                return;
+            }
+
             GLib.Bus.unown_name (owner_id);
 
             player.stop ();

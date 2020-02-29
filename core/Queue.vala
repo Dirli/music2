@@ -18,6 +18,8 @@
 
 namespace Music2 {
     public class Core.Queue : GLib.Object {
+        public int repeat_mode = 0;
+
         private Gee.ArrayList<uint> tracks_queue;
         private Gee.ArrayList<uint> past_tracks;
 
@@ -40,6 +42,10 @@ namespace Music2 {
                 if (index >= 0) {
                     past_tracks.add_all (tracks_queue.slice (0, index));
                     tracks_queue = tracks_queue.slice (index, tracks_queue.size) as Gee.ArrayList<uint>;
+                    if (repeat_mode == Enums.RepeatMode.ON) {
+                        tracks_queue.add_all (past_tracks);
+                        past_tracks.clear ();
+                    }
                 } else {
                     var past_index = past_tracks.index_of (i);
                     if (past_index >= 0) {
@@ -72,6 +78,11 @@ namespace Music2 {
 
             var i = tracks_queue.remove_at (0);
             past_tracks.add (i);
+
+            if (tracks_queue.size == 0 && repeat_mode == Enums.RepeatMode.ON) {
+                tracks_queue.add_all (past_tracks);
+                past_tracks.clear ();
+            }
 
             return tracks_queue.size == 0 ? 0 : tracks_queue.@get (0);
         }
