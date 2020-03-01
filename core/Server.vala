@@ -17,6 +17,13 @@
  */
 
 namespace Music2 {
+    [DBus (name = "org.freedesktop.ScreenSaver")]
+    public interface ScreenSaverIface : Object {
+        public abstract uint32 Inhibit (string app_name, string reason) throws Error;
+        public abstract void UnInhibit (uint32 cookie) throws Error;
+        public abstract void SimulateUserActivity () throws Error;
+    }
+
     public class Core.Server : GLib.Object {
         private GLib.Application app;
 
@@ -30,6 +37,9 @@ namespace Music2 {
 
         private CObjects.Scanner? scanner = null;
         private DataBaseManager? db_manager = null;
+        private ScreenSaverIface? scrsaver_iface = null;
+
+        private uint32? inhibit_cookie = null;
 
         public Server (GLib.Application app) {
             this.app = app;
@@ -47,16 +57,22 @@ namespace Music2 {
 
             on_changed_repeat ();
             on_changed_shuffle ();
+            on_changed_sleep ();
 
             settings.changed["repeat-mode"].connect (on_changed_repeat);
             settings.changed["shuffle-mode"].connect (on_changed_shuffle);
             settings.changed["source-type"].connect (on_changed_source);
+            settings.changed["block-sleep-mode"].connect (on_changed_sleep);
         }
 
         private void on_changed_track (CObjects.Media m) {
             string notification_body = m.get_display_artist ();
             notification_body += "\n";
             notification_body += m.get_display_album ();
+
+            if (scrsaver_iface != null) {
+                inhibit ();
+            }
 
             show_notification (m.get_display_title (),
                                notification_body,
@@ -69,6 +85,24 @@ namespace Music2 {
 
         private void on_changed_shuffle () {
             player.shuffle_mode = settings.get_enum ("shuffle-mode");
+        }
+
+        private void on_changed_sleep () {
+            if (settings.get_boolean ("block-sleep-mode")) {
+                if (scrsaver_iface == null) {
+                    try {
+                        scrsaver_iface = GLib.Bus.get_proxy_sync (BusType.SESSION,
+                                                                  "org.freedesktop.ScreenSaver",
+                                                                  "/ScreenSaver",
+                                                                  DBusProxyFlags.NONE);
+                    } catch (Error e) {
+                        warning ("Could not start screensaver interface: %s", e.message);
+                    }
+                }
+            } else {
+                uninhibit ();
+                scrsaver_iface = null;
+            }
         }
 
         private void on_changed_source () {
@@ -261,6 +295,35 @@ namespace Music2 {
            }
 
            app.send_notification (context, notification);
+        }
+
+        private void inhibit () {
+            try {
+                inhibit_cookie = scrsaver_iface.Inhibit (Constants.APP_NAME, "Playing music");
+            } catch (Error e) {
+                warning ("Could not inhibit screen: %s", e.message);
+                return;
+            }
+
+            try {
+                scrsaver_iface.SimulateUserActivity ();
+            } catch (Error e) {
+                warning ("Could not simulate user activity: %s", e.message);
+            }
+        }
+
+        private void uninhibit () {
+            if (inhibit_cookie != null) {
+                if (scrsaver_iface != null) {
+                    try {
+                        scrsaver_iface.UnInhibit (inhibit_cookie);
+                    } catch (Error e) {
+                        warning ("Could not uninhibit screen: %s", e.message);
+                    }
+                }
+
+                inhibit_cookie = null;
+            }
         }
     }
 }

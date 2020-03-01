@@ -36,6 +36,11 @@
             <summary>The name of the source type from the last launch</summary>
             <description>The name of the source type from the last launch</description>
         </key>
+        <key type="b" name="block-sleep-mode">
+            <default>false</default>
+            <summary>Block sleep mode</summary>
+            <description>Allows you to block sleep mode</description>
+        </key>
         <key type="s" name="source-media">
             <default>''</default>
             <summary>The name of the original media that was used</summary>

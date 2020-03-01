@@ -70,6 +70,10 @@ namespace Music2 {
             hide_on_close_switch.halign = Gtk.Align.START;
             main_win.settings.bind ("close-while-playing", hide_on_close_switch, "active", GLib.SettingsBindFlags.INVERT_BOOLEAN);
 
+            var sleep_mode_switch = new Gtk.Switch ();
+            sleep_mode_switch.halign = Gtk.Align.START;
+            main_win.settings.bind ("block-sleep-mode", sleep_mode_switch, "active", GLib.SettingsBindFlags.DEFAULT);
+
             var layout = new Gtk.Grid ();
             layout.column_spacing = 12;
             layout.margin = 6;
@@ -86,6 +90,8 @@ namespace Music2 {
             layout.attach (new Granite.HeaderLabel (_("Desktop Integration")), 0, 6);
             layout.attach (new SettingsLabel (_("Continue playback when closed:")), 0, 7);
             layout.attach (hide_on_close_switch, 1, 7);
+            layout.attach (new SettingsLabel (_("Block sleep mode")), 0, 8);
+            layout.attach (sleep_mode_switch, 1, 8);
 
             var content = get_content_area () as Gtk.Box;
             content.add (layout);
