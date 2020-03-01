@@ -24,6 +24,8 @@ namespace Music2 {
         private bool queue_reset = false;
         private bool scans_library = false;
 
+        private int queue_id;
+
         private PlayerIface? dbus_player = null;
         private TrackListIface? dbus_tracklist = null;
         private DbusPropIface? dbus_prop = null;
@@ -31,6 +33,7 @@ namespace Music2 {
         private Widgets.ViewStack view_stack;
         private Widgets.MusicStack music_stack;
         private Widgets.QueueStack queue_stack;
+        private Widgets.PlaylistStack playlist_stack;
 
         private Widgets.SourceListView source_list_view;
         private Widgets.StatusBar status_bar;
@@ -46,6 +49,7 @@ namespace Music2 {
         private Views.ProgressBox? progress_box = null;
 
         private Services.LibraryManager library_manager;
+        private Services.PlaylistManager playlist_manager;
 
         private Enums.SourceType active_source_type;
 
@@ -60,6 +64,7 @@ namespace Music2 {
             set {
                 queue_stack.select_run_row (value);
                 music_stack.select_run_row (value);
+                playlist_stack.select_run_row (value);
 
                 _active_track = value;
 
@@ -123,6 +128,8 @@ namespace Music2 {
             Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 
             library_manager = new Services.LibraryManager ();
+            playlist_manager = new Services.PlaylistManager ();
+            queue_id = playlist_manager.get_playlist_id (Constants.QUEUE);
 
             on_changed_source ();
 
@@ -131,9 +138,9 @@ namespace Music2 {
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
             }
-            source_list_view.add_item (1, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
-            source_list_view.update_badge (1, 0);
-            source_list_view.select_active_item (has_music_folder ? -1 : 1);
+            source_list_view.add_item (queue_id, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
+            source_list_view.update_badge (queue_id, 0);
+            source_list_view.select_active_item (has_music_folder ? -1 : queue_id);
 
             library_manager.added_category.connect (music_stack.add_column_item);
             library_manager.cleared_library.connect (music_stack.clear_stack);
@@ -171,6 +178,22 @@ namespace Music2 {
                 }
             });
             library_manager.add_view.connect (music_stack.add_iter);
+
+            playlist_manager.add_view.connect ((tid, count) => {
+                var m = library_manager.get_media (tid);
+                if (m != null) {
+                    m.track = count;
+                    playlist_stack.add_iter (m);
+                    if (active_track >= 0 && m.tid == active_track) {
+                        playlist_stack.select_run_row (active_track);
+                    }
+                }
+            });
+            playlist_manager.selected_playlist.connect (on_selected_playlist);
+            playlist_manager.added_playlist.connect ((pid, name, hint, icon) =>  {
+                source_list_view.add_item (pid, name, hint, icon);
+            });
+            playlist_manager.load_playlists ();
 
             settings.changed["source-type"].connect (on_changed_source);
             // sometimes this event is triggered at startup, which is not the desired behavior
@@ -234,6 +257,10 @@ namespace Music2 {
             music_stack.selected_row.connect (on_selected_row);
             music_stack.filter_view.connect (library_manager.filter_library);
             music_stack.popup_media_menu.connect (on_popup_media_menu);
+
+            playlist_stack = new Widgets.PlaylistStack ();
+            playlist_stack.selected_row.connect (on_selected_row);
+            playlist_stack.popup_media_menu.connect (on_popup_media_menu);
 
             var preferences_menuitem = new Gtk.ModelButton ();
             preferences_menuitem.text = _("Preferences");
@@ -317,6 +344,7 @@ namespace Music2 {
             view_stack = new Widgets.ViewStack ();
             view_stack.add_named (queue_stack, Constants.QUEUE);
             view_stack.add_named (music_stack, "music");
+            view_stack.add_named (playlist_stack, "playlist");
 
             var main_hpaned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             main_hpaned.pack1 (left_grid, false, false);
@@ -357,6 +385,7 @@ namespace Music2 {
                 if (tracks_id.length > 0) {
                     switch (active_source_type) {
                         case Enums.SourceType.DIRECTORY:
+                        case Enums.SourceType.PLAYLIST:
                             try {
                                 var tracks_meta = dbus_tracklist.get_tracks_metadata (tracks_id);
                                 foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
@@ -490,6 +519,7 @@ namespace Music2 {
             if (tracks.length > 0) {
                 switch (active_source_type) {
                     case Enums.SourceType.LIBRARY:
+                    case Enums.SourceType.PLAYLIST:
                         foreach (var tid in tracks) {
                             var m = library_manager.get_media (tid);
                             if (m != null) {
@@ -551,6 +581,10 @@ namespace Music2 {
                 case Enums.Hint.QUEUE:
                     view_stack.set_visible_child_name (Constants.QUEUE);
                     break;
+                case Enums.Hint.PLAYLIST:
+                    playlist_manager.select_playlist (pid, hint);
+                    view_stack.set_visible_child_name ("playlist");
+                    break;
                 case Enums.Hint.MUSIC:
                     view_stack.set_visible_child_name ("music");
                     break;
@@ -601,6 +635,17 @@ namespace Music2 {
 
                             settings.set_enum ("source-type", Enums.SourceType.LIBRARY);
                         }
+                    } else if (activated_type == Enums.SourceType.PLAYLIST) {
+                        music_stack.active_album = -1;
+                        if (playlist_manager.modified_pid == playlist_stack.pid) {
+                            playlist_manager.update_playlist (playlist_manager.modified_pid, true);
+                            if (playlist_manager.modified_pid != 0) {
+                                return true;
+                            }
+                        }
+
+                        settings.set_string ("source-media", playlist_stack.pid.to_string ());
+                        settings.set_enum ("source-type", Enums.SourceType.PLAYLIST);
                     }
 
                     return false;
@@ -621,8 +666,19 @@ namespace Music2 {
             }
         }
 
-        private void on_edited_playlist (int pid, string playlist_name) {
+        private void on_selected_playlist (int pid, Enums.Hint playlist_hint, Enums.SourceType playlist_type) {
+            if (playlist_stack.pid != pid) {
+                playlist_stack.init_store (pid, playlist_hint, playlist_type);
+            }
+        }
 
+        private void on_edited_playlist (int pid, string playlist_name) {
+            if (queue_id != pid) {
+                var modified_name = playlist_manager.edit_playlist (pid, playlist_name);
+                if (modified_name != "") {
+                    source_list_view.rename_playlist (pid, modified_name);
+                }
+            }
         }
 
         private void on_changed_folder () {
@@ -714,6 +770,7 @@ namespace Music2 {
                         if (tid > 0) {
                             queue_stack.remove_run_icon (tid);
                             music_stack.remove_run_icon (tid);
+                            playlist_stack.remove_run_icon (tid);
                         }
                     }
                     break;
@@ -810,6 +867,7 @@ namespace Music2 {
         }
 
         public override bool delete_event (Gdk.EventAny event) {
+            playlist_manager.update_playlist_sync ();
             settings_ui.set_boolean ("window-maximized", is_maximized);
 
             if (!is_maximized) {

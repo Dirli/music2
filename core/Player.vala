@@ -222,7 +222,8 @@ namespace Music2 {
             tracks_list += tid;
         }
 
-        public void adds_to_queue (Gee.ArrayQueue<CObjects.Media> new_queue) {
+        public uint[] adds_to_queue (Gee.ArrayQueue<CObjects.Media> new_queue) {
+            uint[] ordered_list = {};
             if (new_queue.size > 0) {
                 uint[] tracks_id = {};
                 uint[] past_tracks = {};
@@ -239,6 +240,8 @@ namespace Music2 {
                     if (pass && _current_index == tid) {
                         pass = false;
                     }
+
+                    ordered_list += tid;
 
                     if (!pass) {
                         tracks_id += tid;
@@ -261,6 +264,8 @@ namespace Music2 {
 
                 tracklist_replaced (tracks_id);
             }
+
+            return ordered_list;
         }
 
         public uint[] get_queue () {

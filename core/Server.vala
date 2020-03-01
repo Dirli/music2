@@ -82,6 +82,9 @@ namespace Music2 {
                 case Enums.SourceType.LIBRARY:
                     play_from_library ();
                     break;
+                case Enums.SourceType.PLAYLIST:
+                    play_from_playlist ();
+                    break;
                 case Enums.SourceType.NONE:
                     uint[] zero_arr = {};
 
@@ -129,6 +132,7 @@ namespace Music2 {
                     case Enums.SourceType.DIRECTORY:
                         play_from_directory ();
                         break;
+                    case Enums.SourceType.PLAYLIST:
                     case Enums.SourceType.LIBRARY:
                         if (init_db ()) {
                             var tracks_queue = db_manager.get_playlist_tracks (queue_id);
@@ -188,8 +192,28 @@ namespace Music2 {
             }
 
             settings.set_string ("source-media", "");
-            player.adds_to_queue (tracks_queue);
-            db_manager.update_playlist (queue_id, player.get_queue ());
+            var tracks = player.adds_to_queue (tracks_queue);
+            if (tracks.length > 0) {
+                db_manager.update_playlist (queue_id, tracks);
+            }
+        }
+
+        private void play_from_playlist () {
+            if (!init_db ()) {
+                return;
+            }
+
+            var playlist_str = settings.get_string ("source-media");
+            int pid = int.parse (playlist_str);
+            if (pid > 0) {
+                var tracks_queue = db_manager.get_playlist_tracks (pid);
+
+                settings.set_string ("source-media", "");
+                var tracks = player.adds_to_queue (tracks_queue);
+                if (tracks.length > 0) {
+                    db_manager.update_playlist (queue_id, tracks);
+                }
+            }
         }
 
         private void play_from_directory () {
