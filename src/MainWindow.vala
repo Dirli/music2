@@ -385,7 +385,6 @@ namespace Music2 {
                 if (tracks_id.length > 0) {
                     switch (active_source_type) {
                         case Enums.SourceType.DIRECTORY:
-                        case Enums.SourceType.PLAYLIST:
                             try {
                                 var tracks_meta = dbus_tracklist.get_tracks_metadata (tracks_id);
                                 foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
@@ -395,6 +394,7 @@ namespace Music2 {
                                 warning (e.message);
                             }
                             break;
+                        case Enums.SourceType.PLAYLIST:
                         case Enums.SourceType.LIBRARY:
                             foreach (var tid in tracks_id) {
                                 var m = library_manager.get_media (tid);
@@ -403,7 +403,6 @@ namespace Music2 {
                                 }
                             }
                             break;
-
                     }
                 }
             } else {

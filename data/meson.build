@@ -24,3 +24,8 @@ if get_option ('gtk')
         install_dir: join_paths(get_option('datadir'), 'glib-2.0', 'schemas')
     )
 endif
+
+install_data(
+    meson.project_name() + '-eq.gschema.xml',
+    install_dir: join_paths(get_option('datadir'), 'glib-2.0', 'schemas')
+)

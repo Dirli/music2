@@ -1,6 +1,7 @@
 common_files = files (
     'Enums.vala',
     'Constants.vala',
+    'CObjects/EqualizerPreset.vala',
     'CObjects/Media.vala',
     'Interfaces/GSTagger.vala',
     'Tools/FileUtils.vala',
@@ -33,6 +34,7 @@ if get_option ('gtk')
         'Interfaces/StackWrapper.vala',
         'LViews/GridView.vala',
         'LViews/ListView.vala',
+        'LViews/PresetList.vala',
         'LViews/TileRenderer.vala',
         'Tools/CellDataHelper.vala',
         'Tools/GuiUtils.vala',

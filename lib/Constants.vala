@@ -29,11 +29,16 @@ namespace Music2.Constants {
     public const int DIALOG_MIN_WIDTH = 420;
     public const int DIALOG_MIN_HEIGHT = 300;
 
+    public const int ANIMATION_TIMEOUT = 20;
     public const uint INTERVAL = 250;
     public const int64 SEC_INV = 1;
     public const int64 MILI_INV = 1000;
     public const int64 MICRO_INV = 1000000;
     public const int64 NANO_INV = 1000000000;
+
+    public const string[] DECIBELS = {
+        "60", "170", "310", "600", "1k", "3k", "6k", "12k", "14k", "16k"
+    };
 
     public const string[] MEDIA_CONTENT_TYPES = {
         "audio/3gpp",

@@ -20,6 +20,7 @@ executable(
     'Views/SourceListRoot.vala',
     'Views/ViewSelector.vala',
     'Widgets/ColumnsView.vala',
+    'Widgets/EqualizerPopover.vala',
     'Widgets/MusicStack.vala',
     'Widgets/PlaylistStack.vala',
     'Widgets/QueueStack.vala',

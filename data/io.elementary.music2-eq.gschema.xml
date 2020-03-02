@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <schema path="/io/elementary/music2/equalizer/" id="io.elementary.music2.equalizer">
+        <key type="b" name="equalizer-enabled">
+            <default>false</default>
+            <summary>Whether or not the equalizer is enabled</summary>
+            <description>Whether or not the equalizer is enabled</description>
+        </key>
+        <key type="s" name="selected-preset">
+            <default>''</default>
+            <summary>Contains the name of the user-selected preset</summary>
+            <description>Contains information regarding the user-selected preset</description>
+        </key>
+        <key type="as" name="custom-presets">
+            <default>[]</default>
+            <summary>Custom Equalizer Presets</summary>
+            <description>Contains the list of presets added by the user. Gain values are between -80 and 80</description>
+        </key>
+        <key type="b" name="auto-switch-preset">
+            <default>true</default>
+            <summary>Whether or not to use the auto preset</summary>
+            <description>Whether or not to use the auto preset</description>
+        </key>
+    </schema>
+</schemalist>

@@ -71,9 +71,15 @@ namespace Music2 {
             volume_menubutton.add (volume_icon);
             volume_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
 
+            var eq_popover = new Widgets.EqualizerPopover ();
+            eq_popover.preset_changed.connect (update_tooltip);
+
             eq_menubutton = new Gtk.MenuButton ();
+            eq_menubutton.popover = eq_popover;
             eq_menubutton.add (new Gtk.Image.from_icon_name ("media-eq-symbolic", Gtk.IconSize.MENU));
             eq_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
+
+            eq_popover.init ();
 
             pack_start (playlist_menubutton);
             pack_end (eq_menubutton);
