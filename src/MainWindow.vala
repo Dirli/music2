@@ -661,6 +661,37 @@ namespace Music2 {
                         on_changed_folder ();
                     }
                     break;
+                case Enums.ActionType.CLEAR:
+                    if (item.hint == Enums.Hint.QUEUE) {
+                        settings.set_enum ("source-type", Enums.SourceType.NONE);
+                    }
+                    break;
+                case Enums.ActionType.SAVE:
+                    if (item.hint == Enums.Hint.QUEUE) {
+                        if (active_source_type == Enums.SourceType.LIBRARY
+                         || active_source_type == Enums.SourceType.PLAYLIST) {
+                            var pid = playlist_manager.create_playlist (_("Queue"));
+                            if (pid > 0) {
+                                try {
+                                    var tracks = dbus_tracklist.get_tracklist ();
+                                    foreach (var tid in tracks) {
+                                        playlist_manager.add_to_playlist (pid, tid);
+                                    }
+                                } catch (Error e) {
+                                    warning (e.message);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case Enums.ActionType.REMOVE:
+                    if (item.hint == Enums.Hint.PLAYLIST) {
+                        var pid = item.pid;
+                        if (pid != queue_id && playlist_manager.remove_playlist (pid)) {
+                            source_list_view.remove_item (pid);
+                        }
+                    }
+                    break;
 
             }
         }
@@ -723,6 +754,7 @@ namespace Music2 {
                     dnd_selection.button_clicked.connect ((btn_name) => {
                         switch (btn_name) {
                             case Enums.ActionType.PLAY:
+                                source_list_view.select_active_item (queue_id);
                                 settings.set_string ("source-media", uris[0]);
                                 on_selected_row (0, Enums.SourceType.DIRECTORY);
                                 break;
