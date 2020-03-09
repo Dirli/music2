@@ -19,11 +19,6 @@
 namespace Music2 {
     public class Objects.LibraryTagger : Interfaces.GSTagger {
         private Gee.HashSet<string> covers_exist;
-        public int scaned_files {
-            get {
-                return total_scan;
-            }
-        }
 
         public LibraryTagger () {
             covers_exist = new Gee.HashSet<string> ();
@@ -31,12 +26,10 @@ namespace Music2 {
 
         protected override CObjects.Media? create_media (Gst.PbUtils.DiscovererInfo info) {
             var tags = info.get_tags ();
-            CObjects.Media? track = null;
             if (tags != null) {
+                var track= new CObjects.Media (info.get_uri ());
                 string o;
 
-                var t_uri = info.get_uri ();
-                track = new CObjects.Media (t_uri);
 
                 if (tags.get_string (Gst.Tags.TITLE, out o)) {
                     track.title = o;
@@ -133,9 +126,11 @@ namespace Music2 {
                         }
                     }
                 }
+
+                return track;
             }
 
-            return track;
+            return null;
         }
 
         private Gst.Sample? get_cover_sample (Gst.TagList tag_list) {

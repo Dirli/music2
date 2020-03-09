@@ -91,16 +91,15 @@ namespace Music2 {
             queue.offer (iter);
 
             if (empty_queue) {
-                GLib.Mutex mutex = GLib.Mutex ();
-                mutex.lock ();
-                empty_queue = false;
-                mutex.unlock ();
+                lock (empty_queue) {
+                    empty_queue = false;
+                }
 
                 add_to_column ();
 
-                mutex.lock ();
-                empty_queue = true;
-                mutex.unlock ();
+                lock (empty_queue) {
+                    empty_queue = true;
+                }
             }
         }
 

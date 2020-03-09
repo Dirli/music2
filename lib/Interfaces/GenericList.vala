@@ -28,33 +28,31 @@ namespace Music2 {
 
 
         protected void init_columns () {
-            Gee.LinkedList<Gtk.TreeViewColumn> columns = new Gee.LinkedList<Gtk.TreeViewColumn> ();
-
-            columns.add (create_column (Enums.ListColumn.TRACKID, false));
+            Gtk.TreeViewColumn[] columns = {};
+            columns += create_column (Enums.ListColumn.TRACKID, false);
 
             switch (hint) {
                 case Enums.Hint.ALBUM_LIST:
-                    columns.add (create_column (Enums.ListColumn.ICON));
-                    columns.add (create_column (Enums.ListColumn.TITLE));
-                    columns.add (create_column (Enums.ListColumn.LENGTH));
-                    columns.add (create_column (Enums.ListColumn.ARTIST, false));
+                    columns += create_column (Enums.ListColumn.ICON);
+                    columns += create_column (Enums.ListColumn.TITLE);
+                    columns += create_column (Enums.ListColumn.LENGTH);
+                    columns += create_column (Enums.ListColumn.ARTIST, false);
                     break;
                 case Enums.Hint.QUEUE:
                 default:
-                    columns.add (create_column (Enums.ListColumn.ICON));
+                    columns += create_column (Enums.ListColumn.ICON);
                     bool num_column_visible = hint == Enums.Hint.PLAYLIST;
-                    columns.add (create_column (Enums.ListColumn.TRACK, num_column_visible));
-                    columns.add (create_column (Enums.ListColumn.TITLE));
-                    columns.add (create_column (Enums.ListColumn.LENGTH));
-                    columns.add (create_column (Enums.ListColumn.ARTIST));
-                    columns.add (create_column (Enums.ListColumn.ALBUM));
+                    columns += create_column (Enums.ListColumn.TRACK, num_column_visible);
+                    columns += create_column (Enums.ListColumn.TITLE);
+                    columns += create_column (Enums.ListColumn.LENGTH);
+                    columns += create_column (Enums.ListColumn.ARTIST);
+                    columns += create_column (Enums.ListColumn.ALBUM);
                     break;
             }
 
-            columns.foreach ((column) => {
+            foreach (unowned Gtk.TreeViewColumn column in columns) {
                 add_column (column);
-                return true;
-            });
+            }
         }
 
         private Gtk.TreeViewColumn create_column (Enums.ListColumn type, bool visible = true) {

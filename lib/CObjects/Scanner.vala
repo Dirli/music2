@@ -18,25 +18,23 @@
 
 namespace Music2 {
     public class CObjects.Scanner : Interfaces.GSTagger {
-        private int total_files;
+        private bool finished = false;
 
         public Scanner () {}
 
         public void start_scan (string uri) {
-            total_files = -1;
-            total_scan = 0;
+            finished = false;
             scan_directory (uri);
         }
 
-        public bool stop_scan () {
-            return total_files > 0 && total_scan >= total_files;
+        public bool stopped_scan () {
+            return finished;
         }
 
         private void scan_directory (string uri) {
             new Thread<void*> ("scan_directory", () => {
-
                 var directory = GLib.File.new_for_uri (uri.replace ("#", "%23"));
-                int files_counter = 0;
+                string[] total_files = {};
                 try {
                     var children = directory.enumerate_children (
                         "standard::*",
@@ -50,12 +48,10 @@ namespace Music2 {
 
                         string mime_type = file_info.get_content_type ();
                         if (Tools.FileUtils.is_audio_file (mime_type)) {
-                            ++files_counter;
-                            add_discover_uri (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
+                            // add_discover_uri (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
+                            total_files += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
                         }
                     }
-
-                    total_files = files_counter;
 
                     children.close ();
                     children.dispose ();
@@ -64,6 +60,23 @@ namespace Music2 {
                 }
 
                 directory.dispose ();
+
+                foreach (var s in total_files) {
+                    var t = add_discover_uri (s);
+                    if (t != null) {
+                        discovered_new_item (t);
+                    }
+
+                    if (stop_flag) {
+                        break;
+                    }
+                }
+
+                lock (finished) {
+                    finished = true;
+                }
+                discovered_new_item (null);
+
                 return null;
             });
         }

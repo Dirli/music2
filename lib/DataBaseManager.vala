@@ -18,16 +18,6 @@
 
 namespace Music2 {
     public class DataBaseManager : GLib.Object {
-        private static DataBaseManager _instance = null;
-        public static DataBaseManager instance {
-            get {
-                if (_instance == null) {
-                    _instance = new DataBaseManager ();
-                }
-                return _instance;
-            }
-        }
-
         private Sqlite.Database? db;
         private string errormsg;
 
@@ -35,12 +25,12 @@ namespace Music2 {
             get {return db != null;}
         }
 
-        private DataBaseManager () {
+        public DataBaseManager () {
+            errormsg = "";
+
             if (!open_database ()) {
                 db = null;
             }
-
-            errormsg = "";
         }
 
         private bool open_database () {

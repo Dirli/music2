@@ -22,7 +22,7 @@ namespace Music2 {
         public signal void add_view (uint tid, uint count);
         public signal void added_playlist (int pid, string name, Enums.Hint hint, GLib.Icon icon);
 
-        private int active_pid;
+        private int active_pid = -1;
         public int modified_pid = 0;
 
         private DataBaseManager db_manager;
@@ -31,7 +31,7 @@ namespace Music2 {
         private Gee.ArrayList<string> names_list;
 
         public PlaylistManager () {
-            db_manager = DataBaseManager.instance;
+            db_manager = new DataBaseManager ();
             names_list = new Gee.ArrayList<string> ();
             playlists_hash = db_manager.get_playlists ();
         }

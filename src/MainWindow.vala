@@ -150,13 +150,8 @@ namespace Music2 {
                 }
             });
             library_manager.prepare_scan.connect (() => {
-                if (progress_box != null) {
-                    progress_box.destroy ();
-                }
-
-                progress_box = new Views.ProgressBox ();
-                progress_box.cancelled_scan.connect (library_manager.stop_scanner);
-                action_box.add (progress_box);
+                progress_box.update_progress (0);
+                progress_box.show ();
             });
             library_manager.loaded_category.connect (music_stack.init_selections);
             library_manager.started_scan.connect (() => {
@@ -165,16 +160,12 @@ namespace Music2 {
             library_manager.finished_scan.connect ((msg) => {
                 scans_library = false;
 
-                if (progress_box != null) {
-                    progress_box.cancelled_scan.disconnect (library_manager.stop_scanner);
-                    progress_box.destroy ();
-                    progress_box = null;
-                }
+                progress_box.hide ();
 
                 if (library_manager.dirty_library ()) {
                     view_selector.sensitive = true;
-                    view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
                     music_stack.init_selections (null);
+                    status_bar.sensitive_btns (true);
                 }
             });
             library_manager.add_view.connect (music_stack.add_iter);
@@ -213,8 +204,8 @@ namespace Music2 {
 
                     if (library_manager.dirty_library ()) {
                         view_selector.sensitive = true;
-                        view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
                         music_stack.init_selections (null);
+                        status_bar.sensitive_btns (true);
                     }
 
                     load_albums_grid ();
@@ -304,6 +295,7 @@ namespace Music2 {
             });
 
             view_selector = new Views.ViewSelector ();
+            view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
             view_selector.sensitive = false;
 
             var headerbar = new Gtk.HeaderBar ();
@@ -323,6 +315,14 @@ namespace Music2 {
             source_list_view.edited.connect (on_edited_playlist);
 
             action_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
+
+            progress_box = new Views.ProgressBox ();
+            progress_box.cancelled_scan.connect (library_manager.stop_scanner);
+            action_box.add (progress_box);
+            GLib.Idle.add (() => {
+                progress_box.hide ();
+                return false;
+            });
 
             status_bar = new Widgets.StatusBar ();
             status_bar.create_new_pl.connect (() => {});
@@ -597,6 +597,7 @@ namespace Music2 {
             }
 
             if (active_source_type != Enums.SourceType.NONE) {
+                warning ("activate clear");
                 queue_reset = false;
                 settings.set_enum ("source-type", Enums.SourceType.NONE);
             } else {
@@ -604,12 +605,14 @@ namespace Music2 {
             }
 
             GLib.Timeout.add (Constants.INTERVAL, () => {
+                warning ("activate waiting");
                 if (queue_reset) {
                     queue_reset = false;
 
                     run_selected_row (row_id);
 
                     if (activated_type == Enums.SourceType.DIRECTORY) {
+                        warning ("activate directory");
                         music_stack.active_album = -1;
                         settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
                     } else if (activated_type == Enums.SourceType.LIBRARY) {
@@ -714,12 +717,13 @@ namespace Music2 {
         private void on_changed_folder () {
             var music_folder = settings.get_string ("music-folder");
             if (scans_library) {
-                library_manager.stop_scanner ();
+                return;
             }
 
             if (library_manager.dirty_library ()) {
                 library_manager.clear_library ();
                 view_selector.sensitive = false;
+                status_bar.sensitive_btns (false);
             }
 
             if (active_source_type == Enums.SourceType.LIBRARY) {
@@ -746,6 +750,7 @@ namespace Music2 {
                 var file_type = path_file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
 
                 if (file_type == GLib.FileType.DIRECTORY) {
+                    warning ("dnd directory");
                     if (dnd_selection != null) {
                         dnd_selection.destroy ();
                         dnd_selection = null;
@@ -754,8 +759,10 @@ namespace Music2 {
                     dnd_selection.button_clicked.connect ((btn_name) => {
                         switch (btn_name) {
                             case Enums.ActionType.PLAY:
+                            warning ("dnd directory play");
                                 source_list_view.select_active_item (queue_id);
                                 settings.set_string ("source-media", uris[0]);
+                                warning ("dnd directory set");
                                 on_selected_row (0, Enums.SourceType.DIRECTORY);
                                 break;
                             case Enums.ActionType.LOAD:
@@ -769,6 +776,16 @@ namespace Music2 {
                     });
 
                     action_box.add (dnd_selection);
+                } else if (file_type == GLib.FileType.REGULAR) {
+                    var file_name = path_file.get_basename ();
+                    if (file_name != null) {
+                        if (file_name.has_suffix (".m3u8")) {
+                            var path = path_file.get_path ();
+                            settings.set_string ("source-media", path);
+
+                            on_selected_row (0, Enums.SourceType.EXTPLAYLIST);
+                        }
+                    }
                 }
 
                 Gtk.drag_finish (ctx, true, false, time);

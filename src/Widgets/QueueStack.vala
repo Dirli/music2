@@ -70,7 +70,7 @@ namespace Music2 {
                     Enums.ListColumn.LENGTH, m.length,
                     Enums.ListColumn.ALBUM, m.album,
                     Enums.ListColumn.TITLE, m.title,
-                    Enums.ListColumn.ARTIST, m.artist);
+                    Enums.ListColumn.ARTIST, m.artist, -1);
 
                 iter_hash[m.tid] = iter;
             }

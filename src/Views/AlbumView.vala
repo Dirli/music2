@@ -120,19 +120,15 @@ namespace Music2 {
         }
 
         public void add_track (CObjects.Media m) {
-            GLib.Mutex mutex = GLib.Mutex ();
-            mutex.lock ();
-
             Gtk.TreeIter iter;
             tracks_store.insert_with_values (out iter, -1,
                                              Enums.ListColumn.TRACKID, m.tid,
                                              Enums.ListColumn.TRACK, m.track,
                                              Enums.ListColumn.TITLE, m.title,
                                              Enums.ListColumn.ARTIST, m.artist,
-                                             Enums.ListColumn.LENGTH, m.length);
+                                             Enums.ListColumn.LENGTH, m.length, -1);
 
             tracks_hash[m.tid] = iter;
-            mutex.unlock ();
         }
 
         public void set_album (Structs.Album album_struct) {

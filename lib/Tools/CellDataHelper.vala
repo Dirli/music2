@@ -57,13 +57,10 @@ namespace Music2.Tools.CellDataHelper {
 
     private static inline void set_renderer_number (Gtk.CellRendererText renderer, Gtk.TreeIter iter, Gtk.TreeModel model, int column) {
         if ((model as Gtk.ListStore).iter_is_valid (iter)) {
-            GLib.Value? val;
-            model.get_value (iter, column, out val);
+            uint val;
+            model.@get (iter, column, out val, -1);
 
-            if (val != null) {
-                uint n = val.get_uint ();
-                renderer.text = n > 0 ? n.to_string () : "";
-            }
+            renderer.text = val > 0 ? val.to_string () : "";
         }
     }
 
@@ -77,33 +74,25 @@ namespace Music2.Tools.CellDataHelper {
                 return;
             }
 
-            GLib.Value? val;
+            GLib.Value val;
             tree_model.get_value (iter, column, out val);
-            if (val != null) {
-                (cell as Gtk.CellRendererText).text = val.get_string ();
-            }
+            (cell as Gtk.CellRendererText).text = val.get_string ();
         }
     }
 
     public static inline void length_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
         if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
-            GLib.Value? val;
-            tree_model.get_value (iter, Enums.ListColumn.LENGTH, out val);
-            if (val != null) {
-                uint ms = val.get_uint ();
-                (cell as Gtk.CellRendererText).text = (ms <= 0) ? Constants.NOT_AVAILABLE : Granite.DateTime.seconds_to_time ((int) (ms / Constants.MILI_INV));
-            }
+            uint ms;
+            tree_model.@get (iter, Enums.ListColumn.LENGTH, out ms, -1);
+            (cell as Gtk.CellRendererText).text = (ms <= 0) ? Constants.NOT_AVAILABLE : Granite.DateTime.seconds_to_time ((int) (ms / Constants.MILI_INV));
         }
     }
 
     public static inline void bitrate_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
         if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
-            GLib.Value? val;
-            tree_model.get_value (iter, Enums.ListColumn.BITRATE, out val);
-            if (val != null) {
-                uint n = val.get_uint ();
-                (cell as Gtk.CellRendererText).text = n <= 0 ? Constants.NOT_AVAILABLE : _("%u kbps").printf (n);
-            }
+            uint val;
+            tree_model.@get (iter, Enums.ListColumn.BITRATE, out val, -1);
+            (cell as Gtk.CellRendererText).text = val <= 0 ? Constants.NOT_AVAILABLE : _("%u kbps").printf (val);
         }
     }
 

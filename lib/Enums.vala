@@ -38,6 +38,7 @@ namespace Music2.Enums {
         DIRECTORY,
         LIBRARY,
         PLAYLIST,
+        EXTPLAYLIST,
         QUEUE,
     }
 

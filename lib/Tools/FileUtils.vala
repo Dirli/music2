@@ -62,6 +62,70 @@ namespace Music2.Tools.FileUtils {
         return false;
     }
 
+    // public void save_playlist () {
+    //
+    // }
+
+    // public Gee.ArrayQueue<CObjects.Media> parse_playlist (string playlist_path) {
+    //     var tracks_arr = Gee.ArrayQueue<CObjects.Media> ();
+    //     GLib.File file = GLib.File.new_for_path (playlist_path);
+    //
+    //     if (!file.query_exists ()) {
+    //         return tracks_arr;
+    //     }
+    //
+    //     if (file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS) != GLib.FileType.REGULAR) {
+    //         return tracks_arr;
+    //     }
+    //
+    //     var file_name = path_file.get_basename ();
+    //     if (file_name != null) {
+    //         if (file_name.has_suffix (".m3u8")) {
+    //             try {
+    //                 GLib.DataInputStream dis = new GLib.DataInputStream (file.read ());
+    //                 string line;
+    //
+    //                 string track_info = "";
+    //                 while ((line = dis.read_line ()) != null) {
+    //                     if (line == "" || line.has_prefix ("#EXTM3U")) {
+    //                         continue;
+    //                     }
+    //
+    //                     if (line.has_prefix ("#EXTINF:")) {
+    //                         track_info = line;
+    //                         continue;
+    //                     }
+    //
+    //                     if (line.has_prefix ("#")) {
+    //                         continue;
+    //                     }
+    //
+    //                     parse_track (line, track_info);
+    //                     track_info = "";
+    //                 }
+    //             } catch (Error e) {
+    //                 warning (e.message);
+    //             }
+    //         }
+    //     }
+    // }
+
+    // public CObjects.Media? parse_line (string uri, string info) {
+    //     if (info != "") {
+    //
+    //     }
+    //
+    //     GLib.File file = GLib.File.new_for_path (playlist_path);
+    //
+    //     if (!file.query_exists ()) {
+    //         return null;
+    //     }
+    //
+    //     if (file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS) != GLib.FileType.REGULAR) {
+    //         return null;
+    //     }
+    // }
+
     public bool is_audio_file (string mime_type) {
         return mime_type.has_prefix ("audio/") && !mime_type.contains ("x-mpegurl") && !mime_type.contains ("x-scpls");
     }

@@ -26,25 +26,26 @@ namespace Music2 {
         public signal void total_found (uint total);
 
         public int64 start_time;
-        public uint total_media;
+        // public uint total_media;
         public uint recorded_tracks;
+        private string[] tracks_path;
 
         private Gee.HashMap<uint, int> artists_cache;
         private Gee.HashMap<uint, int> albums_cache;
         private Gee.HashMap<int, Gee.ArrayList<int>> apa_cache;
 
-        private bool write_flag = false;
-        private Gee.ArrayQueue<CObjects.Media> write_queue;
+        private bool stop_flag;
 
         private Objects.LibraryTagger? lib_tagger;
-        private DataBaseManager? db_manager;
+        private DataBaseManager db_manager;
 
         public LibraryScanner () {
-            total_media = 0;
-            recorded_tracks = 0;
+            db_manager = new DataBaseManager ();
         }
 
         public void start_scan (string uri) {
+            recorded_tracks = 0;
+            stop_flag = false;
             apa_cache = new Gee.HashMap<int, Gee.ArrayList<int>> ();
             artists_cache = new Gee.HashMap<uint, int> ();
             albums_cache = new Gee.HashMap<uint, int> ();
@@ -52,41 +53,38 @@ namespace Music2 {
             var now_time = new GLib.DateTime.now ();
             start_time = now_time.to_unix ();
 
-            scan_directory (uri, true);
+            scan_directory (uri);
+            total_found (tracks_path.length);
 
-            total_found (total_media);
+            if (tracks_path.length > 0) {
+                // db_manager.reset_database ();
 
-            db_manager = DataBaseManager.instance;
-            db_manager.reset_database ();
+                lib_tagger = new Objects.LibraryTagger ();
+                lib_tagger.init ();
 
-            lib_tagger = new Objects.LibraryTagger ();
-            lib_tagger.init ();
-            lib_tagger.discovered_new_item.connect (on_new_item);
+                foreach (string p in tracks_path) {
+                    var t = lib_tagger.add_discover_uri (p);
+                    if (t != null) {
+                        add_track (t);
+                    }
 
-            if (total_media > 0) {
-                write_queue = new Gee.ArrayQueue<CObjects.Media> ();
-                scan_directory (uri, false);
-            } else {
-                stop_scan ();
+                    if (stop_flag) {
+                        break;
+                    }
+                }
             }
+
+            var t = new GLib.DateTime.now ();
+            finished_scan (t.to_unix () - start_time);
         }
 
         public void stop_scan () {
-            lib_tagger.stop_discovered ();
-            lib_tagger.discovered_new_item.disconnect (on_new_item);
-
-            GLib.Mutex mutex = GLib.Mutex ();
-            mutex.lock ();
-            write_queue.clear ();
-            mutex.unlock ();
-
-            lib_tagger = null;
-
-            // db_manager = null;
-            finished_scan ();
+            lock (stop_flag) {
+                stop_flag = true;
+            }
         }
 
-        public void scan_directory (string uri, bool first_step) {
+        private void scan_directory (string uri) {
             GLib.File directory = GLib.File.new_for_uri (uri.replace ("#", "%23"));
 
             try {
@@ -107,21 +105,15 @@ namespace Music2 {
                         var file_type = symlink.query_file_type (0);
 
                         if (file_type == GLib.FileType.DIRECTORY) {
-                            scan_directory (target, first_step);
+                            scan_directory (target);
                         }
 
                     } else if (file_info.get_file_type () == GLib.FileType.DIRECTORY) {
-                        scan_directory (directory.get_uri () + "/" + file_info.get_name (), first_step);
+                        scan_directory (directory.get_uri () + "/" + file_info.get_name ());
                     } else {
                         string mime_type = file_info.get_content_type ();
                         if (Tools.FileUtils.is_audio_file (mime_type)) {
-                            if (first_step) {
-                                ++total_media;
-                            } else {
-                                lib_tagger.add_discover_uri (directory.get_uri () + "/" + file_info.get_name ()
-                                    .replace ("#", "%23")
-                                    .replace ("%", "%25"));
-                            }
+                            tracks_path += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
                         }
                     }
                 }
@@ -135,75 +127,53 @@ namespace Music2 {
             directory.dispose ();
         }
 
-        private void on_new_item (CObjects.Media m) {
-            write_queue.offer (m);
-
-            if (!write_flag) {
-                write_flag = true;
-                run_write ();
-                write_flag = false;
+        private void add_track (CObjects.Media m) {
+            int art_id;
+            if (!artists_cache.has_key (m.artist.hash ())) {
+                // art_id = db_manager.insert_artist (m.artist);
+                art_id = artists_cache.size + 1;
+                artists_cache[m.artist.hash ()] = art_id;
+                added_artist (m.artist, art_id);
+            } else {
+                art_id = artists_cache[m.artist.hash ()];
             }
 
-            if (lib_tagger != null && lib_tagger.scaned_files == total_media) {
-                lib_tagger.discovered_new_item.disconnect (on_new_item);
-                lib_tagger = null;
+            int alb_id;
+            var alb_hash = ("%u".printf (m.year) + m.album).hash ();
+            if (!albums_cache.has_key (alb_hash)) {
+                // alb_id = db_manager.insert_album (m);
+                alb_id = albums_cache.size + 1;
+                albums_cache[alb_hash] = alb_id;
+                Structs.Album album_struct = {};
+                album_struct.album_id = alb_id;
+                album_struct.title = m.album;
+                var new_apa = new Gee.ArrayList<int> ();
+                new_apa.add (art_id);
+                album_struct.artist_id = new_apa;
+                album_struct.artists = "...";
+                album_struct.year = m.year;
+                album_struct.genre = m.genre;
+                added_album (album_struct);
+            } else {
+                alb_id = albums_cache[alb_hash];
             }
-        }
 
-        private void run_write () {
-            while (!write_queue.is_empty) {
-                CObjects.Media m = write_queue.poll ();
-                int art_id;
-                if (!artists_cache.has_key (m.artist.hash ())) {
-                    art_id = db_manager.insert_artist (m.artist);
-                    artists_cache[m.artist.hash ()] = art_id;
-                    added_artist (m.artist, art_id);
+            if (!apa_cache.has_key (alb_id) || !apa_cache[alb_id].contains (art_id)) {
+                // db_manager.insert_artist_per_album (art_id, alb_id);
+                if (!apa_cache.has_key (alb_id)) {
+                    var new_arr = new Gee.ArrayList<int> ();
+                    new_arr.add (art_id);
+                    apa_cache[alb_id] = new_arr;
                 } else {
-                    art_id = artists_cache[m.artist.hash ()];
+                    apa_cache[alb_id].add (art_id);
                 }
 
-                int alb_id;
-                var alb_hash = ("%u".printf (m.year) + m.album).hash ();
-                if (!albums_cache.has_key (alb_hash)) {
-                    alb_id = db_manager.insert_album (m);
-                    albums_cache[alb_hash] = alb_id;
-                    Structs.Album album_struct = {};
-                    album_struct.album_id = alb_id;
-                    album_struct.title = m.album;
-                    var new_apa = new Gee.ArrayList<int> ();
-                    new_apa.add (art_id);
-                    album_struct.artist_id = new_apa;
-                    album_struct.artists = "...";
-                    album_struct.year = m.year;
-                    album_struct.genre = m.genre;
-                    added_album (album_struct);
-                } else {
-                    alb_id = albums_cache[alb_hash];
-                }
-
-                if (!apa_cache.has_key (alb_id) || !apa_cache[alb_id].contains (art_id)) {
-                    db_manager.insert_artist_per_album (art_id, alb_id);
-                    if (!apa_cache.has_key (alb_id)) {
-                        var new_arr = new Gee.ArrayList<int> ();
-                        new_arr.add (art_id);
-                        apa_cache[alb_id] = new_arr;
-                    } else {
-                        apa_cache[alb_id].add (art_id);
-                    }
-
-                    added_apa (art_id, alb_id);
-                }
-
-                m = db_manager.insert_track (m, alb_id, art_id);
-                added_track (m);
-                recorded_tracks++;
-
-                if (recorded_tracks == total_media) {
-                    var now_time = new GLib.DateTime.now ();
-                    finished_scan (now_time.to_unix () - start_time);
-                    db_manager = null;
-                }
+                added_apa (art_id, alb_id);
             }
+
+            // var trc = db_manager.insert_track (m, alb_id, art_id);
+            m.tid = ++recorded_tracks;
+            added_track (m);
         }
     }
 }

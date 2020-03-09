@@ -160,21 +160,16 @@ namespace Music2 {
 
         public bool add_iter (CObjects.Media m, Enums.ViewMode view_mode) {
             if (view_mode == Enums.ViewMode.COLUMN) {
-                GLib.Mutex mutex = GLib.Mutex ();
-                mutex.lock ();
-
                 Gtk.TreeIter iter;
                 list_store.insert_with_values (out iter, -1,
                      Enums.ListColumn.TRACKID, m.tid,
                      Enums.ListColumn.TRACK, m.track,
-                     Enums.ListColumn.ALBUM, m.album,
+                     Enums.ListColumn.ALBUM, m.get_display_album (),
                      Enums.ListColumn.LENGTH, m.length,
-                     Enums.ListColumn.TITLE, m.title,
-                     Enums.ListColumn.ARTIST, m.artist);
+                     Enums.ListColumn.TITLE, m.get_display_title (),
+                     Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
 
                 iter_hash[m.tid] = iter;
-
-                mutex.unlock ();
                 return true;
             } else if (view_mode == Enums.ViewMode.GRID) {
                 album_view.add_track (m);
@@ -188,15 +183,11 @@ namespace Music2 {
             string custom_tooltip = a_iter.artists;
             custom_tooltip += "\n<span size=\"large\">%u, %s</span>".printf (a_iter.year, Markup.escape_text (a_iter.genre));
 
-            GLib.Mutex mutex = GLib.Mutex ();
-            mutex.lock ();
-
             Gtk.TreeIter iter;
             albums_store.insert_with_values (out iter, -1,
                                              0, a_iter,
-                                             1, custom_tooltip);
+                                             1, custom_tooltip, -1);
 
-            mutex.unlock ();
         }
 
         public void add_column_item (Structs.Iter iter) {
@@ -232,7 +223,7 @@ namespace Music2 {
             if (path != null) {
                 Gtk.TreeIter selected_iter;
                 if (albums_store.get_iter (out selected_iter, path.data)) {
-                    Structs.Album? struct_album;
+                    unowned Structs.Album? struct_album;
                     albums_store.@get (selected_iter, 0, out struct_album);
                     grid_item_activated (struct_album);
 
@@ -244,23 +235,22 @@ namespace Music2 {
         }
 
         private int sort_column_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b, Enums.ListColumn col_id) {
-            GLib.Value? val_a;
-            store.get_value (a, col_id, out val_a);
+            if (!(store as Gtk.ListStore).iter_is_valid (a) || !(store as Gtk.ListStore).iter_is_valid (b)) {
+                return 0;
+            }
 
-            GLib.Value? val_b;
+            GLib.Value val_a;
+            store.get_value (a, col_id, out val_a);
+            GLib.Value val_b;
             store.get_value (b, col_id, out val_b);
 
-            if (val_a != null && val_b != null) {
-                var col_type = col_id.get_data_type ();
-                if (col_type == GLib.Type.STRING) {
-                    string a_str = val_a.get_string ();
-                    string b_str = val_b.get_string ();
-                    return Tools.String.compare (a_str, b_str);
-                } else if (col_type == GLib.Type.UINT) {
-                    uint a_uint = val_a.get_uint ();
-                    uint b_uint = val_b.get_uint ();
-                    return a_uint == b_uint ? 0 : a_uint > b_uint ? 1 : -1;
-                }
+            var col_type = col_id.get_data_type ();
+            if (col_type == GLib.Type.STRING) {
+                return Tools.String.compare (val_a.get_string (), val_b.get_string ());
+            } else if (col_type == GLib.Type.UINT) {
+                uint uint_a = val_a.get_uint ();
+                uint uint_b = val_b.get_uint ();
+                return uint_a == uint_b ? 0 : uint_a > uint_b ? 1 : -1;
             }
 
             return 0;
@@ -273,7 +263,7 @@ namespace Music2 {
 
             if (sort_column_id < 1) {return 0;}
 
-            int rv = 1;
+            int rv = 0;
             rv = sort_column_func (store, a, b, (Enums.ListColumn) sort_column_id);
 
             if (sort_direction == Gtk.SortType.DESCENDING) {
@@ -284,7 +274,7 @@ namespace Music2 {
         }
 
         private int grid_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
-            int rv = 1;
+            int rv = 0;
 
             Structs.Album? struct_a;
             store.@get (a, 0, out struct_a, -1);

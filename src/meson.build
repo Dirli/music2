@@ -11,6 +11,7 @@ executable(
     'Views/AlbumImage.vala',
     'Views/AlbumView.vala',
     'Views/ColumnBrowser.vala',
+    'Views/ColumnView.vala',
     'Views/CustomButton.vala',
     'Views/DnDSelection.vala',
     'Views/OptionChooser.vala',

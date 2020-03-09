@@ -35,7 +35,7 @@ namespace Music2.Tools.GuiUtils {
 
             if (cover_icon != null) {
                 var icon_info = Gtk.IconTheme.get_default ().lookup_by_gicon_for_scale (cover_icon, 128, scale, 0);
-                Gdk.Pixbuf cover_pixbuf = null;
+                Gdk.Pixbuf? cover_pixbuf = null;
 
                 try {
                     cover_pixbuf = icon_info.load_icon ();

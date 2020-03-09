@@ -48,6 +48,7 @@ namespace Music2 {
             playlist_menubutton.tooltip_text = _("Add Playlist");
             playlist_menubutton.add (new Gtk.Image.from_icon_name ("list-add-symbolic", Gtk.IconSize.MENU));
             playlist_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
+            playlist_menubutton.sensitive = false;
 
             volume_scale = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 5);
             volume_scale.hexpand = true;
@@ -106,11 +107,11 @@ namespace Music2 {
 
             volume_scale.set_value (val * 100);
 
-            if (val < 0.10) {
+            if (val < 0.05) {
                 icon_name = "audio-volume-muted-symbolic";
-            } else if (val < 0.45) {
+            } else if (val < 0.40) {
                 icon_name = "audio-volume-low-symbolic";
-            } else if (val < 0.90) {
+            } else if (val < 0.75) {
                 icon_name = "audio-volume-medium-symbolic";
             } else {
                 icon_name = "audio-volume-high-symbolic";
@@ -123,6 +124,10 @@ namespace Music2 {
 
         private void update_tooltip (string eq_preset_name) {
             eq_menubutton.tooltip_markup = _("Equalizer: %s").printf ("<b>" + Markup.escape_text (eq_preset_name) + "</b>");
+        }
+
+        public void sensitive_btns (bool val) {
+            playlist_menubutton.sensitive = val;
         }
     }
 }

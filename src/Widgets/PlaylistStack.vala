@@ -28,6 +28,8 @@ namespace Music2 {
 
             add_named (alert_view, "alert");
             add_named (init_list_view (Enums.Hint.PLAYLIST), "listview");
+
+            show_alert ();
         }
 
         public void init_store (int p_id, Enums.Hint hint, Enums.SourceType type) {
@@ -99,7 +101,7 @@ namespace Music2 {
                 Enums.ListColumn.LENGTH, m.length,
                 Enums.ListColumn.ALBUM, m.album,
                 Enums.ListColumn.TITLE, m.title,
-                Enums.ListColumn.ARTIST, m.artist);
+                Enums.ListColumn.ARTIST, m.artist, -1);
 
             iter_hash[m.tid] = iter;
 

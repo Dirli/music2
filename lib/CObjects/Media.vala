@@ -17,7 +17,7 @@
  */
 
 namespace Music2 {
-    public class CObjects.Media : GLib.Object {
+    public class CObjects.Media {
         public string uri;
         public string title;
         public string album;

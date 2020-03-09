@@ -32,7 +32,6 @@ namespace Music2 {
         private Gee.HashMap<int, string> artists_hash;
         private Gee.ArrayList<string> genre_array;
 
-        private DataBaseManager db_manager;
         private Services.LibraryScanner lib_scanner;
 
         public bool loaded;
@@ -47,18 +46,21 @@ namespace Music2 {
             albums_hash = new Gee.HashMap<int, Structs.Album?> ();
             genre_array = new Gee.ArrayList<string> ();
 
-            db_manager = DataBaseManager.instance;
         }
 
         public void add_track (CObjects.Media m) {
-            media_hash[m.tid] = m;
-            add_view (m, Enums.ViewMode.COLUMN);
+            lock (media_hash) {
+                media_hash[m.tid] = m;
+                add_view (m, Enums.ViewMode.COLUMN);
+            }
         }
 
         public void add_artist (string artist_name, int artist_id) {
-            if (!artists_hash.has_key (artist_id)) {
-                artists_hash[artist_id] = artist_name;
-                add_category (Enums.Category.ARTIST, artist_name, artist_id);
+            lock (artists_hash) {
+                if (!artists_hash.has_key (artist_id)) {
+                    artists_hash[artist_id] = artist_name;
+                    add_category (Enums.Category.ARTIST, artist_name, artist_id);
+                }
             }
         }
 
@@ -79,27 +81,35 @@ namespace Music2 {
         }
 
         public void add_apa (int art_id, int alb_id) {
-            albums_hash[alb_id].artist_id.add (art_id);
+            lock (albums_hash) {
+                albums_hash[alb_id].artist_id.add (art_id);
+            }
         }
 
         public void add_album (Structs.Album a_struct) {
             if (!albums_hash.has_key (a_struct.album_id)) {
-                if (!genre_array.contains (a_struct.genre)) {
-                    genre_array.add (a_struct.genre);
-                    add_category (Enums.Category.GENRE, a_struct.genre, genre_array.size);
+                lock (genre_array) {
+                    if (!genre_array.contains (a_struct.genre)) {
+                        genre_array.add (a_struct.genre);
+                        add_category (Enums.Category.GENRE, a_struct.genre, genre_array.size);
+                    }
                 }
                 albums_hash[a_struct.album_id] = a_struct;
                 add_category (Enums.Category.ALBUM, a_struct.title, a_struct.album_id);
             }
         }
 
-        public bool load_library () {
-            if (!db_manager.check_db) {
-                return false;
-            }
-
+        public void load_library () {
             new Thread<void*> ("load_library", () => {
-                artists_hash = db_manager.get_artists ();
+                var db_manager = new DataBaseManager ();
+
+                if (!db_manager.check_db) {
+                    return null;
+                }
+
+                lock (artists_hash) {
+                    artists_hash = db_manager.get_artists ();
+                }
                 artists_hash.foreach ((art) => {
                     add_category (Enums.Category.ARTIST, art.value, art.key);
                     return true;
@@ -144,8 +154,6 @@ namespace Music2 {
 
                 return null;
             });
-
-            return true;
         }
 
         private void add_category (Enums.Category iter_category, string iter_name, int iter_id) {
@@ -257,6 +265,9 @@ namespace Music2 {
                     total_m = total_media;
                     if (total_m > 0) {
                         source_id = GLib.Timeout.add (1000, () => {
+                            if (scan_m == 0) {
+                                return true;
+                            }
 
                             progress_scan ((double) scan_m / total_m);
                             return true;

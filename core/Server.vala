@@ -116,6 +116,9 @@ namespace Music2 {
                 case Enums.SourceType.LIBRARY:
                     play_from_library ();
                     break;
+                case Enums.SourceType.EXTPLAYLIST:
+                    load_from_extplaylist ();
+                    break;
                 case Enums.SourceType.PLAYLIST:
                     play_from_playlist ();
                     break;
@@ -166,6 +169,9 @@ namespace Music2 {
                     case Enums.SourceType.DIRECTORY:
                         play_from_directory ();
                         break;
+                    case Enums.SourceType.EXTPLAYLIST:
+                        load_from_extplaylist ();
+                        break;
                     case Enums.SourceType.PLAYLIST:
                     case Enums.SourceType.LIBRARY:
                         if (init_db ()) {
@@ -180,7 +186,7 @@ namespace Music2 {
 
         private bool init_db () {
             if (db_manager == null) {
-                db_manager = DataBaseManager.instance;
+                db_manager = new DataBaseManager ();
                 if (!db_manager.check_db) {
                     settings.set_enum ("source-type", Enums.SourceType.NONE);
                     return false;
@@ -204,7 +210,7 @@ namespace Music2 {
 
         private void stop_scanner () {
             scanner.discovered_new_item.disconnect (on_new_item);
-            scanner.stop_discovered ();
+            scanner.stop_scan ();
             scanner = null;
         }
 
@@ -230,6 +236,10 @@ namespace Music2 {
             if (tracks.length > 0) {
                 db_manager.update_playlist (queue_id, tracks);
             }
+        }
+
+        private void load_from_extplaylist () {
+            var playlist_path = settings.get_string ("source-media");
         }
 
         private void play_from_playlist () {
@@ -270,7 +280,7 @@ namespace Music2 {
                 }
             }
 
-            if (scanner.stop_scan ()) {
+            if (scanner.stopped_scan ()) {
                 stop_scanner ();
             }
         }
