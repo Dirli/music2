@@ -597,7 +597,6 @@ namespace Music2 {
             }
 
             if (active_source_type != Enums.SourceType.NONE) {
-                warning ("activate clear");
                 queue_reset = false;
                 settings.set_enum ("source-type", Enums.SourceType.NONE);
             } else {
@@ -605,19 +604,18 @@ namespace Music2 {
             }
 
             GLib.Timeout.add (Constants.INTERVAL, () => {
-                warning ("activate waiting");
                 if (queue_reset) {
                     queue_reset = false;
 
                     run_selected_row (row_id);
 
-                    if (activated_type == Enums.SourceType.DIRECTORY) {
-                        warning ("activate directory");
+                    if (activated_type != Enums.SourceType.LIBRARY) {
                         music_stack.active_album = -1;
-                        settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
-                    } else if (activated_type == Enums.SourceType.LIBRARY) {
+                    }
+
+                    if (activated_type == Enums.SourceType.LIBRARY) {
                         if (scans_library) {
-                            //
+                            return false;
                         } else {
                             var f = music_stack.get_filter ((Enums.ViewMode) view_selector.mode_button.selected);
                             if (f == null) {return false;}
@@ -634,11 +632,8 @@ namespace Music2 {
 
                                 settings.set_string ("source-media", category_type.to_string () + "::" + filter_str);
                             }
-
-                            settings.set_enum ("source-type", Enums.SourceType.LIBRARY);
                         }
                     } else if (activated_type == Enums.SourceType.PLAYLIST) {
-                        music_stack.active_album = -1;
                         if (playlist_manager.modified_pid == playlist_stack.pid) {
                             playlist_manager.update_playlist (playlist_manager.modified_pid, true);
                             if (playlist_manager.modified_pid != 0) {
@@ -647,8 +642,8 @@ namespace Music2 {
                         }
 
                         settings.set_string ("source-media", playlist_stack.pid.to_string ());
-                        settings.set_enum ("source-type", Enums.SourceType.PLAYLIST);
                     }
+                    settings.set_enum ("source-type", activated_type);
 
                     return false;
                 }
@@ -694,6 +689,9 @@ namespace Music2 {
                             source_list_view.remove_item (pid);
                         }
                     }
+                    break;
+                case Enums.ActionType.EXPORT:
+                    export_playlist (item);
                     break;
 
             }
@@ -750,7 +748,6 @@ namespace Music2 {
                 var file_type = path_file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
 
                 if (file_type == GLib.FileType.DIRECTORY) {
-                    warning ("dnd directory");
                     if (dnd_selection != null) {
                         dnd_selection.destroy ();
                         dnd_selection = null;
@@ -759,10 +756,8 @@ namespace Music2 {
                     dnd_selection.button_clicked.connect ((btn_name) => {
                         switch (btn_name) {
                             case Enums.ActionType.PLAY:
-                            warning ("dnd directory play");
                                 source_list_view.select_active_item (queue_id);
                                 settings.set_string ("source-media", uris[0]);
-                                warning ("dnd directory set");
                                 on_selected_row (0, Enums.SourceType.DIRECTORY);
                                 break;
                             case Enums.ActionType.LOAD:
@@ -779,7 +774,7 @@ namespace Music2 {
                 } else if (file_type == GLib.FileType.REGULAR) {
                     var file_name = path_file.get_basename ();
                     if (file_name != null) {
-                        if (file_name.has_suffix (".m3u8")) {
+                        if (file_name.has_suffix (".m3u")) {
                             var path = path_file.get_path ();
                             settings.set_string ("source-media", path);
 
@@ -860,6 +855,57 @@ namespace Music2 {
                 });
 
                 return false;
+            });
+        }
+
+        private void export_playlist (Views.SourceListItem item) {
+            var path = Tools.GuiUtils.get_playlist_path (item.name, settings.get_string ("music-folder"));
+            var hint = item.hint;
+            var pid = item.pid;
+
+            new Thread<void*> ("export_playlist", () => {
+                CObjects.Media[] tracks = {};
+                if (hint == Enums.Hint.QUEUE) {
+                    try {
+                        var tids = dbus_tracklist.get_tracklist ();
+                        if (active_source_type == Enums.SourceType.DIRECTORY || active_source_type == Enums.SourceType.EXTPLAYLIST) {
+                            var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
+                            foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
+                                var m = metadata_to_media (meta);
+                                if (m != null) {
+                                    tracks += m;
+                                }
+                            }
+                        } else {
+                            foreach (var tid in tids) {
+                                var m = library_manager.get_media (tid);
+                                if (m != null) {
+                                    tracks += m;
+                                }
+                            }
+                        }
+                    } catch (Error e) {
+                        warning (e.message);
+                    }
+                } else if (hint == Enums.Hint.PLAYLIST) {
+                    var tids = playlist_manager.get_playlist (pid);
+                    if (tids != null) {
+                        tids.foreach ((tid) => {
+                            var m = library_manager.get_media (tid);
+                            if (m != null) {
+                                tracks += m;
+                            }
+
+                            return true;
+                        });
+                    }
+                }
+
+                if (tracks.length > 0) {
+                    Tools.FileUtils.save_playlist_m3u (path, tracks);
+                }
+
+                return null;
             });
         }
 

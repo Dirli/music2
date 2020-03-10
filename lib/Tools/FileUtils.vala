@@ -62,69 +62,77 @@ namespace Music2.Tools.FileUtils {
         return false;
     }
 
-    // public void save_playlist () {
-    //
-    // }
+    public bool save_playlist_m3u (string playlist_path, CObjects.Media[] tracks) {
+        string to_save = get_m3u_content (tracks);
+        GLib.File dest = GLib.File.new_for_path (playlist_path);
 
-    // public Gee.ArrayQueue<CObjects.Media> parse_playlist (string playlist_path) {
-    //     var tracks_arr = Gee.ArrayQueue<CObjects.Media> ();
-    //     GLib.File file = GLib.File.new_for_path (playlist_path);
-    //
-    //     if (!file.query_exists ()) {
-    //         return tracks_arr;
-    //     }
-    //
-    //     if (file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS) != GLib.FileType.REGULAR) {
-    //         return tracks_arr;
-    //     }
-    //
-    //     var file_name = path_file.get_basename ();
-    //     if (file_name != null) {
-    //         if (file_name.has_suffix (".m3u8")) {
-    //             try {
-    //                 GLib.DataInputStream dis = new GLib.DataInputStream (file.read ());
-    //                 string line;
-    //
-    //                 string track_info = "";
-    //                 while ((line = dis.read_line ()) != null) {
-    //                     if (line == "" || line.has_prefix ("#EXTM3U")) {
-    //                         continue;
-    //                     }
-    //
-    //                     if (line.has_prefix ("#EXTINF:")) {
-    //                         track_info = line;
-    //                         continue;
-    //                     }
-    //
-    //                     if (line.has_prefix ("#")) {
-    //                         continue;
-    //                     }
-    //
-    //                     parse_track (line, track_info);
-    //                     track_info = "";
-    //                 }
-    //             } catch (Error e) {
-    //                 warning (e.message);
-    //             }
-    //         }
-    //     }
-    // }
+        try {
+            if (dest.query_exists ()) {
+                dest.delete ();
+            }
 
-    // public CObjects.Media? parse_line (string uri, string info) {
-    //     if (info != "") {
-    //
-    //     }
-    //
-    //     GLib.File file = GLib.File.new_for_path (playlist_path);
-    //
-    //     if (!file.query_exists ()) {
-    //         return null;
-    //     }
-    //
-    //     if (file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS) != GLib.FileType.REGULAR) {
-    //         return null;
-    //     }
-    // }
+            var file_stream = dest.create (GLib.FileCreateFlags.REPLACE_DESTINATION);
+            var data_stream = new GLib.DataOutputStream (file_stream);
+            data_stream.put_string (to_save);
+
+            return true;
+        } catch (Error e) {
+            warning ("Could not save playlist %s to m3u file %s: %s\n", playlist_path, dest.get_path (), e.message);
+        }
+
+        return false;
+    }
+
+    public string get_m3u_content (CObjects.Media[] tracks) {
+        string to_save = "#EXTM3U";
+
+        foreach (unowned CObjects.Media t in tracks) {
+            if (t == null) {
+                continue;
+            }
+
+            var sec = Tools.TimeUtils.mili_to_sec (t.length).to_string ();
+
+            to_save += "\n\n#EXTINF:" + sec + ", " + t.get_display_artist () + " - " + t.get_display_title ();
+            to_save += "\n" + File.new_for_uri (t.uri).get_path ();
+        }
+
+        return to_save;
+    }
+
+    public GLib.Array? get_playlist_m3u (string playlist_path) {
+        GLib.Array<string> tracks = new GLib.Array<string> ();
+
+        var file = GLib.File.new_for_path (playlist_path);
+        if (!file.query_exists ()) {
+            warning ("The imported playlist doesn't exist!");
+            return null;
+        }
+
+        try {
+            string line;
+            bool correct = false;
+            var dis = new DataInputStream (file.read ());
+            while ((line = dis.read_line ()) != null) {
+                if (!correct) {
+                    if (line != "#EXTM3U") {
+                        throw new IOError.INVALID_DATA ("The file does not meet the requirements");
+                    } else {
+                        correct = true;
+                    }
+                }
+
+                if (line[0] != '#' && line.replace (" ", "").length > 0) {
+                    tracks.append_val ("file://" + line.replace ("#", "%23").replace ("%", "%25"));
+                }
+            }
+        } catch (Error e) {
+            warning ("Could not load m3u file at %s: %s\n", playlist_path, e.message);
+            return null;
+        }
+
+        return tracks;
+    }
 
     public bool is_audio_file (string mime_type) {
         return mime_type.has_prefix ("audio/") && !mime_type.contains ("x-mpegurl") && !mime_type.contains ("x-scpls");

@@ -50,4 +50,46 @@ namespace Music2.Tools.GuiUtils {
 
         return null;
     }
+
+    public string get_playlist_path (string playlist_name, string library_path) {
+        if (playlist_name == "") {
+            return "";
+        }
+
+        var m3u_filter = new Gtk.FileFilter ();
+        m3u_filter.add_pattern ("*.m3u");
+        m3u_filter.set_filter_name (_("MPEG Version 3.0 Extended (*.m3u)"));
+
+        var file_chooser = new Gtk.FileChooserNative (_("Export Playlist"),
+                                                      null,
+                                                      Gtk.FileChooserAction.SAVE,
+                                                      _("Save"),
+                                                      _("Cancel"));
+
+        file_chooser.do_overwrite_confirmation = true;
+        file_chooser.set_current_name (playlist_name + ".m3u");
+        file_chooser.add_filter (m3u_filter);
+
+        if (library_path != "" && GLib.File.new_for_path (library_path).query_exists ()) {
+            file_chooser.set_current_folder (library_path);
+        } else {
+            file_chooser.set_current_folder (GLib.Environment.get_home_dir ());
+        }
+
+        string file = "";
+
+        if (file_chooser.run () == Gtk.ResponseType.ACCEPT) {
+            file = file_chooser.get_filename ();
+            string extension = file.slice (file.last_index_of ("."), -1);
+
+            if (extension.length == 0 || extension[0] != '.') {
+                extension = ".m3u";
+                file += extension;
+            }
+        }
+
+        file_chooser.destroy ();
+
+        return file;
+    }
 }

@@ -23,7 +23,6 @@ namespace Music2 {
         protected abstract CObjects.Media? create_media (Gst.PbUtils.DiscovererInfo info);
         protected Gst.PbUtils.Discoverer? discoverer;
 
-        public bool launched = false;
         protected bool stop_flag = false;
 
         public void init () {
@@ -49,10 +48,6 @@ namespace Music2 {
         }
 
         public CObjects.Media? add_discover_uri (string uri) {
-            if (!launched) {
-                launched = true;
-            }
-
             // discoverer.discover_uri_async (uri);
             try {
                 var info = discoverer.discover_uri (uri);

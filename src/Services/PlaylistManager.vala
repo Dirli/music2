@@ -40,6 +40,14 @@ namespace Music2 {
             return db_manager.get_playlist_id (name);
         }
 
+        public Gee.ArrayList<uint>? get_playlist (int pid) {
+            if (playlists_hash.has_key (pid)) {
+                return playlists_hash[pid].tracks;
+            }
+
+            return null;
+        }
+
         public void load_playlists () {
             playlists_hash.foreach ((entry) => {
                 var pl_name = entry.value.name;

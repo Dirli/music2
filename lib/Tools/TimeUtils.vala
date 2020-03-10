@@ -65,6 +65,14 @@ namespace Music2.Tools.TimeUtils {
         return nanoseconds * Constants.SEC_INV / Constants.NANO_INV;
     }
 
+    public inline int64 mili_to_sec (int64 milliseconds) {
+        if (milliseconds == 0) {
+            return 0;
+        }
+
+        return milliseconds * Constants.SEC_INV / Constants.MILI_INV;
+    }
+
     public inline int64 sec_to_micro (int64 seconds) {
         return seconds * Constants.MICRO_INV / Constants.SEC_INV;
     }

@@ -20,15 +20,38 @@ namespace Music2 {
     public class CObjects.Scanner : Interfaces.GSTagger {
         private bool finished = false;
 
-        public Scanner () {}
+        public Scanner () {
+            finished = false;
+        }
 
         public void start_scan (string uri) {
-            finished = false;
             scan_directory (uri);
         }
 
         public bool stopped_scan () {
             return finished;
+        }
+
+        public void scan_tracks (GLib.Array<string> tracks_path) {
+            new Thread<void*> ("scan_tracks", () => {
+                for (int i = 0; i < tracks_path.length ; i++) {
+                    var t = add_discover_uri (tracks_path.index (i));
+                    if (t != null) {
+                        discovered_new_item (t);
+                    }
+
+                    if (stop_flag) {
+                        break;
+                    }
+            	}
+
+                lock (finished) {
+                    finished = true;
+                }
+                discovered_new_item (null);
+
+                return null;
+            });
         }
 
         private void scan_directory (string uri) {

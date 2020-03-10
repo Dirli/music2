@@ -240,6 +240,23 @@ namespace Music2 {
 
         private void load_from_extplaylist () {
             var playlist_path = settings.get_string ("source-media");
+
+            var paths = Tools.FileUtils.get_playlist_m3u (playlist_path);
+            if (paths == null) {
+                settings.set_string ("source-media", "");
+                settings.set_enum ("source-type", Enums.SourceType.NONE);
+
+                return;
+            }
+
+            if (scanner != null) {
+                stop_scanner ();
+            }
+
+            scanner = new CObjects.Scanner ();
+            scanner.init ();
+            scanner.discovered_new_item.connect (on_new_item);
+            scanner.scan_tracks (paths);
         }
 
         private void play_from_playlist () {
@@ -261,7 +278,7 @@ namespace Music2 {
         }
 
         private void play_from_directory () {
-            if (scanner != null && scanner.launched) {
+            if (scanner != null) {
                 stop_scanner ();
             }
 

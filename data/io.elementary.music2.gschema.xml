@@ -14,6 +14,7 @@
         <value value="1" nick="directory"/>
         <value value="2" nick="library"/>
         <value value="3" nick="playlist"/>
+        <value value="4" nick="extplaylist"/>
     </enum>
     <schema path="/io/elementary/music2/" id="io.elementary.music2">
         <key type="s" name="music-folder">
