@@ -47,6 +47,21 @@ namespace Music2 {
             get {return welcome_screen != null;}
         }
 
+        public void add_iter (CObjects.Media m) {
+            lock (list_store) {
+                Gtk.TreeIter iter;
+                list_store.insert_with_values (out iter, -1,
+                    Enums.ListColumn.TRACKID, m.tid,
+                    Enums.ListColumn.TRACK, m.track,
+                    Enums.ListColumn.ALBUM, m.get_display_album (),
+                    Enums.ListColumn.LENGTH, m.length,
+                    Enums.ListColumn.TITLE, m.get_display_title (),
+                    Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
+
+                iter_hash[m.tid] = iter;
+            }
+        }
+
         protected void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
             Gtk.TreeIter? iter;
             list_store.get_iter (out iter, path);
@@ -132,7 +147,9 @@ namespace Music2 {
 
         private void on_row_inserted (Gtk.TreePath path, Gtk.TreeIter iter) {
             list_store.row_inserted.disconnect (on_row_inserted);
-            visible_child_name = "listview";
+            if (get_child_by_name ("listview") != null) {
+                set_visible_child_name ("listview");
+            }
         }
 
         public void show_welcome () {

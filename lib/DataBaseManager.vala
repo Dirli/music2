@@ -515,6 +515,41 @@ namespace Music2 {
             return album_id;
         }
 
+        public Gee.HashMap<uint, CObjects.Media> get_tracks_hash () {
+            var tracks_hash = new Gee.HashMap<uint, CObjects.Media> ();
+            Sqlite.Statement stmt;
+
+            string sql = """
+                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
+                FROM media
+                INNER JOIN albums
+                ON media.album_id = albums.id
+                INNER JOIN artists
+                ON media.artist_id = artists.id
+                ORDER BY artists.name, albums.year, albums.title, media.track;
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            while (stmt.step () == Sqlite.ROW) {
+                var m = new CObjects.Media (stmt.column_text (4));
+                m.tid = (uint) stmt.column_int64 (0);
+                m.title = stmt.column_text (1);
+                m.genre = stmt.column_text (2);
+                m.track = (uint) stmt.column_int64 (3);
+                m.length = (uint) stmt.column_int64 (5);
+                m.album = stmt.column_text (6);
+                m.year = (uint) stmt.column_int (7);
+                m.artist = stmt.column_text (8);
+
+                tracks_hash[m.tid] = m;
+            }
+
+            stmt.reset ();
+            return tracks_hash;
+        }
+
         public Gee.ArrayQueue<CObjects.Media> get_tracks (Enums.Category? category, string filter = "") {
             Sqlite.Statement stmt;
 

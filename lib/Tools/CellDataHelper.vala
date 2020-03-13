@@ -29,13 +29,15 @@ namespace Music2.Tools.CellDataHelper {
     }
 
     public static void icon_func (Gtk.CellLayout layout, Gtk.CellRenderer renderer, Gtk.TreeModel model, Gtk.TreeIter iter) {
-        var image_renderer = renderer as Gtk.CellRendererPixbuf;
-        GLib.return_if_fail (image_renderer != null);
+        if ((model as Gtk.ListStore).iter_is_valid (iter)) {
+            var image_renderer = renderer as Gtk.CellRendererPixbuf;
+            GLib.return_if_fail (image_renderer != null);
 
-        if (renderer.visible) {
-            Value icon;
-            model.get_value (iter, Enums.ListColumn.ICON, out icon);
-            image_renderer.gicon = icon.get_object () as GLib.Icon;
+            if (renderer.visible) {
+                Value icon;
+                model.get_value (iter, Enums.ListColumn.ICON, out icon);
+                image_renderer.gicon = icon.get_object () as GLib.Icon;
+            }
         }
     }
 
@@ -66,6 +68,7 @@ namespace Music2.Tools.CellDataHelper {
 
     public static inline void string_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
         if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
+            Gtk.TreeIter i = iter;
             var tvc = layout as Gtk.TreeViewColumn;
             GLib.return_if_fail (tvc != null);
 
@@ -75,7 +78,7 @@ namespace Music2.Tools.CellDataHelper {
             }
 
             GLib.Value val;
-            tree_model.get_value (iter, column, out val);
+            tree_model.get_value (i, column, out val);
             (cell as Gtk.CellRendererText).text = val.get_string ();
         }
     }

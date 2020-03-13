@@ -89,23 +89,5 @@ namespace Music2 {
 
             show_alert ();
         }
-
-        public void add_iter (CObjects.Media m) {
-            GLib.Mutex mutex = GLib.Mutex ();
-            mutex.lock ();
-
-            Gtk.TreeIter iter;
-            list_store.insert_with_values (out iter, -1,
-                Enums.ListColumn.TRACKID, m.tid,
-                Enums.ListColumn.TRACK, m.track,
-                Enums.ListColumn.LENGTH, m.length,
-                Enums.ListColumn.ALBUM, m.album,
-                Enums.ListColumn.TITLE, m.title,
-                Enums.ListColumn.ARTIST, m.artist, -1);
-
-            iter_hash[m.tid] = iter;
-
-            mutex.unlock ();
-        }
     }
 }

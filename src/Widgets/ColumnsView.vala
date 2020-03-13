@@ -20,15 +20,10 @@ namespace Music2 {
     public class Widgets.ColumnsView : Gtk.Grid {
         public signal void filter_list (Enums.Category type, int val);
 
-        private bool empty_queue = true;
-        private Gee.ArrayQueue<Structs.Iter?> queue;
-
         private Enums.Category filter_field;
         private int filter_value;
 
         public ColumnsView () {
-            queue = new Gee.ArrayQueue<Structs.Iter?> ();
-
             foreach (unowned Enums.Category category in Enums.Category.get_all ()) {
                 if (category != Enums.Category.N_CATEGORIES) {
                     add_column (category);
@@ -88,28 +83,9 @@ namespace Music2 {
         }
 
         public void add_column_item (Structs.Iter iter) {
-            queue.offer (iter);
-
-            if (empty_queue) {
-                lock (empty_queue) {
-                    empty_queue = false;
-                }
-
-                add_to_column ();
-
-                lock (empty_queue) {
-                    empty_queue = true;
-                }
-            }
-        }
-
-        private void add_to_column () {
-            while (!queue.is_empty) {
-                var iter = queue.poll ();
-                var column = get_child_at (iter.category, 0);
-                if (column != null) {
-                    (column as Views.ColumnBrowser).add_item (iter.name, iter.id);
-                }
+            var column = get_child_at (iter.category, 0);
+            if (column != null) {
+                (column as Views.ColumnBrowser).add_item (iter.name, iter.id);
             }
         }
     }

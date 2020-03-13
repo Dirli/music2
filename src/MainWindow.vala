@@ -23,6 +23,7 @@ namespace Music2 {
 
         private bool queue_reset = false;
         private bool scans_library = false;
+        private bool loaded_library = false;
 
         private int queue_id;
 
@@ -38,15 +39,13 @@ namespace Music2 {
         private Widgets.SourceListView source_list_view;
         private Widgets.StatusBar status_bar;
         private Widgets.TopDisplay top_display;
+        private Widgets.ActionStack action_stack;
 
         private Gtk.Button play_button;
         private Gtk.Button previous_button;
         private Gtk.Button next_button;
-        private Gtk.Box action_box;
 
         private Views.ViewSelector view_selector;
-        private Views.DnDSelection? dnd_selection = null;
-        private Views.ProgressBox? progress_box = null;
 
         private Services.LibraryManager library_manager;
         private Services.PlaylistManager playlist_manager;
@@ -144,15 +143,8 @@ namespace Music2 {
 
             library_manager.added_category.connect (music_stack.add_column_item);
             library_manager.cleared_library.connect (music_stack.clear_stack);
-            library_manager.progress_scan.connect ((progress_val) => {
-                if (progress_box != null) {
-                    progress_box.update_progress (progress_val);
-                }
-            });
-            library_manager.prepare_scan.connect (() => {
-                progress_box.update_progress (0);
-                progress_box.show ();
-            });
+            library_manager.progress_scan.connect (action_stack.update_progress);
+            library_manager.prepare_scan.connect (action_stack.init_progress);
             library_manager.loaded_category.connect (music_stack.init_selections);
             library_manager.started_scan.connect (() => {
                 scans_library = true;
@@ -160,7 +152,7 @@ namespace Music2 {
             library_manager.finished_scan.connect ((msg) => {
                 scans_library = false;
 
-                progress_box.hide ();
+                action_stack.hide_widget ("progress");
 
                 if (library_manager.dirty_library ()) {
                     view_selector.sensitive = true;
@@ -190,10 +182,10 @@ namespace Music2 {
             // sometimes this event is triggered at startup, which is not the desired behavior
             // settings.changed["music-folder"].connect (on_changed_folder);
 
-            library_manager.load_library ();
+            load_library ();
 
             GLib.Timeout.add (Constants.INTERVAL, () => {
-                if (library_manager.loaded) {
+                if (loaded_library) {
                     try {
                         dbus_player.init_player ();
                     } catch (Error e) {
@@ -207,10 +199,6 @@ namespace Music2 {
                         music_stack.init_selections (null);
                         status_bar.sensitive_btns (true);
                     }
-
-                    load_albums_grid ();
-
-                    view_selector.mode_button.mode_changed.connect (on_mode_changed);
 
                     return false;
                 }
@@ -296,6 +284,7 @@ namespace Music2 {
 
             view_selector = new Views.ViewSelector ();
             view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
+            view_selector.mode_button.mode_changed.connect (on_mode_changed);
             view_selector.sensitive = false;
 
             var headerbar = new Gtk.HeaderBar ();
@@ -314,15 +303,11 @@ namespace Music2 {
             source_list_view.menu_activated.connect (on_menu_activated);
             source_list_view.edited.connect (on_edited_playlist);
 
-            action_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
-
-            progress_box = new Views.ProgressBox ();
-            progress_box.cancelled_scan.connect (library_manager.stop_scanner);
-            action_box.add (progress_box);
-            GLib.Idle.add (() => {
-                progress_box.hide ();
-                return false;
-            });
+            action_stack = new Widgets.ActionStack ();
+            action_stack.margin_start = 5;
+            action_stack.margin_end = 5;
+            action_stack.cancelled_scan.connect (library_manager.stop_scanner);
+            action_stack.dnd_button_clicked.connect (on_dnd_button_clicked);
 
             status_bar = new Widgets.StatusBar ();
             status_bar.create_new_pl.connect (() => {});
@@ -334,7 +319,7 @@ namespace Music2 {
             var left_grid = new Gtk.Grid ();
             left_grid.orientation = Gtk.Orientation.VERTICAL;
             left_grid.add (source_list_view);
-            left_grid.add (action_box);
+            left_grid.add (action_stack);
             left_grid.add (status_bar);
 
             Gtk.TargetEntry target = {"text/uri-list", 0, 0};
@@ -354,9 +339,7 @@ namespace Music2 {
             main_hpaned.show_all ();
 
             add (main_hpaned);
-
             set_titlebar (headerbar);
-
             show ();
         }
 
@@ -396,32 +379,63 @@ namespace Music2 {
                             break;
                         case Enums.SourceType.PLAYLIST:
                         case Enums.SourceType.LIBRARY:
-                            foreach (var tid in tracks_id) {
-                                var m = library_manager.get_media (tid);
-                                if (m != null) {
-                                    add_to_queue (m);
-                                }
-                            }
+                                fill_queue (tracks_id);
                             break;
                     }
                 }
             } else {
                 play_button.sensitive = false;
                 play_button.image = new Gtk.Image.from_icon_name ("media-playback-start-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
+                music_stack.select_run_row (null);
             }
         }
 
-        private void load_albums_grid () {
-            if (library_manager.albums_hash.size > 0) {
-                new Thread<void*> ("load_albums_grid", () => {
-                    library_manager.albums_hash.foreach ((entry) => {
-                        music_stack.add_grid_item (entry.value);
-                        return true;
-                    });
+        private void load_library () {
+            new Thread<void*> ("load_library", () => {
+                library_manager.init_library ();
 
-                    return null;
+                library_manager.artists_hash.foreach ((art) => {
+                    Structs.Iter new_iter = {};
+                    new_iter.category = Enums.Category.ARTIST;
+                    new_iter.name = art.value;
+                    new_iter.id = art.key;
+                    music_stack.add_column_item (new_iter);
+                    return true;
                 });
-            }
+
+                library_manager.albums_hash.foreach ((alb) => {
+                    Structs.Iter new_iter = {};
+                    new_iter.category = Enums.Category.ALBUM;
+                    new_iter.name = alb.value.title;
+                    new_iter.id = alb.key;
+                    music_stack.add_column_item (new_iter);
+                    return true;
+                });
+
+                int count = 0;
+                library_manager.genre_array.foreach ((g) => {
+                    Structs.Iter new_iter = {};
+                    new_iter.category = Enums.Category.GENRE;
+                    new_iter.name = g;
+                    new_iter.id = ++count;
+                    music_stack.add_column_item (new_iter);
+                    return true;
+                });
+
+                library_manager.media_hash.foreach ((entry) => {
+                    music_stack.add_iter (entry.value, Enums.ViewMode.COLUMN);
+                    return true;
+                });
+
+                loaded_library = true;
+
+                library_manager.albums_hash.foreach ((entry) => {
+                    music_stack.add_grid_item (entry.value);
+                    return true;
+                });
+
+                return null;
+            });
         }
 
         // actions
@@ -513,22 +527,12 @@ namespace Music2 {
         }
 
         private void on_track_list_replaced (uint[] tracks, uint cur_track) {
+            source_list_view.update_badge (queue_id, 0);
             queue_stack.clear_stack ();
 
-            if (tracks.length > 0) {
-                switch (active_source_type) {
-                    case Enums.SourceType.LIBRARY:
-                    case Enums.SourceType.PLAYLIST:
-                        foreach (var tid in tracks) {
-                            var m = library_manager.get_media (tid);
-                            if (m != null) {
-                                add_to_queue (m);
-                            }
-                        }
-
-                        break;
-                }
-            } else {
+            if (active_source_type == Enums.SourceType.LIBRARY || active_source_type == Enums.SourceType.PLAYLIST) {
+                fill_queue (tracks);
+            } else if (active_source_type == Enums.SourceType.NONE) {
                 top_display.stop_progress ();
                 top_display.set_visible_child_name ("empty");
                 if (cur_track == 0) {
@@ -598,6 +602,7 @@ namespace Music2 {
 
             if (active_source_type != Enums.SourceType.NONE) {
                 queue_reset = false;
+                active_source_type = Enums.SourceType.NONE;
                 settings.set_enum ("source-type", Enums.SourceType.NONE);
             } else {
                 queue_reset = true;
@@ -643,6 +648,7 @@ namespace Music2 {
 
                         settings.set_string ("source-media", playlist_stack.pid.to_string ());
                     }
+                    active_source_type = activated_type;
                     settings.set_enum ("source-type", activated_type);
 
                     return false;
@@ -741,6 +747,18 @@ namespace Music2 {
             }
         }
 
+        private void on_dnd_button_clicked (Enums.ActionType action_type, string uri) {
+            switch (action_type) {
+                case Enums.ActionType.PLAY:
+                    source_list_view.select_active_item (queue_id);
+                    settings.set_string ("source-media", uri);
+                    on_selected_row (0, Enums.SourceType.DIRECTORY);
+                    break;
+                case Enums.ActionType.LOAD:
+                    break;
+            }
+        }
+
         private void on_drag_data_received (Gdk.DragContext ctx, int x, int y, Gtk.SelectionData sel, uint info, uint time) {
             var uris = sel.get_uris ();
             if (uris.length > 0) {
@@ -748,29 +766,7 @@ namespace Music2 {
                 var file_type = path_file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
 
                 if (file_type == GLib.FileType.DIRECTORY) {
-                    if (dnd_selection != null) {
-                        dnd_selection.destroy ();
-                        dnd_selection = null;
-                    }
-                    dnd_selection = new Views.DnDSelection ();
-                    dnd_selection.button_clicked.connect ((btn_name) => {
-                        switch (btn_name) {
-                            case Enums.ActionType.PLAY:
-                                source_list_view.select_active_item (queue_id);
-                                settings.set_string ("source-media", uris[0]);
-                                on_selected_row (0, Enums.SourceType.DIRECTORY);
-                                break;
-                            case Enums.ActionType.LOAD:
-                                break;
-                        }
-
-                        GLib.Idle.add (() => {
-                            dnd_selection.destroy ();
-                            return false;
-                        });
-                    });
-
-                    action_box.add (dnd_selection);
+                    action_stack.init_dnd (Enums.SourceType.DIRECTORY, uris[0]);
                 } else if (file_type == GLib.FileType.REGULAR) {
                     var file_name = path_file.get_basename ();
                     if (file_name != null) {
@@ -822,9 +818,27 @@ namespace Music2 {
             play_button.image = new Gtk.Image.from_icon_name (icon_name, Gtk.IconSize.LARGE_TOOLBAR);
         }
 
+        private void fill_queue (owned uint[] tids) {
+            new Thread<void*> ("fill_queue", () => {
+                foreach (var tid in tids) {
+                    var m = library_manager.get_media (tid);
+                    if (m != null) {
+                        var queue_size = queue_stack.add_iter (m);
+                        source_list_view.update_badge (queue_id, queue_size);
+
+                        if (active_track >= 0 && m.tid == active_track) {
+                            queue_stack.select_run_row (active_track);
+                        }
+                    }
+                }
+
+                return null;
+            });
+        }
+
         private void add_to_queue (CObjects.Media m) {
             var queue_size = queue_stack.add_iter (m);
-            source_list_view.update_badge (1, queue_size);
+            source_list_view.update_badge (queue_id, queue_size);
 
             if (active_track >= 0 && m.tid == active_track) {
                 queue_stack.select_run_row (active_track);

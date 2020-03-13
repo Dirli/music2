@@ -22,9 +22,7 @@ namespace Music2 {
 
         public ColumnView (Enums.Category category) {
             this.category = category;
-        }
 
-        construct {
             set_headers_clickable (true);
             headers_visible = true;
             activate_on_single_click = false;
@@ -38,7 +36,7 @@ namespace Music2 {
             column.sizing = Gtk.TreeViewColumnSizing.FIXED;
 
             bool column_resizable = true;
-            var test_strings = new string[0];
+            string test_strings = "";
 
             Gtk.CellRenderer? renderer = null;
 
@@ -48,7 +46,7 @@ namespace Music2 {
                 case Enums.Category.ARTIST:
                     renderer = new Gtk.CellRendererText ();
                     column.set_cell_data_func (renderer, cell_data_func);
-                    test_strings += _("Sample List String");
+                    test_strings = _("Sample List String");
                     break;
             }
 
@@ -92,30 +90,24 @@ namespace Music2 {
             column.title = category.to_string ();
             column.visible = true;
 
-            column.clicked.connect (() => {
-
-            });
-
             return column;
         }
 
-        private void set_fixed_column_width (Gtk.Widget treeview, Gtk.TreeViewColumn column, Gtk.CellRendererText renderer, string[] strings, int padding) {
+        private void set_fixed_column_width (Gtk.Widget treeview, Gtk.TreeViewColumn column, Gtk.CellRendererText renderer, string strings, int padding) {
             int max_width = 0;
 
-            foreach (unowned string str in strings) {
-                renderer.text = str;
-                Gtk.Requisition natural_size;
-                renderer.get_preferred_size (treeview, null, out natural_size);
+            renderer.text = strings;
+            Gtk.Requisition natural_size;
+            renderer.get_preferred_size (treeview, null, out natural_size);
 
-                if (natural_size.width > max_width) {
-                    max_width = natural_size.width;
-                }
+            if (natural_size.width > max_width) {
+                max_width = natural_size.width;
             }
 
             column.fixed_width = max_width + padding;
         }
 
-        private static inline void cell_data_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
+        private void cell_data_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
             if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
                 GLib.Value val;
                 tree_model.get_value (iter, 0, out val);

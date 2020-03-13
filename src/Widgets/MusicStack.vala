@@ -54,7 +54,7 @@ namespace Music2 {
             browser_pane.pack2 (init_list_view (Enums.Hint.MUSIC), true, false);
 
             list_store.set_sort_column_id (Enums.ListColumn.ARTIST, Gtk.SortType.ASCENDING);
-            list_store.set_sort_func (0, list_sort_func);
+            list_store.set_sort_func (Enums.ListColumn.ARTIST, list_sort_func);
 
             albums_store = new Gtk.ListStore (2, typeof (Structs.Album), typeof (string));
             albums_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
@@ -107,10 +107,14 @@ namespace Music2 {
             (this as Interfaces.StackWrapper).on_row_activated (path, column);
         }
 
-        public new void select_run_row (uint tid) {
-            album_view.select_run_row (tid);
+        public new void select_run_row (uint? tid) {
+            if (tid != null) {
+                album_view.select_run_row (tid);
 
-            (this as Interfaces.StackWrapper).select_run_row (tid);
+                (this as Interfaces.StackWrapper).select_run_row (tid);
+            } else {
+                //
+            }
         }
 
         public new void remove_run_icon (uint tid) {
@@ -158,18 +162,9 @@ namespace Music2 {
             return null;
         }
 
-        public bool add_iter (CObjects.Media m, Enums.ViewMode view_mode) {
+        public new bool add_iter (CObjects.Media m, Enums.ViewMode view_mode) {
             if (view_mode == Enums.ViewMode.COLUMN) {
-                Gtk.TreeIter iter;
-                list_store.insert_with_values (out iter, -1,
-                     Enums.ListColumn.TRACKID, m.tid,
-                     Enums.ListColumn.TRACK, m.track,
-                     Enums.ListColumn.ALBUM, m.get_display_album (),
-                     Enums.ListColumn.LENGTH, m.length,
-                     Enums.ListColumn.TITLE, m.get_display_title (),
-                     Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
-
-                iter_hash[m.tid] = iter;
+                (this as Interfaces.StackWrapper).add_iter (m);
                 return true;
             } else if (view_mode == Enums.ViewMode.GRID) {
                 album_view.add_track (m);
@@ -235,10 +230,6 @@ namespace Music2 {
         }
 
         private int sort_column_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b, Enums.ListColumn col_id) {
-            if (!(store as Gtk.ListStore).iter_is_valid (a) || !(store as Gtk.ListStore).iter_is_valid (b)) {
-                return 0;
-            }
-
             GLib.Value val_a;
             store.get_value (a, col_id, out val_a);
             GLib.Value val_b;
@@ -257,6 +248,10 @@ namespace Music2 {
         }
 
         public int list_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
+            if (!(store as Gtk.ListStore).iter_is_valid (a) || !(store as Gtk.ListStore).iter_is_valid (b)) {
+                return 0;
+            }
+
             int sort_column_id;
             Gtk.SortType sort_direction;
             list_store.get_sort_column_id (out sort_column_id, out sort_direction);

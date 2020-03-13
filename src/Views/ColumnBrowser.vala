@@ -75,46 +75,35 @@ namespace Music2 {
         }
 
         public int new_sort_func (Gtk.TreeModel store , Gtk.TreeIter a, Gtk.TreeIter b) {
-            if (!list_store.iter_is_valid (a) || !list_store.iter_is_valid (b)) {
+            if (!(store as Gtk.ListStore).iter_is_valid (a) || !(store as Gtk.ListStore).iter_is_valid (b)) {
                 return 0;
             }
 
-            int rv = 0;
-
-            int sort_column_id;
-            Gtk.SortType sort_direction;
-            list_store.get_sort_column_id (out sort_column_id, out sort_direction);
-
-            unowned string first_str;
-            list_store.@get (first_iter, 0, out first_str, -1);
-            unowned string a_str;
-            list_store.@get (a, 0, out a_str, -1);
-            unowned string b_str;
-            list_store.@get (b, 0, out b_str, -1);
+            GLib.Value val_first;
+            store.get_value (first_iter, 0, out val_first);
+            GLib.Value val_a;
+            store.get_value (a, 0, out val_a);
+            GLib.Value val_b;
+            store.get_value (b, 0, out val_b);
 
             // "All" is always the first
-            if (first_str == a_str) {return -1;}
+            if (val_first.get_string () == val_a.get_string ()) {return -1;}
+            if (val_first == val_b.get_string ()) {return 1;}
 
-            if (first_str == b_str) {return 1;}
-
-            rv = Tools.String.compare (a_str, b_str);
-
-            if (sort_direction == Gtk.SortType.DESCENDING) {
-                rv = (rv > 0) ? -1 : 1;
-            }
-
-            return rv;
+            return Tools.String.compare (val_a.get_string (), val_b.get_string ());
         }
 
         public void add_item (string text, int item_id) {
             if (text != "") {
-                Gtk.TreeIter iter;
-                list_store.insert_with_values (out iter, -1,
-                                               0, text,
-                                               1, item_id, -1);
+                lock (list_store) {
+                    Gtk.TreeIter iter;
+                    list_store.insert_with_values (out iter, -1,
+                                                   0, text,
+                                                   1, item_id, -1);
 
-               ++n_items;
-               update_first_item ();
+                   ++n_items;
+                   update_first_item ();
+                }
             }
         }
 
@@ -167,48 +156,18 @@ namespace Music2 {
             list_store.set (first_iter, 0, get_first_item_text ());
         }
 
-        private string get_first_item_text () {
+        private inline string get_first_item_text () {
             string rv = "";
 
-            switch (category) {
-                case Enums.Category.GENRE:
-                    if (n_items == 1) {
-                        rv = _("All Genres");
-                    } else if (n_items > 1) {
-                        rv = _("All %i Genres").printf (n_items);
-                    } else {
-                        rv = _("No Genres");
-                    }
-                    break;
-                case Enums.Category.ARTIST:
-                    if (n_items == 1) {
-                        rv = _ ("All Artists");
-                    } else if (n_items > 1) {
-                        rv = _ ("All %i Artists").printf (n_items);
-                    } else {
-                        rv = _("No Artists");
-                    }
-                    break;
-                case Enums.Category.ALBUM:
-                    if (n_items == 1) {
-                        rv = _("All Albums");
-                    } else if (n_items > 1) {
-                        rv = _("All %i Albums").printf (n_items);
-                    } else {
-                        rv = _("No Albums");
-                    }
-                    break;
+            if (n_items == 1) {
+                rv = _("All ") + category.to_string ();
+            } else if (n_items > 1) {
+                rv = _("All %i ").printf (n_items) + category.to_string ();
+            } else {
+                rv = _("No ") + category.to_string ();
             }
 
             return rv;
         }
-
-        // public void cell_data_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-        //     if (list_store.iter_is_valid (iter)) {
-        //         GLib.Value val;
-        //         tree_model.get_value (iter, 0, out val);
-        //         (cell as Gtk.CellRendererText).text = val.get_string ();
-        //     }
-        // }
     }
 }

@@ -18,7 +18,9 @@
 
 namespace Music2 {
     public class Views.DnDSelection : Gtk.Box {
-        public signal void button_clicked (Enums.ActionType action_type);
+        public signal void button_clicked (Enums.ActionType action_type, string uri);
+
+        private string uri;
 
         public DnDSelection () {
             orientation = Gtk.Orientation.VERTICAL;
@@ -28,17 +30,17 @@ namespace Music2 {
 
             var play_btn = new Views.CustomButton ("media-playback-start-symbolic", "Play");
             play_btn.clicked.connect (() => {
-                button_clicked (Enums.ActionType.PLAY);
+                button_clicked (Enums.ActionType.PLAY, uri);
             });
 
             var load_btn = new Views.CustomButton ("go-down-symbolic", "Load");
             load_btn.clicked.connect (() => {
-                button_clicked (Enums.ActionType.LOAD);
+                button_clicked (Enums.ActionType.LOAD, uri);
             });
 
             var cancel_btn = new Views.CustomButton ("pane-hide-symbolic", "Cancel");
             cancel_btn.clicked.connect (() => {
-                button_clicked (Enums.ActionType.NONE);
+                button_clicked (Enums.ActionType.NONE, uri);
             });
 
             add (play_btn);
@@ -46,6 +48,10 @@ namespace Music2 {
             add (cancel_btn);
 
             show_all ();
+        }
+
+        public void add_data (string data) {
+            uri = data;
         }
     }
 }

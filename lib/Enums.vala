@@ -19,7 +19,7 @@
 namespace Music2.Enums {
     public enum ViewMode {
         GRID = 0,
-        COLUMN = 1;
+        COLUMN = 1
     }
 
     public enum RepeatMode {
@@ -39,7 +39,7 @@ namespace Music2.Enums {
         LIBRARY,
         PLAYLIST,
         EXTPLAYLIST,
-        QUEUE,
+        QUEUE
     }
 
     public enum ActionType {
@@ -52,7 +52,7 @@ namespace Music2.Enums {
         REMOVE,
         RENAME,
         SAVE,
-        SCAN,
+        SCAN
     }
 
     public enum Hint {
@@ -62,7 +62,7 @@ namespace Music2.Enums {
         READ_ONLY_PLAYLIST,
         SMART_PLAYLIST,
         ALBUM_LIST,
-        QUEUE;
+        QUEUE
     }
 
     public enum ListColumn {
@@ -123,33 +123,6 @@ namespace Music2.Enums {
                 default:
                     GLib.assert_not_reached ();
             }
-        }
-
-        public Value? get_value_for_media (CObjects.Media m, int media_row_index = -1) {
-            switch (this) {
-                case ICON:
-                    return new GLib.ThemedIcon ("audio-volume-high-symbolic");
-                case TRACKID:
-                    return m.tid;
-                case TRACK:
-                    return m.track;
-                case TITLE:
-                    return m.get_display_title ();
-                case LENGTH:
-                    return m.length;
-                case ARTIST:
-                    return m.get_display_artist ();
-                case ALBUM:
-                    return m.get_display_album ();
-                case GENRE:
-                    return m.get_display_genre ();
-                case YEAR:
-                    return m.year;
-                case BITRATE:
-                    return m.bitrate;
-            }
-
-            GLib.assert_not_reached ();
         }
 
         public static GLib.Type[] get_all () {
