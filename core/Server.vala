@@ -232,9 +232,12 @@ namespace Music2 {
             }
 
             settings.set_string ("source-media", "");
-            var tracks = player.adds_to_queue (tracks_queue);
+            uint[] tracks = player.adds_to_queue (tracks_queue);
             if (tracks.length > 0) {
-                db_manager.update_playlist (queue_id, tracks);
+                new Thread<void*> ("fill_queue", () => {
+                    db_manager.update_playlist (queue_id, tracks);
+                    return null;
+                });
             }
         }
 
@@ -270,9 +273,12 @@ namespace Music2 {
                 var tracks_queue = db_manager.get_playlist_tracks (pid);
 
                 settings.set_string ("source-media", "");
-                var tracks = player.adds_to_queue (tracks_queue);
+                uint[] tracks = player.adds_to_queue (tracks_queue);
                 if (tracks.length > 0) {
-                    db_manager.update_playlist (queue_id, tracks);
+                    new Thread<void*> ("update_playlist", () => {
+                        db_manager.update_playlist (queue_id, tracks);
+                        return null;
+                    });
                 }
             }
         }
