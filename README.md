@@ -1,9 +1,11 @@
-Someone had to do it. This is an attempt to make the elementaryOS stock music player really fast, convenient and easy.
+# Music2
+
+The player is not fully stable yet, and the functionality is not fully implemented. But some things is already knows faster and more responsive.
+
+![screenshot](data/screenshot1.png?raw=true)
+
+![screenshot](data/screenshot2.png?raw=true)
 
 ## map of migration with the stock player
-* playback manager
-* local database
-* playlists
 * smart playlists
-* external playlists
-* repeat gui
+* tag editor
