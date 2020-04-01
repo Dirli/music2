@@ -45,10 +45,10 @@ namespace Music2.Enums {
     public enum ActionType {
         NONE = 0,
         PLAY,
-        LOAD,
         CLEAR,
         EDIT,
         EXPORT,
+        IMPORT,
         REMOVE,
         RENAME,
         SAVE,

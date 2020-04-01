@@ -43,9 +43,9 @@ namespace Music2 {
                 }
 
                 if (tags.get_string (Gst.Tags.ALBUM_ARTIST, out o)) {
-                    track.artist = o;
+                    track.artist = o.strip ();
                 } else if (tags.get_string (Gst.Tags.ARTIST, out o)) {
-                    track.artist = o;
+                    track.artist = o.strip ();
                 }
 
                 string genre;

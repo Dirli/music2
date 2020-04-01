@@ -365,6 +365,23 @@ namespace Music2 {
             return artists_hash;
         }
 
+        public Gee.HashMap<string, int> get_artists_rev () {
+            var artists_hash = new Gee.HashMap<string, int> ();
+            Sqlite.Statement stmt;
+            string sql = """
+                SELECT id, name FROM artists;
+            """;
+
+            db.prepare_v2 (sql, sql.length, out stmt);
+
+            while (stmt.step () == Sqlite.ROW) {
+                artists_hash[stmt.column_text (1)] = stmt.column_int (0);
+            }
+
+            stmt.reset ();
+            return artists_hash;
+        }
+
         public int insert_artist (string artist) {
             Sqlite.Statement stmt;
             string sql = """
@@ -466,6 +483,25 @@ namespace Music2 {
                 album_struct.genre = stmt.column_text (3);
 
                 return_hash.add (album_struct);
+            }
+
+            stmt.reset ();
+            return return_hash;
+        }
+
+        public Gee.HashMap<uint, int> get_albums_rev () {
+            var return_hash = new Gee.HashMap<uint, int>();
+            Sqlite.Statement stmt;
+
+            string sql = """
+                SELECT id, title, year FROM albums;
+            """;
+
+            db.prepare_v2 (sql, sql.length, out stmt);
+
+            while (stmt.step () == Sqlite.ROW) {
+                var hash_key = (stmt.column_int (2).to_string () + stmt.column_text (1)).hash ();
+                return_hash[hash_key] = stmt.column_int (0);
             }
 
             stmt.reset ();

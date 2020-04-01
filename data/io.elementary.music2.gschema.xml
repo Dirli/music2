@@ -16,6 +16,7 @@
         <value value="3" nick="playlist"/>
         <value value="4" nick="extplaylist"/>
     </enum>
+
     <schema path="/io/elementary/music2/" id="io.elementary.music2">
         <key type="s" name="music-folder">
             <default>''</default>
@@ -57,15 +58,15 @@
             <summary>Whether or not to auto-organize folders and rename files</summary>
             <description>Whether or not to auto-organize folders and rename files</description>
         </key>
-        <key type="b" name="write-metadata-to-file">
-            <default>true</default>
-            <summary>Whether or not to write metadata to file</summary>
-            <description>Whether or not to write metadata to file</description>
-        </key>
-        <key type="b" name="copy-imported-music">
+        <key type="b" name="import-all-files">
             <default>false</default>
-            <summary>Whether or not to copy imported files to music folder</summary>
-            <description>Whether or not to copy imported files to music folder</description>
+            <summary>Do need to import non-music files</summary>
+            <description>Do need to import non-music files</description>
+        </key>
+        <key type="b" name="move-imported-music">
+            <default>false</default>
+            <summary>Whether you want to delete imported files</summary>
+            <description>Whether to delete imported files from the source folder</description>
         </key>
         <key type="b" name="close-while-playing">
             <default>true</default>

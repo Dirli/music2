@@ -33,6 +33,7 @@ namespace Music2 {
         public Gee.ArrayList<string> genre_array;
 
         private Services.LibraryScanner lib_scanner;
+        private Services.ImportManager import_manager;
 
         public LibraryManager () {
             Tools.FileUtils.get_cache_directory ("covers");
@@ -264,8 +265,88 @@ namespace Music2 {
             });
         }
 
+        public void import_folder (string folder_uri, string music_folder) {
+            started_scan ();
+
+            uint total_m = 0;
+            uint scan_m = 0;
+            uint source_id = 0;
+
+            import_manager = new Services.ImportManager (music_folder);
+            import_manager.total_found.connect ((total_media) => {
+                total_m = total_media;
+                if (total_m > 0) {
+                    source_id = GLib.Timeout.add (1000, () => {
+                        if (scan_m == 0) {
+                            return true;
+                        }
+
+                        progress_scan ((double) scan_m / total_m);
+                        return true;
+                    });
+                }
+
+                prepare_scan ();
+            });
+            import_manager.added_track.connect ((m) => {
+                scan_m++;
+            });
+            import_manager.finished_scan.connect ((scan_time) => {
+                if (source_id > 0) {
+                    GLib.Source.remove (source_id);
+                    source_id = 0;
+                }
+
+                import_manager.added_artists.foreach ((entry) => {
+                    add_artist (entry.key, entry.value);
+
+                    return true;
+                });
+
+                import_manager.added_albums.foreach ((entry) => {
+                    if (albums_hash.has_key (entry.value.album_id)) {
+                        entry.value.artist_id.foreach ((art_id) => {
+                            unowned Gee.ArrayList<int> artists = albums_hash[entry.value.album_id].artist_id;
+                            if (!artists.contains (art_id)) {
+                                artists.add (art_id);
+                            }
+
+                            return true;
+                        });
+                    } else {
+                        add_album (entry.value);
+                    }
+
+                    return true;
+                });
+
+                import_manager.added_tracks.foreach ((track) => {
+                    add_track (track);
+                    return true;
+                });
+
+                string msg = _("Import %lld tracks to the library,").printf (scan_m);
+                if (scan_time >= 0) {
+                    msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
+                }
+
+                finished_scan (msg);
+
+                import_manager = null;
+            });
+
+            new Thread<void*> ("import_folder", () => {
+                import_manager.start_scan (folder_uri);
+                return null;
+            });
+        }
+
         public void stop_scanner () {
-            lib_scanner.stop_scan ();
+            if (lib_scanner != null) {
+                lib_scanner.stop_scan ();
+            } else if (import_manager != null) {
+                import_manager.stop_scan ();
+            }
         }
 
         public bool dirty_library () {

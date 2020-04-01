@@ -17,16 +17,15 @@
  */
 
 namespace Music2 {
-    public class Services.LibraryScanner : GLib.Object {
-        public signal void finished_scan (int64 scan_time = -1);
-        public signal void added_track (CObjects.Media m);
+    public class Services.LibraryScanner : Interfaces.Scanner {
+        // public signal void finished_scan (int64 scan_time = -1);
+        // public signal void added_track (CObjects.Media m);
         public signal void added_artist (string artist_name, int artist_id);
         public signal void added_album (Structs.Album album);
         public signal void added_apa (int artist_id, int album_id);
-        public signal void total_found (uint total);
+        // public signal void total_found (uint total);
 
         public int64 start_time;
-        // public uint total_media;
         public uint recorded_tracks;
         private string[] tracks_path;
 
@@ -34,7 +33,7 @@ namespace Music2 {
         private Gee.HashMap<uint, int> albums_cache;
         private Gee.HashMap<int, Gee.ArrayList<int>> apa_cache;
 
-        private bool stop_flag;
+        // private bool stop_flag;
 
         private Objects.LibraryTagger? lib_tagger;
         private DataBaseManager db_manager;
@@ -43,7 +42,7 @@ namespace Music2 {
             db_manager = new DataBaseManager ();
         }
 
-        public void start_scan (string uri) {
+        public override void start_scan (string uri) {
             recorded_tracks = 0;
             stop_flag = false;
             apa_cache = new Gee.HashMap<int, Gee.ArrayList<int>> ();
@@ -57,7 +56,7 @@ namespace Music2 {
             total_found (tracks_path.length);
 
             if (tracks_path.length > 0) {
-                // db_manager.reset_database ();
+                db_manager.reset_database ();
 
                 lib_tagger = new Objects.LibraryTagger ();
                 lib_tagger.init ();
@@ -78,11 +77,11 @@ namespace Music2 {
             finished_scan (t.to_unix () - start_time);
         }
 
-        public void stop_scan () {
-            lock (stop_flag) {
-                stop_flag = true;
-            }
-        }
+        // public void stop_scan () {
+        //     lock (stop_flag) {
+        //         stop_flag = true;
+        //     }
+        // }
 
         private void scan_directory (string uri) {
             GLib.File directory = GLib.File.new_for_uri (uri.replace ("#", "%23"));

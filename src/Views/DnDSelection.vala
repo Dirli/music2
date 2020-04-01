@@ -33,12 +33,13 @@ namespace Music2 {
                 button_clicked (Enums.ActionType.PLAY, uri);
             });
 
-            var load_btn = new Views.CustomButton ("go-down-symbolic", "Load");
+            var load_btn = new Views.CustomButton ("go-down-symbolic", "Import");
             load_btn.clicked.connect (() => {
-                button_clicked (Enums.ActionType.LOAD, uri);
+                button_clicked (Enums.ActionType.IMPORT, uri);
             });
 
             var cancel_btn = new Views.CustomButton ("pane-hide-symbolic", "Cancel");
+            cancel_btn.get_style_context ().add_class (Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION);
             cancel_btn.clicked.connect (() => {
                 button_clicked (Enums.ActionType.NONE, uri);
             });

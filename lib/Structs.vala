@@ -43,4 +43,9 @@ namespace Music2.Structs {
         public string name;
         public int id;
     }
+
+    public struct ImportFile {
+        public string parents;
+        public string uri;
+    }
 }

@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2020 Dirli <litandrej85@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 namespace Music2 {
     public class Widgets.ActionStack : Gtk.Stack {
         public signal void cancelled_scan ();
@@ -43,8 +61,8 @@ namespace Music2 {
             if (get_child_by_name ("dnd") == null) {
                 var dnd_selection = new Views.DnDSelection ();
                 dnd_selection.button_clicked.connect ((btn_name, uri) => {
-                    dnd_button_clicked (btn_name, uri);
                     hide_widget ("dnd");
+                    dnd_button_clicked (btn_name, uri);
                 });
 
                 add_named (dnd_selection, "dnd");

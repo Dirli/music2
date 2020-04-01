@@ -58,13 +58,13 @@ namespace Music2 {
             organize_folders_switch.halign = Gtk.Align.START;
             main_win.settings.bind ("update-folder-hierarchy", organize_folders_switch, "active", GLib.SettingsBindFlags.DEFAULT);
 
-            var write_file_metadata_switch = new Gtk.Switch ();
-            write_file_metadata_switch.halign = Gtk.Align.START;
-            main_win.settings.bind ("write-metadata-to-file", write_file_metadata_switch, "active", GLib.SettingsBindFlags.DEFAULT);
+            var import_all_files_switch = new Gtk.Switch ();
+            import_all_files_switch.halign = Gtk.Align.START;
+            main_win.settings.bind ("import-all-files", import_all_files_switch, "active", GLib.SettingsBindFlags.DEFAULT);
 
-            var copy_imported_music_switch = new Gtk.Switch ();
-            copy_imported_music_switch.halign = Gtk.Align.START;
-            main_win.settings.bind ("copy-imported-music", copy_imported_music_switch, "active", GLib.SettingsBindFlags.DEFAULT);
+            var move_imported_music_switch = new Gtk.Switch ();
+            move_imported_music_switch.halign = Gtk.Align.START;
+            main_win.settings.bind ("move-imported-music", move_imported_music_switch, "active", GLib.SettingsBindFlags.DEFAULT);
 
             var hide_on_close_switch = new Gtk.Switch ();
             hide_on_close_switch.halign = Gtk.Align.START;
@@ -83,10 +83,10 @@ namespace Music2 {
             layout.attach (new Granite.HeaderLabel (_("Library Management")), 0, 2);
             layout.attach (new SettingsLabel (_("Keep Music folder organized:")), 0, 3);
             layout.attach (organize_folders_switch, 1, 3);
-            layout.attach (new SettingsLabel (_("Write metadata to file:")), 0, 4);
-            layout.attach (write_file_metadata_switch, 1, 4);
-            layout.attach (new SettingsLabel (_("Copy imported files to Library:")), 0, 5);
-            layout.attach (copy_imported_music_switch, 1, 5);
+            layout.attach (new SettingsLabel (_("import all files (not just music files):")), 0, 4);
+            layout.attach (import_all_files_switch, 1, 4);
+            layout.attach (new SettingsLabel (_("Move imported music (delete source):")), 0, 5);
+            layout.attach (move_imported_music_switch, 1, 5);
             layout.attach (new Granite.HeaderLabel (_("Desktop Integration")), 0, 6);
             layout.attach (new SettingsLabel (_("Continue playback when closed:")), 0, 7);
             layout.attach (hide_on_close_switch, 1, 7);

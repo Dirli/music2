@@ -31,6 +31,7 @@ if get_option ('gtk')
     app_files += files (
         'Structs.vala',
         'Interfaces/GenericList.vala',
+        'Interfaces/Scanner.vala',
         'Interfaces/StackWrapper.vala',
         'LViews/GridView.vala',
         'LViews/ListView.vala',

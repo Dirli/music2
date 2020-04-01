@@ -754,7 +754,23 @@ namespace Music2 {
                     settings.set_string ("source-media", uri);
                     on_selected_row (0, Enums.SourceType.DIRECTORY);
                     break;
-                case Enums.ActionType.LOAD:
+                case Enums.ActionType.IMPORT:
+                    if (scans_library) {
+                        return;
+                    }
+
+                    var music_folder = settings.get_string ("music-folder");
+                    var import_dialog = new Dialogs.ImportFolder (this, uri);
+                    import_dialog.response.connect ((response_id) => {
+                        if (response_id == Gtk.ResponseType.APPLY) {
+                            library_manager.import_folder (uri, music_folder);
+                        }
+
+                        import_dialog.destroy ();
+                    });
+
+                    import_dialog.show_all ();
+                    import_dialog.run ();
                     break;
             }
         }
