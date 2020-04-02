@@ -74,9 +74,15 @@ namespace Music2 {
                 inhibit ();
             }
 
+            var cover_path = "";
+            if (m.album != null) {
+                cover_path = Tools.FileUtils.get_cover_path (m.year, m.get_display_album ());
+            }
+
+
             show_notification (m.get_display_title (),
                                notification_body,
-                               Tools.FileUtils.get_cover_path (m.year, m.album));
+                               cover_path);
         }
 
         private void on_changed_repeat () {
@@ -121,6 +127,8 @@ namespace Music2 {
                     break;
                 case Enums.SourceType.PLAYLIST:
                     play_from_playlist ();
+                    break;
+                case Enums.SourceType.FILE:
                     break;
                 case Enums.SourceType.NONE:
                     uint[] zero_arr = {};
@@ -169,6 +177,8 @@ namespace Music2 {
                     case Enums.SourceType.DIRECTORY:
                         play_from_directory ();
                         break;
+                    case Enums.SourceType.FILE:
+                        break;
                     case Enums.SourceType.EXTPLAYLIST:
                         load_from_extplaylist ();
                         break;
@@ -208,6 +218,30 @@ namespace Music2 {
             Core.Daemon.on_exit (0);
         }
 
+        public void open_files (GLib.File[] files) {
+            settings.set_enum ("source-type", Enums.SourceType.NONE);
+            GLib.Array<string> tracks = new GLib.Array<string> ();
+            foreach (unowned GLib.File f in files) {
+                if (f.query_exists ()) {
+                    tracks.append_val (f.get_uri ());
+                }
+            }
+
+            if (tracks.length > 0) {
+                if (scanner != null) {
+                    stop_scanner ();
+                }
+
+                settings.set_enum ("source-type", Enums.SourceType.FILE);
+                player.launch = true;
+
+                scanner = new CObjects.Scanner ();
+                scanner.init ();
+                scanner.discovered_new_item.connect (on_new_item);
+                scanner.scan_tracks (tracks);
+            }
+        }
+
         private void stop_scanner () {
             scanner.discovered_new_item.disconnect (on_new_item);
             scanner.stop_scan ();
@@ -245,7 +279,7 @@ namespace Music2 {
             var playlist_path = settings.get_string ("source-media");
 
             var paths = Tools.FileUtils.get_playlist_m3u (playlist_path);
-            if (paths == null) {
+            if (paths.length == 0) {
                 settings.set_string ("source-media", "");
                 settings.set_enum ("source-type", Enums.SourceType.NONE);
 

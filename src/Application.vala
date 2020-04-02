@@ -21,7 +21,7 @@ namespace Music2 {
         private MainWindow main_window;
 
         construct {
-            flags |= ApplicationFlags.HANDLES_OPEN;
+            // flags |= ApplicationFlags.HANDLES_OPEN;
             application_id = Constants.APP_NAME;
         }
 

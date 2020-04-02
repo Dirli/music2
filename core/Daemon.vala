@@ -19,6 +19,7 @@
 namespace Music2 {
     public class Core.Daemon : GLib.Application {
         private static Daemon? instance = null;
+        private Core.Server player_server = null;
 
         public static unowned Daemon get_instance () {
             if (instance == null) {
@@ -31,12 +32,20 @@ namespace Music2 {
         private Daemon () {}
 
         construct {
+            flags |= ApplicationFlags.HANDLES_OPEN;
             application_id = "io.elementary.music2d";
         }
 
         public override void activate () {
-            new Core.Server (this);
-            hold ();
+            if (player_server == null) {
+                player_server = new Core.Server (this);
+                hold ();
+            }
+        }
+
+        public override void open (GLib.File[] files, string hint) {
+            activate ();
+            player_server.open_files (files);
         }
 
         public static void on_exit (int signum) {

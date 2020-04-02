@@ -71,7 +71,6 @@ namespace Music2 {
 
                         string mime_type = file_info.get_content_type ();
                         if (Tools.FileUtils.is_audio_file (mime_type)) {
-                            // add_discover_uri (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
                             total_files += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
                         }
                     }
@@ -117,9 +116,6 @@ namespace Music2 {
 
                 if (tags.get_string (Gst.Tags.TITLE, out o)) {
                     track.title = o;
-                }
-                if (track.title.strip () == "") {
-                    track.title = GLib.Path.get_basename (info.get_uri ());
                 }
 
                 if (tags.get_string (Gst.Tags.ALBUM, out o)) {
