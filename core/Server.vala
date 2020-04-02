@@ -219,13 +219,38 @@ namespace Music2 {
         }
 
         public void open_files (GLib.File[] files) {
-            settings.set_enum ("source-type", Enums.SourceType.NONE);
+            if (active_source_type != null && active_source_type != Enums.SourceType.NONE) {
+                settings.set_enum ("source-type", Enums.SourceType.NONE);
+            }
             GLib.Array<string> tracks = new GLib.Array<string> ();
+            var check_type = true;
             foreach (unowned GLib.File f in files) {
+                if (check_type) {
+                    check_type = false;
+                    var file_type = f.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
+                    if (file_type == GLib.FileType.DIRECTORY) {
+                        settings.set_string ("source-media", f.get_uri ());
+                        settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
+                        break;
+                    } else if (file_type == GLib.FileType.REGULAR) {
+                        var file_name = f.get_basename ();
+                        if (file_name != null) {
+                            if (file_name.has_suffix (".m3u")) {
+                                var f_uri = f.get_uri ();
+                                settings.set_string ("source-media", f_uri);
+                                settings.set_enum ("source-type", Enums.SourceType.EXTPLAYLIST);
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (f.query_exists ()) {
                     tracks.append_val (f.get_uri ());
                 }
             }
+
+            player.launch = true;
 
             if (tracks.length > 0) {
                 if (scanner != null) {
@@ -233,7 +258,6 @@ namespace Music2 {
                 }
 
                 settings.set_enum ("source-type", Enums.SourceType.FILE);
-                player.launch = true;
 
                 scanner = new CObjects.Scanner ();
                 scanner.init ();
@@ -276,9 +300,9 @@ namespace Music2 {
         }
 
         private void load_from_extplaylist () {
-            var playlist_path = settings.get_string ("source-media");
+            var playlist_uri = settings.get_string ("source-media");
 
-            var paths = Tools.FileUtils.get_playlist_m3u (playlist_path);
+            var paths = Tools.FileUtils.get_playlist_m3u (playlist_uri);
             if (paths.length == 0) {
                 settings.set_string ("source-media", "");
                 settings.set_enum ("source-type", Enums.SourceType.NONE);

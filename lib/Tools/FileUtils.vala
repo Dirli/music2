@@ -100,11 +100,11 @@ namespace Music2.Tools.FileUtils {
         return to_save;
     }
 
-    public GLib.Array? get_playlist_m3u (string playlist_path) {
+    public GLib.Array? get_playlist_m3u (string playlist_uri) {
         GLib.Array<string> tracks = new GLib.Array<string> ();
 
-        var file = GLib.File.new_for_path (playlist_path);
-        if (!file.query_exists ()) {
+        var pl_file = GLib.File.new_for_uri (playlist_uri);
+        if (!pl_file.query_exists ()) {
             warning ("The imported playlist doesn't exist!");
             return null;
         }
@@ -112,7 +112,7 @@ namespace Music2.Tools.FileUtils {
         try {
             string line;
             bool correct = false;
-            var dis = new DataInputStream (file.read ());
+            var dis = new DataInputStream (pl_file.read ());
             while ((line = dis.read_line ()) != null) {
                 if (!correct) {
                     if (line != "#EXTM3U") {
@@ -127,7 +127,7 @@ namespace Music2.Tools.FileUtils {
                 }
             }
         } catch (Error e) {
-            warning ("Could not load m3u file at %s: %s\n", playlist_path, e.message);
+            warning ("Could not load m3u file at %s: %s\n", pl_file.get_path (), e.message);
             return null;
         }
 

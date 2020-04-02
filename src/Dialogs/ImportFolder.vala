@@ -18,8 +18,8 @@
 
 namespace Music2 {
     public class Dialogs.ImportFolder : Gtk.Dialog {
-        public string import_uri {get; construct set;}
-        public ImportFolder (Music2.MainWindow main_window, string uri) {
+        public string import_path {get; construct set;}
+        public ImportFolder (Music2.MainWindow main_window, string path) {
             Object (
                 border_width: 6,
                 deletable: false,
@@ -29,13 +29,11 @@ namespace Music2 {
                 title: _("Import folder"),
                 width_request: Constants.DIALOG_MIN_WIDTH,
                 window_position: Gtk.WindowPosition.CENTER_ON_PARENT,
-                import_uri: uri
+                import_path: path
             );
 
-            var dir = GLib.File.new_for_uri (import_uri);
-
             var header_message = _("You plan to import a folder to your library:\n%s")
-            .printf (GLib.Markup.escape_text (dir.get_path ()));
+            .printf (GLib.Markup.escape_text (import_path));
 
             var header_label = new TitleLabel ("");
             header_label.max_width_chars = 60;

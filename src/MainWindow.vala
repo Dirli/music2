@@ -241,13 +241,21 @@ namespace Music2 {
             playlist_stack.selected_row.connect (on_selected_row);
             playlist_stack.popup_media_menu.connect (on_popup_media_menu);
 
+            var import_menuitem = new Gtk.ModelButton ();
+            import_menuitem.text = _("Import to library");
+            import_menuitem.clicked.connect (action_import);
+
             var preferences_menuitem = new Gtk.ModelButton ();
             preferences_menuitem.text = _("Preferences");
             preferences_menuitem.clicked.connect (on_preferences_click);
-            preferences_menuitem.show ();
+
+            var menu_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
+            menu_box.add (import_menuitem);
+            menu_box.add (preferences_menuitem);
+            menu_box.show_all ();
 
             var menu_popover = new Gtk.Popover (null);
-            menu_popover.add (preferences_menuitem);
+            menu_popover.add (menu_box);
 
             var menu_button = new Gtk.MenuButton ();
             menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.LARGE_TOOLBAR);
@@ -469,7 +477,35 @@ namespace Music2 {
         }
 
         private void action_search () {}
-        private void action_import () {}
+
+        private void action_import () {
+            if (scans_library) {
+                return;
+            }
+
+            var file_chooser = new Gtk.FileChooserNative (
+                _("Import Music"),
+                this,
+                Gtk.FileChooserAction.SELECT_FOLDER,
+                _("Open"),
+                _("Cancel")
+            );
+            file_chooser.set_select_multiple (false);
+            file_chooser.set_local_only (true);
+
+            var select_folder = "";
+            if (file_chooser.run () == Gtk.ResponseType.ACCEPT) {
+                select_folder = file_chooser.get_filename ();
+            }
+
+            file_chooser.destroy ();
+
+            if (select_folder == "") {
+                return;
+            }
+
+            on_import_folder (GLib.File.new_for_path (select_folder));
+        }
 
         private void action_view_albums () {
             view_selector.mode_button.selected = Enums.ViewMode.GRID;
@@ -571,6 +607,27 @@ namespace Music2 {
 
             preferences.show_all ();
             preferences.run ();
+        }
+
+        private void on_import_folder (GLib.File folder) {
+            GLib.Timeout.add (400, () => {
+                if (folder.query_exists ()) {
+                    var music_folder = settings.get_string ("music-folder");
+                    var import_dialog = new Dialogs.ImportFolder (this, folder.get_path ());
+                    import_dialog.response.connect ((response_id) => {
+                        if (response_id == Gtk.ResponseType.APPLY) {
+                            library_manager.import_folder (folder.get_uri (), music_folder);
+                        }
+
+                        import_dialog.destroy ();
+                    });
+
+                    import_dialog.show_all ();
+                    import_dialog.run ();
+                }
+
+                return false;
+            });
         }
 
         private void on_mode_changed () {
@@ -760,18 +817,7 @@ namespace Music2 {
                         return;
                     }
 
-                    var music_folder = settings.get_string ("music-folder");
-                    var import_dialog = new Dialogs.ImportFolder (this, uri);
-                    import_dialog.response.connect ((response_id) => {
-                        if (response_id == Gtk.ResponseType.APPLY) {
-                            library_manager.import_folder (uri, music_folder);
-                        }
-
-                        import_dialog.destroy ();
-                    });
-
-                    import_dialog.show_all ();
-                    import_dialog.run ();
+                    on_import_folder (GLib.File.new_for_uri (uri));
                     break;
             }
         }
@@ -788,8 +834,7 @@ namespace Music2 {
                     var file_name = path_file.get_basename ();
                     if (file_name != null) {
                         if (file_name.has_suffix (".m3u")) {
-                            var path = path_file.get_path ();
-                            settings.set_string ("source-media", path);
+                            settings.set_string ("source-media", uris[0]);
 
                             on_selected_row (0, Enums.SourceType.EXTPLAYLIST);
                         }
