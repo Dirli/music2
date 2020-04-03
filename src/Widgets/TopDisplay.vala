@@ -20,7 +20,7 @@ namespace Music2 {
     public class Widgets.TopDisplay : Gtk.Stack {
         public signal void mode_option_changed (string mode_name, int option_val);
         public signal void seek_position (int64 offset);
-        public signal void popup_media_menu ();
+        public signal void popup_media_menu (double x, double y, Gtk.Widget w);
 
         private uint progress_timer = 0;
         private uint seek_timer = 0;
@@ -59,7 +59,7 @@ namespace Music2 {
             track_eventbox.add (track_label);
             track_eventbox.button_press_event.connect ((e) => {
                 if (e.button == Gdk.BUTTON_SECONDARY) {
-                    popup_media_menu ();
+                    popup_media_menu (e.x, e.y, track_label);
                 }
                 return false;
             });

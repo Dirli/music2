@@ -50,8 +50,11 @@ namespace Music2.Enums {
         EDIT,
         EXPORT,
         IMPORT,
+        QUEUE,
         REMOVE,
         RENAME,
+        BROWSE,
+        SCROLL,
         SAVE,
         SCAN
     }

@@ -25,6 +25,7 @@ executable(
     'Widgets/ActionStack.vala',
     'Widgets/ColumnsView.vala',
     'Widgets/EqualizerPopover.vala',
+    'Widgets/MediaMenu.vala',
     'Widgets/MusicStack.vala',
     'Widgets/PlaylistStack.vala',
     'Widgets/QueueStack.vala',

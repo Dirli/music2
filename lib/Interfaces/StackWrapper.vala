@@ -19,7 +19,7 @@
 namespace Music2 {
     public abstract class Interfaces.StackWrapper : Gtk.Stack {
         public signal void selected_row (uint row_id, Enums.SourceType source_type);
-        public signal void popup_media_menu (Enums.Hint hint, uint[] tids);
+        public signal void popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget w);
 
         public abstract void clear_stack ();
 
@@ -80,7 +80,7 @@ namespace Music2 {
             list_view.set_model (list_store);
             tree_sel = list_view.get_selection ();
 
-            list_view.popup_media_menu.connect ((popup_hint) => {
+            list_view.popup_media_menu.connect ((popup_hint, x_point, y_point, widget) => {
                 Gtk.TreeModel mod;
                 uint[] tids = {};
                 var paths_list = tree_sel.get_selected_rows (out mod);
@@ -94,7 +94,14 @@ namespace Music2 {
                     }
                 });
 
-                popup_media_menu (popup_hint, tids);
+                Gdk.Rectangle rect = {};
+
+                rect.x = (int) x_point;
+                rect.y = (int) y_point;
+                rect.height = 1;
+                rect.width = 1;
+
+                popup_media_menu (popup_hint, tids, rect, widget);
             });
 
             var scrolled_view = new Gtk.ScrolledWindow (null, null);

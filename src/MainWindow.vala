@@ -40,6 +40,7 @@ namespace Music2 {
         private Widgets.StatusBar status_bar;
         private Widgets.TopDisplay top_display;
         private Widgets.ActionStack action_stack;
+        private Widgets.MediaMenu? media_menu = null;
 
         private Gtk.Button play_button;
         private Gtk.Button previous_button;
@@ -281,12 +282,19 @@ namespace Music2 {
             top_display.mode_option_changed.connect ((key, new_val) => {
                 settings.set_enum (key, new_val);
             });
-            top_display.popup_media_menu.connect (() => {
+            top_display.popup_media_menu.connect ((x_point, y_point, widget) => {
                 uint[] tids = {};
 
                 if (active_track > 0) {
                     tids += active_track;
-                    on_popup_media_menu (Enums.Hint.QUEUE, tids);
+                    Gdk.Rectangle rect = {};
+
+                    rect.x = (int) x_point;
+                    rect.y = (int) y_point;
+                    rect.height = 1;
+                    rect.width = 1;
+
+                    on_popup_media_menu (Enums.Hint.QUEUE, tids, rect, widget);
                 }
             });
 
@@ -591,8 +599,32 @@ namespace Music2 {
             }
         }
 
-        private void on_popup_media_menu (Enums.Hint hint, uint[] tids) {
+        private void on_popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget w) {
+            if (media_menu == null) {
+                media_menu = new Widgets.MediaMenu ();
+                media_menu.popdown ();
+                media_menu.activate_menu_item.connect (on_activate_item);
+            }
 
+            if (hint == Enums.Hint.NONE) {
+                return;
+            }
+
+            media_menu.set_pointing_to (rect);
+            media_menu.set_relative_to (w);
+            media_menu.popup_media_menu (hint, tids);
+        }
+
+        private void on_activate_item (Enums.Hint hint, Enums.ActionType action_type, uint[] tids) {
+            if (tids.length == 0) {
+                return;
+            }
+
+            switch (action_type) {
+                case Enums.ActionType.BROWSE:
+                    show_in_browser (hint, tids[0]);
+                    break;
+            }
         }
 
         private void on_preferences_click () {
@@ -850,6 +882,10 @@ namespace Music2 {
                 top_display.set_progress (p);
             }
 
+            if (media_menu != null) {
+                media_menu.player_state = play_state;
+            }
+
             var icon_name = "media-playback-start-symbolic";
             play_button.tooltip_text = _("Play");
 
@@ -932,6 +968,32 @@ namespace Music2 {
 
                 return false;
             });
+        }
+
+        private void show_in_browser (Enums.Hint hint, uint tid) {
+            CObjects.Media? media = null;
+            if (Enums.Hint.QUEUE == hint) {
+                try {
+                    uint[] tids = {tid};
+                    var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
+                    if (tracks_meta.length > 0) {
+                        media = metadata_to_media (tracks_meta[0]);
+                    }
+                } catch (Error e) {
+                    warning (e.message);
+                }
+            } else if (Enums.Hint.MUSIC == hint) {
+                media = library_manager.get_media (tid);
+            }
+
+            if (media != null) {
+                try {
+                    var m_file = GLib.File.new_for_uri (media.uri);
+                    Gtk.show_uri (null, m_file.get_parent ().get_uri (), Gdk.CURRENT_TIME);
+                } catch (Error err) {
+                    warning ("Could not browse media %s: %s\n", media.uri, err.message);
+                }
+            }
         }
 
         private void export_playlist (Views.SourceListItem item) {
