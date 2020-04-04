@@ -138,21 +138,11 @@ namespace Music2 {
             if (iter_hash.has_key (tid) && has_list_view) {
                 GLib.Idle.add (() => {
                     var iter = iter_hash[tid];
-                    tree_sel.select_iter (iter);
+                    var sel_path = list_store.get_path (iter);
 
-                    Gtk.TreeModel mod;
-                    var paths_list = tree_sel.get_selected_rows (out mod);
-
-                    if (paths_list.length () > 0) {
+                    if (sel_path != null) {
                         list_store.set (iter, Enums.ListColumn.ICON, new GLib.ThemedIcon ("audio-volume-high-symbolic"), -1);
-
-                        var column = list_view.get_column (0);
-                        if (column != null) {
-                            var cells = column.get_cells ();
-                            if (cells.length () > 0) {
-                                list_view.set_cursor_on_cell (paths_list.nth_data (0), column, cells.nth_data (0), false);
-                            }
-                        }
+                        list_view.set_cursor (sel_path, null, false);
                     }
 
                     return false;
@@ -177,13 +167,10 @@ namespace Music2 {
             if (iter_hash.has_key (tid) && has_list_view) {
                 tree_sel.unselect_all ();
 
-                var current_iter = iter_hash[tid];
-                tree_sel.select_iter (current_iter);
+                var current_path = list_store.get_path (iter_hash[tid]);
 
-                Gtk.TreeModel mod;
-                var paths_list = tree_sel.get_selected_rows (out mod);
-                if (paths_list.length () > 0) {
-                    list_view.set_cursor_on_cell (paths_list.nth_data (0), null, null, false);
+                if (current_path != null) {
+                    list_view.set_cursor (current_path, null, false);
                 }
             }
         }

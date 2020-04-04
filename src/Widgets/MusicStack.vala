@@ -113,7 +113,17 @@ namespace Music2 {
 
                 (this as Interfaces.StackWrapper).select_run_row (tid);
             } else {
-                //
+                GLib.Idle.add (() => {
+                    Gtk.TreeIter iter;
+                    if (list_store.get_iter_first (out iter)) {
+                        var first_path = list_store.get_path (iter);
+                        if (first_path != null) {
+                            list_view.set_cursor (first_path, null, false);
+                        }
+                    }
+
+                    return false;
+                });
             }
         }
 
