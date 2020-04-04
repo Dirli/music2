@@ -4,9 +4,9 @@ namespace Music2 {
 
         private uint[] tracks_id;
 
-        public string player_state {
+        public bool active_media {
             set {
-                scroll_to_current.sensitive = ("Playing" == value || "Paused" == value);
+                scroll_to_current.sensitive = value;
             }
         }
 
@@ -17,6 +17,9 @@ namespace Music2 {
         private Gtk.ModelButton import_to_library;
         private Gtk.ModelButton queue_media;
         private Gtk.ModelButton remove_media;
+
+        private Gtk.Separator separator1;
+        private Gtk.Separator separator2;
 
         private Enums.Hint? current_hint = null;
 
@@ -70,12 +73,15 @@ namespace Music2 {
 
             menu_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
 
+            separator1 = new Gtk.Separator (Gtk.Orientation.HORIZONTAL);
+            separator2 = new Gtk.Separator (Gtk.Orientation.HORIZONTAL);
+
             menu_box.add (scroll_to_current);
-            menu_box.add (new Gtk.Separator (Gtk.Orientation.HORIZONTAL));
+            menu_box.add (separator1);
             menu_box.add (file_browse);
             menu_box.add (edit_media);
             menu_box.add (queue_media);
-            menu_box.add (new Gtk.Separator (Gtk.Orientation.HORIZONTAL));
+            menu_box.add (separator2);
             menu_box.add (remove_media);
             menu_box.add (import_to_library);
 
@@ -83,7 +89,7 @@ namespace Music2 {
             show_all ();
         }
 
-        public void popup_media_menu (Enums.Hint hint, uint[] tids) {
+        public void popup_media_menu (Enums.Hint hint, uint[] tids, bool show_scroll) {
             tracks_id = tids;
 
             if (current_hint == null || current_hint != hint) {
@@ -100,31 +106,32 @@ namespace Music2 {
                         break;
                     case Enums.Hint.MUSIC:
                     case Enums.Hint.PLAYLIST:
-                        scroll_to_current.show ();
                         edit_media.show ();
                         file_browse.show ();
                         queue_media.show ();
+                        separator2.show ();
                         remove_media.show ();
                         if (hint == Enums.Hint.MUSIC) {
                             remove_media.set_label (_("Remove from Library…"));
                         }
-                        // menu_box.add (rate_media);
                         break;
                     case Enums.Hint.SMART_PLAYLIST:
-                        scroll_to_current.show ();
                         edit_media.show ();
                         file_browse.show ();
                         queue_media.show ();
                         break;
                     case Enums.Hint.QUEUE:
-                        scroll_to_current.show ();
+                        if (show_scroll) {
+                            scroll_to_current.show ();
+                            separator1.show ();
+                        }
                         file_browse.show ();
+                        separator2.show ();
                         remove_media.show ();
                         remove_media.set_label (_("Remove from Queue"));
                         break;
                     case Enums.Hint.READ_ONLY_PLAYLIST:
                     default:
-                        scroll_to_current.show ();
                         file_browse.show ();
                         break;
                 }

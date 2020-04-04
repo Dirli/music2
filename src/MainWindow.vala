@@ -282,7 +282,7 @@ namespace Music2 {
             top_display.mode_option_changed.connect ((key, new_val) => {
                 settings.set_enum (key, new_val);
             });
-            top_display.popup_media_menu.connect ((x_point, y_point, widget) => {
+            top_display.popup_media_menu.connect ((x_point, y_point) => {
                 uint[] tids = {};
 
                 if (active_track > 0) {
@@ -294,7 +294,7 @@ namespace Music2 {
                     rect.height = 1;
                     rect.width = 1;
 
-                    on_popup_media_menu (Enums.Hint.QUEUE, tids, rect, widget);
+                    on_popup_media_menu (Enums.Hint.QUEUE, tids, rect, null);
                 }
             });
 
@@ -599,7 +599,7 @@ namespace Music2 {
             }
         }
 
-        private void on_popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget w) {
+        private void on_popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget? w) {
             if (media_menu == null) {
                 media_menu = new Widgets.MediaMenu ();
                 media_menu.popdown ();
@@ -610,9 +610,11 @@ namespace Music2 {
                 return;
             }
 
+            media_menu.active_media = active_track > 0;
+
             media_menu.set_pointing_to (rect);
-            media_menu.set_relative_to (w);
-            media_menu.popup_media_menu (hint, tids);
+            media_menu.set_relative_to (w == null ? top_display : w);
+            media_menu.popup_media_menu (hint, tids, w == null);
         }
 
         private void on_activate_item (Enums.Hint hint, Enums.ActionType action_type, uint[] tids) {
@@ -623,6 +625,12 @@ namespace Music2 {
             switch (action_type) {
                 case Enums.ActionType.BROWSE:
                     show_in_browser (hint, tids[0]);
+                    break;
+                case Enums.ActionType.SCROLL:
+                    var visible_widget = view_stack.get_visible_child ();
+                    if (visible_widget is Interfaces.StackWrapper) {
+                        (visible_widget as Interfaces.StackWrapper).scroll_to_current (active_track);
+                    }
                     break;
             }
         }
@@ -880,10 +888,6 @@ namespace Music2 {
         private void changed_state (string play_state, int64 p) {
             if (p > 0) {
                 top_display.set_progress (p);
-            }
-
-            if (media_menu != null) {
-                media_menu.player_state = play_state;
             }
 
             var icon_name = "media-playback-start-symbolic";

@@ -81,11 +81,21 @@ namespace Music2 {
             tree_sel = list_view.get_selection ();
 
             list_view.popup_media_menu.connect ((popup_hint, x_point, y_point, widget) => {
+                int cell_x, cell_y;
+                Gtk.TreePath? cursor_path;
+                Gtk.TreeViewColumn? cursor_column;
+                list_view.get_path_at_pos ((int) x_point, (int) y_point, out cursor_path, out cursor_column, out cell_x, out cell_y);
+
                 Gtk.TreeModel mod;
                 uint[] tids = {};
                 var paths_list = tree_sel.get_selected_rows (out mod);
 
+                bool contains_cursor_path = false;
                 paths_list.foreach ((iter_path) => {
+                    if (!contains_cursor_path) {
+                        contains_cursor_path = cursor_path != null && iter_path.compare (cursor_path) == 0 ? true : false;
+                    }
+
                     Gtk.TreeIter iter;
                     if (list_store.get_iter (out iter, iter_path)) {
                         uint tid;
@@ -93,6 +103,17 @@ namespace Music2 {
                         tids += tid;
                     }
                 });
+
+                if (!contains_cursor_path && cursor_path != null) {
+                    tree_sel.unselect_all ();
+                    tree_sel.select_path (cursor_path);
+                    Gtk.TreeIter iter;
+                    if (list_store.get_iter (out iter, cursor_path)) {
+                        uint tid;
+                        list_store.@get (iter, Enums.ListColumn.TRACKID, out tid);
+                        tids = {tid};
+                    }
+                }
 
                 Gdk.Rectangle rect = {};
 
@@ -148,6 +169,21 @@ namespace Music2 {
 
                 if (paths_list.length () > 0) {
                     tree_sel.unselect_path (paths_list.nth_data (0));
+                }
+            }
+        }
+
+        public void scroll_to_current (uint tid) {
+            if (iter_hash.has_key (tid) && has_list_view) {
+                tree_sel.unselect_all ();
+
+                var current_iter = iter_hash[tid];
+                tree_sel.select_iter (current_iter);
+
+                Gtk.TreeModel mod;
+                var paths_list = tree_sel.get_selected_rows (out mod);
+                if (paths_list.length () > 0) {
+                    list_view.set_cursor_on_cell (paths_list.nth_data (0), null, null, false);
                 }
             }
         }
