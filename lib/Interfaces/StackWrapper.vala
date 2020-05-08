@@ -23,9 +23,7 @@ namespace Music2 {
 
         public abstract void clear_stack ();
 
-        protected Gee.HashMap<uint, Gtk.TreeIter?> iter_hash;
-
-        protected Gtk.ListStore list_store;
+        public Gtk.ListStore list_store;
         protected Enums.SourceType source_type;
         protected string current_view { get; set; }
 
@@ -47,34 +45,19 @@ namespace Music2 {
             get {return welcome_screen != null;}
         }
 
-        public void add_iter (CObjects.Media m) {
-            lock (list_store) {
-                Gtk.TreeIter iter;
-                list_store.insert_with_values (out iter, -1,
-                    Enums.ListColumn.TRACKID, m.tid,
-                    Enums.ListColumn.TRACK, m.track,
-                    Enums.ListColumn.ALBUM, m.get_display_album (),
-                    Enums.ListColumn.LENGTH, m.length,
-                    Enums.ListColumn.TITLE, m.get_display_title (),
-                    Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
-
-                iter_hash[m.tid] = iter;
-            }
-        }
-
         protected void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
             Gtk.TreeIter? iter;
-            list_store.get_iter (out iter, path);
+            list_view.model.get_iter (out iter, path);
 
             if (iter != null) {
                 GLib.Value text;
-                list_store.get_value (iter, Enums.ListColumn.TRACKID, out text);
+                list_view.model.get_value (iter, (int) Enums.ListColumn.TRACKID, out text);
                 selected_row ((uint) text, source_type);
             }
         }
 
-        protected Gtk.ScrolledWindow init_list_view (Enums.Hint hint) {
-            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
+        protected Gtk.ScrolledWindow init_list_view (Enums.Hint hint, Gtk.ListStore list_store) {
+            this.list_store = list_store;
 
             list_view = new LViews.ListView (hint);
             list_view.set_model (list_store);
@@ -86,8 +69,8 @@ namespace Music2 {
                 Gtk.TreeViewColumn? cursor_column;
                 list_view.get_path_at_pos ((int) x_point, (int) y_point, out cursor_path, out cursor_column, out cell_x, out cell_y);
 
-                Gtk.TreeModel mod;
                 uint[] tids = {};
+                unowned Gtk.TreeModel mod;
                 var paths_list = tree_sel.get_selected_rows (out mod);
 
                 bool contains_cursor_path = false;
@@ -99,7 +82,7 @@ namespace Music2 {
                     Gtk.TreeIter iter;
                     if (list_store.get_iter (out iter, iter_path)) {
                         uint tid;
-                        list_store.@get (iter, Enums.ListColumn.TRACKID, out tid);
+                        list_store.@get (iter, (int) Enums.ListColumn.TRACKID, out tid);
                         tids += tid;
                     }
                 });
@@ -110,7 +93,7 @@ namespace Music2 {
                     Gtk.TreeIter iter;
                     if (list_store.get_iter (out iter, cursor_path)) {
                         uint tid;
-                        list_store.@get (iter, Enums.ListColumn.TRACKID, out tid);
+                        list_store.@get (iter, (int) Enums.ListColumn.TRACKID, out tid, -1);
                         tids = {tid};
                     }
                 }
@@ -134,44 +117,49 @@ namespace Music2 {
             return scrolled_view;
         }
 
-        public void select_run_row (uint tid) {
-            if (iter_hash.has_key (tid) && has_list_view) {
-                GLib.Idle.add (() => {
-                    var iter = iter_hash[tid];
-                    var sel_path = list_store.get_path (iter);
-
-                    if (sel_path != null) {
-                        list_store.set (iter, Enums.ListColumn.ICON, new GLib.ThemedIcon ("audio-volume-high-symbolic"), -1);
-                        list_view.set_cursor (sel_path, null, false);
+        public void select_run_row (Gtk.TreeIter iter) {
+            GLib.Idle.add (() => {
+                Gtk.TreePath? sel_path = null;
+                if (list_view.model is Gtk.TreeModelFilter) {
+                    var child_path = list_store.get_path (iter);
+                    if (child_path != null) {
+                        var filter_model = list_view.model as Gtk.TreeModelFilter;
+                        if (filter_model != null) {
+                            sel_path = filter_model.convert_child_path_to_path (child_path);
+                        }
                     }
 
-                    return false;
-                });
+                } else {
+                    sel_path = list_store.get_path (iter);
+                }
+
+                if (sel_path != null) {
+                    list_store.@set (iter, (int) Enums.ListColumn.ICON, new GLib.ThemedIcon ("audio-volume-high-symbolic"), -1);
+                    list_view.set_cursor (sel_path, null, false);
+                }
+
+                return false;
+            });
+        }
+
+        public void remove_run_icon (Gtk.TreeIter iter) {
+            list_store.@set (iter, (int) Enums.ListColumn.ICON, null, -1);
+
+            unowned Gtk.TreeModel mod;
+            var paths_list = tree_sel.get_selected_rows (out mod);
+
+            if (paths_list.length () > 0) {
+                tree_sel.unselect_path (paths_list.nth_data (0));
             }
         }
 
-        public void remove_run_icon (uint tid) {
-            if (iter_hash.has_key (tid) && has_list_view) {
-                list_store.set (iter_hash[tid], Enums.ListColumn.ICON, null, -1);
+        public void scroll_to_current (Gtk.TreeIter iter) {
+            tree_sel.unselect_all ();
 
-                Gtk.TreeModel mod;
-                var paths_list = tree_sel.get_selected_rows (out mod);
+            var current_path = list_store.get_path (iter);
 
-                if (paths_list.length () > 0) {
-                    tree_sel.unselect_path (paths_list.nth_data (0));
-                }
-            }
-        }
-
-        public void scroll_to_current (uint tid) {
-            if (iter_hash.has_key (tid) && has_list_view) {
-                tree_sel.unselect_all ();
-
-                var current_path = list_store.get_path (iter_hash[tid]);
-
-                if (current_path != null) {
-                    list_view.set_cursor (current_path, null, false);
-                }
+            if (current_path != null) {
+                list_view.set_cursor (current_path, null, false);
             }
         }
 

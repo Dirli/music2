@@ -25,8 +25,6 @@ namespace Music2 {
         // private Views.DnDSelection dnd_selection;
 
         public ActionStack () {
-
-
             var empty_grid = new Gtk.Grid ();
             transition_type = Gtk.StackTransitionType.CROSSFADE;
 
@@ -36,11 +34,12 @@ namespace Music2 {
         }
 
         public void hide_widget (string widget_name) {
-            visible_child_name = "empty";
             var removed_widget = get_child_by_name (widget_name);
             if (removed_widget != null) {
                 removed_widget.destroy ();
             }
+
+            visible_child_name = "empty";
         }
 
         public void init_progress () {
@@ -68,14 +67,20 @@ namespace Music2 {
                 add_named (dnd_selection, "dnd");
             }
 
-            (get_child_by_name ("dnd") as Views.DnDSelection).add_data (uri);
-            set_visible_child_name ("dnd");
+            var dnd_widget = get_child_by_name ("dnd") as Views.DnDSelection;
+            if (dnd_widget != null) {
+                dnd_widget.add_data (uri);
+                set_visible_child_name ("dnd");
+            }
         }
 
         public void update_progress (double progress_val) {
-            var progress_box = get_child_by_name ("progress");
-            if (progress_box != null) {
-                (progress_box as Views.ProgressBox).update_progress (progress_val);
+            var child = get_child_by_name ("progress");
+            if (child != null) {
+                var progress_box = child as Views.ProgressBox;
+                if (progress_box != null) {
+                    progress_box.update_progress (progress_val);
+                }
             }
         }
     }

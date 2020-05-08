@@ -17,7 +17,7 @@
  */
 
 namespace Music2 {
-    public class Widgets.PlaylistStack : Interfaces.StackWrapper {
+    public class Widgets.PlaylistStack : Interfaces.ListStack {
         public int pid;
         public Enums.Hint playlist_hint;
 
@@ -25,9 +25,10 @@ namespace Music2 {
             alert_view = new Granite.Widgets.AlertView ("", "", "");
 
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
+            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
 
             add_named (alert_view, "alert");
-            add_named (init_list_view (Enums.Hint.PLAYLIST), "listview");
+            add_named (init_list_view (Enums.Hint.PLAYLIST, list_store), "listview");
 
             show_alert ();
         }
@@ -41,6 +42,21 @@ namespace Music2 {
                 playlist_hint = hint;
                 update_visible ();
             }
+        }
+
+        public override int add_iter (CObjects.Media m) {
+            Gtk.TreeIter iter;
+            list_store.insert_with_values (out iter, -1,
+                (int) Enums.ListColumn.TRACKID, m.tid,
+                (int) Enums.ListColumn.TRACK, m.track,
+                (int) Enums.ListColumn.ALBUM, m.get_display_album (),
+                (int) Enums.ListColumn.LENGTH, m.length,
+                (int) Enums.ListColumn.TITLE, m.get_display_title (),
+                (int) Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
+
+            iter_hash[m.tid] = iter;
+
+            return 1;
         }
 
         public override void clear_stack () {
@@ -70,7 +86,7 @@ namespace Music2 {
                     alert_view.show_action (_("Edit Smart Playlist"));
 
                     alert_view.action_activated.connect (() => {
-                        // button_clicked (playlist);
+                        // 
                     });
 
                     message_head = _("No Songs");

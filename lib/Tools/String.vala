@@ -17,6 +17,10 @@
  */
 
 namespace Music2.Tools.String {
+    public inline string get_simple_display_text (string? text) {
+        return !is_empty (text) ? text : Constants.UNKNOWN;
+    }
+
     public inline bool is_empty (string? text, bool check_white_space = true) {
         if (text != null) {
             return check_white_space ? is_white_space (text) : text == "";
@@ -72,5 +76,19 @@ namespace Music2.Tools.String {
         string[] array = new string[0];
         array += text;
         return array;
+    }
+
+    public inline string get_first_item_text (Enums.Category category, int n_items) {
+        string rv = "";
+
+        if (n_items == 1) {
+            rv = _("All ") + category.to_string ();
+        } else if (n_items > 1) {
+            rv = _("All %i ").printf (n_items) + category.to_string ();
+        } else {
+            rv = _("No ") + category.to_string ();
+        }
+
+        return rv;
     }
 }

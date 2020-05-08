@@ -30,9 +30,12 @@ if get_option ('gtk')
     app_files = client_files
     app_files += files (
         'Structs.vala',
+        'Interfaces/ColumnBox.vala',
         'Interfaces/GenericList.vala',
+        'Interfaces/ListStack.vala',
         'Interfaces/Scanner.vala',
         'Interfaces/StackWrapper.vala',
+        'LViews/ColumnView.vala',
         'LViews/GridView.vala',
         'LViews/ListView.vala',
         'LViews/PresetList.vala',

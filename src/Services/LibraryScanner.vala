@@ -18,13 +18,6 @@
 
 namespace Music2 {
     public class Services.LibraryScanner : Interfaces.Scanner {
-        // public signal void finished_scan (int64 scan_time = -1);
-        // public signal void added_track (CObjects.Media m);
-        public signal void added_artist (string artist_name, int artist_id);
-        public signal void added_album (Structs.Album album);
-        public signal void added_apa (int artist_id, int album_id);
-        // public signal void total_found (uint total);
-
         public int64 start_time;
         public uint recorded_tracks;
         private string[] tracks_path;
@@ -32,8 +25,6 @@ namespace Music2 {
         private Gee.HashMap<uint, int> artists_cache;
         private Gee.HashMap<uint, int> albums_cache;
         private Gee.HashMap<int, Gee.ArrayList<int>> apa_cache;
-
-        // private bool stop_flag;
 
         private Objects.LibraryTagger? lib_tagger;
         private DataBaseManager db_manager;
@@ -76,12 +67,6 @@ namespace Music2 {
             var t = new GLib.DateTime.now ();
             finished_scan (t.to_unix () - start_time);
         }
-
-        // public void stop_scan () {
-        //     lock (stop_flag) {
-        //         stop_flag = true;
-        //     }
-        // }
 
         private void scan_directory (string uri) {
             GLib.File directory = GLib.File.new_for_uri (uri.replace ("#", "%23"));
@@ -132,7 +117,6 @@ namespace Music2 {
                 art_id = db_manager.insert_artist (m.artist);
                 // art_id = artists_cache.size + 1;
                 artists_cache[m.artist.hash ()] = art_id;
-                added_artist (m.artist, art_id);
             } else {
                 art_id = artists_cache[m.artist.hash ()];
             }
@@ -143,16 +127,6 @@ namespace Music2 {
                 alb_id = db_manager.insert_album (m);
                 // alb_id = albums_cache.size + 1;
                 albums_cache[alb_hash] = alb_id;
-                Structs.Album album_struct = {};
-                album_struct.album_id = alb_id;
-                album_struct.title = m.album;
-                var new_apa = new Gee.ArrayList<int> ();
-                new_apa.add (art_id);
-                album_struct.artist_id = new_apa;
-                album_struct.artists = "...";
-                album_struct.year = m.year;
-                album_struct.genre = m.genre;
-                added_album (album_struct);
             } else {
                 alb_id = albums_cache[alb_hash];
             }
@@ -166,13 +140,11 @@ namespace Music2 {
                 } else {
                     apa_cache[alb_id].add (art_id);
                 }
-
-                added_apa (art_id, alb_id);
             }
 
-            added_track (db_manager.insert_track (m, alb_id, art_id));
             // m.tid = ++recorded_tracks;
-            // added_track (m);
+            // added_track (m, art_id, alb_id);
+            added_track (db_manager.insert_track (m, alb_id, art_id), art_id, alb_id);
         }
     }
 }

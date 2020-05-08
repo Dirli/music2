@@ -17,7 +17,7 @@
  */
 
 namespace Music2 {
-    public class Widgets.QueueStack : Interfaces.StackWrapper {
+    public class Widgets.QueueStack : Interfaces.ListStack {
         private int queue_size;
 
         construct {
@@ -25,15 +25,31 @@ namespace Music2 {
             queue_size = 0;
 
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
+            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
 
             alert_view = new Granite.Widgets.AlertView (_("No songs in Queue"),
                                                         _("To add songs to the queue, use the <b>secondary click</b> on an item and choose <b>Queue</b>. When a song finishes, the queued songs will be played first before the next song in the currently playing list."),
                                                         "dialog-information");
 
             add_named (alert_view, "alert");
-            add_named (init_list_view (Enums.Hint.QUEUE), "listview");
+            add_named (init_list_view (Enums.Hint.QUEUE, list_store), "listview");
 
             show_alert ();
+        }
+
+        public override int add_iter (CObjects.Media m) {
+            Gtk.TreeIter iter;
+            list_store.insert_with_values (out iter, -1,
+                (int) Enums.ListColumn.TRACKID, m.tid,
+                (int) Enums.ListColumn.TRACK, m.track,
+                (int) Enums.ListColumn.ALBUM, m.get_display_album (),
+                (int) Enums.ListColumn.LENGTH, m.length,
+                (int) Enums.ListColumn.TITLE, m.get_display_title (),
+                (int) Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
+
+            iter_hash[m.tid] = iter;
+
+            return ++queue_size;
         }
 
         public override void clear_stack () {
@@ -41,12 +57,6 @@ namespace Music2 {
             show_alert ();
             list_store.clear ();
             iter_hash.clear ();
-        }
-
-        public new int add_iter (CObjects.Media m) {
-            (this as Interfaces.StackWrapper).add_iter (m);
-
-            return ++queue_size;
         }
     }
 }

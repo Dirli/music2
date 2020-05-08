@@ -71,16 +71,16 @@ namespace Music2.Enums {
 
     public enum ListColumn {
         ICON = 0,
-        TRACKID,
-        TRACK,
-        TITLE,
-        LENGTH,
-        ARTIST,
-        ALBUM,
-        GENRE,
-        YEAR,
-        BITRATE,
-        N_COLUMNS;
+        TRACKID = 1,
+        TRACK = 2,
+        TITLE = 3,
+        LENGTH = 4,
+        ARTIST = 5,
+        ALBUM = 6,
+        GENRE = 7,
+        YEAR = 8,
+        BITRATE = 9,
+        N_COLUMNS = 10;
 
         public string to_string () {
             switch (this) {

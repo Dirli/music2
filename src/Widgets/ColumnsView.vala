@@ -18,18 +18,13 @@
 
 namespace Music2 {
     public class Widgets.ColumnsView : Gtk.Grid {
-        public signal void filter_list (Enums.Category type, int val);
+        public signal void filter_list (Enums.Category type, string val, int val_id);
 
-        private Enums.Category filter_field;
-        private int filter_value;
+        private Enums.Category filter_category;
+        private int filter_id;
+        private string filter_str;
 
-        public ColumnsView () {
-            foreach (unowned Enums.Category category in Enums.Category.get_all ()) {
-                if (category != Enums.Category.N_CATEGORIES) {
-                    add_column (category);
-                }
-            }
-        }
+        public ColumnsView () {}
 
         public void clear_columns (Enums.Category? filter_category) {
             foreach (unowned Enums.Category category in Enums.Category.get_all ()) {
@@ -37,56 +32,60 @@ namespace Music2 {
                     if (filter_category == null || (int) filter_category < (int) category) {
                         var column = get_child_at (category, 0);
                         if (column != null) {
-                            (column as Views.ColumnBrowser).clear_column ();
+                            var column_browser = column as Interfaces.ColumnBox;
+                            if (column_browser != null) {
+                                column_browser.clear_box ();
+                            }
                         }
                     }
                 }
             }
         }
 
-        public void init_selections (Enums.Category? cat) {
-            foreach (unowned Enums.Category category in Enums.Category.get_all ()) {
-                if (category != Enums.Category.N_CATEGORIES) {
-                    if (cat == null || (int) cat < (int) category) {
-                        var column = get_child_at (category, 0);
-                        if (column != null) {
-                            (column as Views.ColumnBrowser).init_selection ();
-                        }
-                    }
-                }
-            }
-        }
-
-        protected void add_column (Enums.Category type) {
-            var column = new Views.ColumnBrowser (type);
+        public void add_column (Interfaces.ColumnBox column) {
             column.set_size_request (60, 100);
-            column.select_row.connect ((val) => {
-                filter_field = type;
-                filter_value = val;
-                filter_list (type, val);
+            column.select_row.connect ((val_str, val_id) => {
+                filter_category = column.category;
+                filter_id = val_id;
+                filter_str = val_str;
+                if (column.category != Enums.Category.ALBUM) {
+                    var child_column1 = get_child_at (Enums.Category.ALBUM, 0);
+                    if (child_column1 != null) {
+                        var column_album = child_column1 as Views.ColumnAlbum;
+                        if (column_album != null) {
+                            column_album.filter_list (val_id, (int) column.category + 2);
+                            if (column.category == Enums.Category.GENRE) {
+                                var child_column2 = get_child_at (Enums.Category.ARTIST, 0);
+                                if (child_column2 != null) {
+                                    var column_browser = child_column2 as Views.ColumnBrowser;
+                                    if (column_browser != null) {
+                                        var artists_list = column_album.get_artists_hash ();
+                                        column_browser.filter_list (artists_list);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                filter_list (column.category, val_id > 0 ? val_str : "", val_id);
             });
 
             column.activated_row.connect (() => {
-
+                //
             });
 
             column.hexpand = column.vexpand = true;
-            attach (column, (int) type, 0, 1, 1);
+            attach (column, (int) column.category, 0, 1, 1);
         }
 
         public Structs.Filter get_filter () {
             Structs.Filter f = {};
-            f.field = filter_field;
-            f.val = filter_value;
+            f.category = filter_category;
+            f.id = filter_id;
+            f.str = filter_str;
 
             return f;
-        }
-
-        public void add_column_item (Structs.Iter iter) {
-            var column = get_child_at (iter.category, 0);
-            if (column != null) {
-                (column as Views.ColumnBrowser).add_item (iter.name, iter.id);
-            }
         }
     }
 }

@@ -29,73 +29,102 @@ namespace Music2.Tools.CellDataHelper {
     }
 
     public static void icon_func (Gtk.CellLayout layout, Gtk.CellRenderer renderer, Gtk.TreeModel model, Gtk.TreeIter iter) {
-        if ((model as Gtk.ListStore).iter_is_valid (iter)) {
-            var image_renderer = renderer as Gtk.CellRendererPixbuf;
-            GLib.return_if_fail (image_renderer != null);
+        if (model == null) {
+            return;
+        }
 
-            if (renderer.visible) {
-                Value icon;
-                model.get_value (iter, Enums.ListColumn.ICON, out icon);
-                image_renderer.gicon = icon.get_object () as GLib.Icon;
-            }
+        var image_renderer = renderer as Gtk.CellRendererPixbuf;
+
+        if (image_renderer != null || renderer.visible) {
+            Value icon;
+            model.get_value (iter, (int) Enums.ListColumn.ICON, out icon);
+            image_renderer.gicon = icon.get_object () as GLib.Icon;
         }
     }
 
     public static inline void number_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-        set_renderer_number (cell as Gtk.CellRendererText, iter, tree_model, Enums.ListColumn.TRACK);
-    }
-
-    public static inline void intelligent_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-        var tvc = layout as Gtk.TreeViewColumn;
-        GLib.return_if_fail (tvc != null);
-
-        int column = tvc.sort_column_id;
-        if (column < 0) {
+        if (tree_model == null) {
             return;
         }
 
-        set_renderer_number (cell as Gtk.CellRendererText, iter, tree_model, column);
-    }
-
-    private static inline void set_renderer_number (Gtk.CellRendererText renderer, Gtk.TreeIter iter, Gtk.TreeModel model, int column) {
-        if ((model as Gtk.ListStore).iter_is_valid (iter)) {
-            uint val;
-            model.@get (iter, column, out val, -1);
-
-            renderer.text = val > 0 ? val.to_string () : "";
+        var renderer_text = cell as Gtk.CellRendererText;
+        if (renderer_text != null) {
+            set_renderer_number (renderer_text, iter, tree_model, Enums.ListColumn.TRACK);
         }
     }
 
-    public static inline void string_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-        if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
-            Gtk.TreeIter i = iter;
-            var tvc = layout as Gtk.TreeViewColumn;
-            GLib.return_if_fail (tvc != null);
+    public static inline void intelligent_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
+        if (tree_model == null) {
+            return;
+        }
 
+        var tvc = layout as Gtk.TreeViewColumn;
+
+        if (tvc != null) {
+            int column = tvc.sort_column_id;
+            if (column < 0) {
+                return;
+            }
+
+            var renderer_text = cell as Gtk.CellRendererText;
+            if (renderer_text != null) {
+                set_renderer_number (renderer_text, iter, tree_model, column);
+            }
+        }
+    }
+
+    private static inline void set_renderer_number (Gtk.CellRendererText renderer, Gtk.TreeIter iter, Gtk.TreeModel model, int column) {
+        uint val;
+        model.@get (iter, column, out val, -1);
+
+        renderer.text = val > 0 ? val.to_string () : "";
+    }
+
+    public static inline void string_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
+        if (tree_model == null) {
+            return;
+        }
+
+        var tvc = layout as Gtk.TreeViewColumn;
+
+        if (tvc != null) {
             int column = tvc.sort_column_id;
             if (column < 0) {
                 return;
             }
 
             GLib.Value val;
-            tree_model.get_value (i, column, out val);
-            (cell as Gtk.CellRendererText).text = val.get_string ();
+            tree_model.get_value (iter, column, out val);
+            var renderer_text = cell as Gtk.CellRendererText;
+            if (renderer_text != null) {
+                renderer_text.text = val.get_string ();
+            }
         }
     }
 
     public static inline void length_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-        if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
-            uint ms;
-            tree_model.@get (iter, Enums.ListColumn.LENGTH, out ms, -1);
-            (cell as Gtk.CellRendererText).text = (ms <= 0) ? Constants.NOT_AVAILABLE : Granite.DateTime.seconds_to_time ((int) (ms / Constants.MILI_INV));
+        if (tree_model == null) {
+            return;
+        }
+
+        uint ms;
+        tree_model.@get (iter, (int) Enums.ListColumn.LENGTH, out ms, -1);
+        var renderer_text = cell as Gtk.CellRendererText;
+        if (renderer_text != null) {
+            renderer_text.text = (ms <= 0) ? Constants.NOT_AVAILABLE : Granite.DateTime.seconds_to_time ((int) (ms / Constants.MILI_INV));
         }
     }
 
     public static inline void bitrate_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-        if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
-            uint val;
-            tree_model.@get (iter, Enums.ListColumn.BITRATE, out val, -1);
-            (cell as Gtk.CellRendererText).text = val <= 0 ? Constants.NOT_AVAILABLE : _("%u kbps").printf (val);
+        if (tree_model == null) {
+            return;
+        }
+
+        uint val;
+        tree_model.@get (iter, (int) Enums.ListColumn.BITRATE, out val, -1);
+        var renderer_text = cell as Gtk.CellRendererText;
+        if (renderer_text != null) {
+            renderer_text.text = val <= 0 ? Constants.NOT_AVAILABLE : _("%u kbps").printf (val);
         }
     }
 

@@ -46,19 +46,15 @@ namespace Music2 {
         }
 
         public inline string get_display_artist () {
-            return get_simple_display_text (artist);
-        }
-
-        internal inline string get_simple_display_text (string? text) {
-            return !Tools.String.is_empty (text) ? text : Constants.UNKNOWN;
+            return Tools.String.get_simple_display_text (artist);
         }
 
         public inline string get_display_album () {
-            return get_simple_display_text (album);
+            return Tools.String.get_simple_display_text (album);
         }
 
         public inline string get_display_genre () {
-            return get_simple_display_text (genre);
+            return Tools.String.get_simple_display_text (genre);
         }
     }
 }

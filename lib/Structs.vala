@@ -22,7 +22,7 @@ namespace Music2.Structs {
         public string title;
         public string genre;
         public uint year;
-        public Gee.ArrayList<int> artist_id;
+        public string artists_id;
         public string artists;
     }
 
@@ -34,8 +34,9 @@ namespace Music2.Structs {
     }
 
     public struct Filter {
-        public int val;
-        public Enums.Category field;
+        public int id;
+        public string str;
+        public Enums.Category category;
     }
 
     public struct Iter {

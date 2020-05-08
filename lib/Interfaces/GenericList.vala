@@ -57,14 +57,14 @@ namespace Music2 {
 
         private Gtk.TreeViewColumn create_column (Enums.ListColumn type, bool visible = true) {
             var column = new Gtk.TreeViewColumn ();
-            column.set_data<int> (Constants.TYPE_DATA_KEY, type);
+            column.set_data<int> (Constants.TYPE_DATA_KEY, (int) type);
             column.title = type.to_string ();
             column.visible = visible;
 
-            column.clicked.connect (() => {
-                // sort_direction = column.get_sort_order ();
-                // sort_column_id = Tools.CellDataHelper.get_column_type (column);
-            });
+            // column.clicked.connect (() => {
+            //     sort_direction = column.get_sort_order ();
+            //     sort_column_id = Tools.CellDataHelper.get_column_type (column);
+            // });
 
             return column;
         }

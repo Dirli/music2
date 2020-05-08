@@ -25,6 +25,7 @@ namespace Music2 {
         private Structs.ImportFile[] import_files;
         private Gee.HashMap<string, int> artists_exist;
         private Gee.HashMap<uint, int> albums_exist;
+        private Gee.HashMap<uint, Gee.ArrayList<int>> apa_cache;
 
         public Gee.HashMap<uint, Structs.Album?> added_albums;
         public Gee.HashMap<string, int> added_artists;
@@ -35,6 +36,8 @@ namespace Music2 {
             added_albums = new Gee.HashMap<uint, Structs.Album?> ();
             added_artists = new Gee.HashMap<string, int> ();
             added_tracks = new Gee.ArrayList<CObjects.Media?> ();
+            apa_cache = new Gee.HashMap<uint, Gee.ArrayList<int>> ();
+
             import_files = {};
         }
 
@@ -84,9 +87,9 @@ namespace Music2 {
                         }
                     }
 
-                    if (!added_albums[alb_hash].artist_id.contains (art_id)) {
+                    if (apa_cache.has_key (alb_hash) || !apa_cache[alb_hash].contains (art_id)) {
                         db_manager.insert_artist_per_album (art_id, alb_id);
-                        added_albums[alb_hash].artist_id.add (art_id);
+                        apa_cache[alb_hash].add (art_id);
                     }
 
                     added_tracks.add (db_manager.insert_track (m, alb_id, art_id));
@@ -106,7 +109,7 @@ namespace Music2 {
 
             album_struct.album_id = album_id;
             album_struct.title = m.album;
-            album_struct.artist_id = new Gee.ArrayList<int> ();
+            album_struct.artists_id = "";
             album_struct.artists = "...";
             album_struct.year = m.year;
             album_struct.genre = m.genre;

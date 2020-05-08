@@ -17,7 +17,7 @@
  */
 
 namespace Music2 {
-    public class Views.ColumnView : Gtk.TreeView {
+    public class LViews.ColumnView : Gtk.TreeView {
         private Enums.Category category;
 
         public ColumnView (Enums.Category category) {
@@ -86,7 +86,6 @@ namespace Music2 {
 
         private Gtk.TreeViewColumn create_column () {
             var column = new Gtk.TreeViewColumn ();
-            column.set_data<int> (Constants.TYPE_DATA_KEY, 0);
             column.title = category.to_string ();
             column.visible = true;
 
@@ -108,10 +107,15 @@ namespace Music2 {
         }
 
         private void cell_data_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-            if ((tree_model as Gtk.ListStore).iter_is_valid (iter)) {
-                GLib.Value val;
-                tree_model.get_value (iter, 0, out val);
-                (cell as Gtk.CellRendererText).text = val.get_string ();
+            if (tree_model == null) {
+                return;
+            }
+
+            string val;
+            tree_model.@get (iter, 0, out val, -1);
+            var renderer_text = cell as Gtk.CellRendererText;
+            if (renderer_text != null) {
+                renderer_text.text = val;
             }
         }
     }

@@ -18,19 +18,29 @@
 
 namespace Music2 {
     public class Services.LibraryManager : GLib.Object {
-        public signal bool add_view (CObjects.Media m, Enums.ViewMode view_mode);
-        public signal void added_category (Structs.Iter iter);
+        public signal void added_category (Enums.Category category, Gtk.ListStore store);
         public signal void started_scan ();
         public signal void finished_scan (string msg);
-        public signal void loaded_category (Enums.Category? category);
         public signal void prepare_scan ();
         public signal void progress_scan (double progress_val);
         public signal void cleared_library ();
 
-        public Gee.HashMap<int, Structs.Album?> albums_hash;
+        public bool loaded = false;
+
         public Gee.HashMap<uint, CObjects.Media> media_hash;
-        public Gee.HashMap<int, string> artists_hash;
+        public Gee.HashMap<uint, Gtk.TreeIter?> media_iter_hash;
+        public Gtk.ListStore media_store;
+
+        public Gtk.ListStore albums_grid_store;
+
+        public Gee.HashMap<int, Structs.Album?> albums_hash;
+        public Objects.CategoryStore albums_store;
+
+        public Gee.HashMap<int, Gtk.TreeIter?> artists_hash;
+        public Objects.CategoryStore artists_store;
+
         public Gee.ArrayList<string> genre_array;
+        public Objects.CategoryStore genre_store;
 
         private Services.LibraryScanner lib_scanner;
         private Services.ImportManager import_manager;
@@ -39,24 +49,68 @@ namespace Music2 {
             Tools.FileUtils.get_cache_directory ("covers");
 
             media_hash = new Gee.HashMap<uint, CObjects.Media> ();
-            artists_hash = new Gee.HashMap<int, string> ();
+
+            media_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
+            media_store.set_sort_column_id ((int) Enums.ListColumn.ARTIST, Gtk.SortType.ASCENDING);
+            media_store.set_sort_func ((int) Enums.ListColumn.ARTIST, media_sort_func);
+
+            media_iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
+
+            albums_grid_store = new Gtk.ListStore (2, typeof (Structs.Album), typeof (string));
+            albums_grid_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
+            albums_grid_store.set_sort_func (0, grid_sort_func);
+
+            artists_hash = new Gee.HashMap<int, Gtk.TreeIter?> ();
             albums_hash = new Gee.HashMap<int, Structs.Album?> ();
             genre_array = new Gee.ArrayList<string> ();
+        }
 
+        public void init_stores () {
+            artists_store = new Objects.CategoryStore (Enums.Category.ARTIST, new Type[] {
+                typeof (string),
+                typeof (int),
+            });
+            added_category (Enums.Category.ARTIST, artists_store);
+
+            albums_store = new Objects.CategoryStore (Enums.Category.ALBUM, new Type[] {
+                typeof (string),
+                typeof (int),
+                typeof (int),
+                typeof (string),
+            });
+            added_category (Enums.Category.ALBUM, albums_store);
+
+            genre_store = new Objects.CategoryStore (Enums.Category.GENRE, new Type[] {
+                typeof (string),
+                typeof (int),
+            });
+            added_category (Enums.Category.GENRE, genre_store);
         }
 
         public void add_track (CObjects.Media m) {
-            lock (media_hash) {
+            lock (media_store) {
+                Gtk.TreeIter iter;
+                media_store.insert_with_values (out iter, -1,
+                    (int) Enums.ListColumn.TRACKID, m.tid,
+                    (int) Enums.ListColumn.TRACK, m.track,
+                    (int) Enums.ListColumn.ALBUM, m.get_display_album (),
+                    (int) Enums.ListColumn.LENGTH, m.length,
+                    (int) Enums.ListColumn.GENRE, m.get_display_genre (),
+                    (int) Enums.ListColumn.TITLE, m.get_display_title (),
+                    (int) Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
+
                 media_hash[m.tid] = m;
-                add_view (m, Enums.ViewMode.COLUMN);
+                media_iter_hash[m.tid] = iter;
             }
         }
 
         public void add_artist (string artist_name, int artist_id) {
-            lock (artists_hash) {
-                if (!artists_hash.has_key (artist_id)) {
-                    artists_hash[artist_id] = artist_name;
-                    add_category (Enums.Category.ARTIST, artist_name, artist_id);
+            if (!artists_hash.has_key (artist_id)) {
+                lock (artists_store) {
+                    Gtk.TreeIter iter;
+                    string simple_artist = Tools.String.get_simple_display_text (artist_name);
+                    artists_store.insert_with_values (out iter, -1, 0, simple_artist, 1, artist_id, -1);
+                    artists_hash[artist_id] = iter;
                 }
             }
         }
@@ -69,30 +123,50 @@ namespace Music2 {
             return media_hash[tid];
         }
 
-        public string get_genre (int genre_i) {
-            if (genre_i > genre_array.size) {
-                return "";
+        public Gtk.TreeIter? get_media_iter (uint tid) {
+            if (!media_iter_hash.has_key (tid)) {
+                return null;
             }
 
-            return genre_array[genre_i - 1];
+            return media_iter_hash[tid];
         }
 
         public void add_apa (int art_id, int alb_id) {
-            lock (albums_hash) {
-                albums_hash[alb_id].artist_id.add (art_id);
-            }
+            // lock (albums_hash) {
+            //     albums_hash[alb_id].artist_id.add (art_id);
+            // }
         }
 
         public void add_album (Structs.Album a_struct) {
             if (!albums_hash.has_key (a_struct.album_id)) {
-                lock (genre_array) {
-                    if (!genre_array.contains (a_struct.genre)) {
+                if (!genre_array.contains (a_struct.genre)) {
+                    lock (genre_store) {
                         genre_array.add (a_struct.genre);
-                        add_category (Enums.Category.GENRE, a_struct.genre, genre_array.size);
+                        Gtk.TreeIter genre_iter;
+                        genre_store.insert_with_values (out genre_iter, -1,
+                                                        0, Tools.String.get_simple_display_text (a_struct.genre),
+                                                        1, genre_array.size, -1);
                     }
                 }
-                albums_hash[a_struct.album_id] = a_struct;
-                add_category (Enums.Category.ALBUM, a_struct.title, a_struct.album_id);
+
+                var genre_id = genre_array.index_of (a_struct.genre) + 1;
+                lock (albums_store) {
+                    albums_hash[a_struct.album_id] = a_struct;
+                    Gtk.TreeIter album_iter;
+                    albums_store.insert_with_values (out album_iter, -1,
+                                                     0, a_struct.title,
+                                                     1, a_struct.album_id,
+                                                     2, genre_id,
+                                                     3, a_struct.artists_id, -1);
+                }
+
+                string custom_tooltip = a_struct.artists + "\n<span size=\"large\">%u, %s</span>".printf (a_struct.year, Markup.escape_text (a_struct.genre));
+                lock (albums_grid_store) {
+                    Gtk.TreeIter grid_iter;
+                    albums_grid_store.insert_with_values (out grid_iter, -1,
+                                                          0, a_struct,
+                                                          1, custom_tooltip, -1);
+                }
             }
         }
 
@@ -103,114 +177,57 @@ namespace Music2 {
                 return;
             }
 
-            artists_hash = db_manager.get_artists ();
+            db_manager.get_artists ().foreach ((entry) => {
+                add_artist (entry.value, entry.key);
+                return true;
+            });
 
             var apa_cache = db_manager.get_artists_per_albums ();
             db_manager.get_albums ().foreach ((entry) => {
                 if (apa_cache.has_key (entry.album_id)) {
                     var artists_string = "";
+                    var artists_id = "";
 
                     apa_cache[entry.album_id].foreach ((art_id) => {
                         if (artists_string != "") {
                             artists_string += "\n";
                         }
 
-                        if (artists_hash.has_key (art_id)) {
-                            artists_string += "<span size=\"large\"><b>%s</b></span>".printf (Markup.escape_text (artists_hash[art_id]));
+                        if (artists_id != "") {
+                            artists_id += ";";
                         }
 
-                        return true;
-                    });
-                    entry.artist_id = apa_cache[entry.album_id];
-                    entry.artists = artists_string;
+                        artists_id += art_id.to_string ();
 
-                    if (!albums_hash.has_key (entry.album_id)) {
-                        albums_hash[entry.album_id] = entry;
-                    }
+                        if (artists_hash.has_key (art_id)) {
+                            lock (artists_store) {
+                                string s;
 
-                    if (!genre_array.contains (entry.genre)) {
-                        genre_array.add (entry.genre);
-                    }
-                }
-
-                return true;
-            });
-
-            media_hash = db_manager.get_tracks_hash ();
-        }
-
-        private void add_category (Enums.Category iter_category, string iter_name, int iter_id) {
-            Structs.Iter new_iter = {};
-            new_iter.category = iter_category;
-            new_iter.name = iter_name;
-            new_iter.id = iter_id;
-            added_category (new_iter);
-        }
-
-        public void filter_library (Enums.Category category, int filter_id, Enums.ViewMode view_mode) {
-            string[] albums_arr = {};
-            bool filter_off = filter_id == 0;
-            switch (category) {
-                case Enums.Category.GENRE:
-                    if (filter_off || (filter_id > 0 && genre_array.size >= filter_id)) {
-                        var genre_str = filter_off ? "" : genre_array[filter_id - 1];
-                        var hash_artistid = new Gee.HashSet<int> ();
-                        albums_hash.values.foreach ((val) => {
-                            if (filter_off || val.genre == genre_str) {
-                                val.artist_id.foreach ((a_id) => {
-                                    if (!hash_artistid.contains (a_id) && artists_hash.has_key (a_id)) {
-                                        hash_artistid.add (a_id);
-                                        add_category (Enums.Category.ARTIST, artists_hash[a_id], a_id);
-                                    }
-                                    return true;
-                                });
-
-                                add_category (Enums.Category.ALBUM, val.title, val.album_id);
-                                if (!filter_off) {
-                                    albums_arr += val.title;
+                                artists_store.@get (artists_hash[art_id], 0, out s, -1);
+                                if (s != null) {
+                                    artists_string += "<span size=\"large\"><b>%s</b></span>".printf (Markup.escape_text (s));
                                 }
                             }
-                            return true;
-                        });
-                    }
-                    break;
-                case Enums.Category.ARTIST:
-                    albums_hash.values.foreach ((val) => {
-                        if (filter_off || val.artist_id.contains (filter_id)) {
-                            add_category (Enums.Category.ALBUM, val.title, val.album_id);
-                            if (!filter_off) {
-                                albums_arr += val.title;
-                            }
                         }
+
                         return true;
                     });
 
-                    break;
-                case Enums.Category.ALBUM:
-                    if (!filter_off && albums_hash.has_key (filter_id)) {
-                        albums_arr += albums_hash[filter_id].title;
-                    }
+                    entry.artists_id = artists_id;
+                    entry.artists = artists_string;
 
-                    break;
-            }
-
-            media_hash.values.foreach ((m) => {
-                if (filter_off || m.album in albums_arr) {
-                    if (category == Enums.Category.ARTIST && !filter_off && m.artist != artists_hash[filter_id]) {
-                        return true;
-                    }
-
-                    if (!add_view (m, view_mode)) {
-                        return false;
-                    }
+                    add_album (entry);
                 }
 
                 return true;
             });
 
-            if (view_mode == Enums.ViewMode.COLUMN) {
-                loaded_category (category);
-            }
+            db_manager.get_tracks (null).foreach ((m) => {
+                add_track (m);
+                return true;
+            });
+
+            loaded = true;
         }
 
         public void scan_library (string uri) {
@@ -236,13 +253,22 @@ namespace Music2 {
 
                 lib_scanner = null;
             });
-            lib_scanner.added_track.connect ((m) => {
+            lib_scanner.added_track.connect ((m, artist_id, album_id) => {
                 scan_m++;
+
+                add_artist (m.artist, artist_id);
+
+                Structs.Album album_struct = {};
+                album_struct.album_id = album_id;
+                album_struct.title = m.album;
+                album_struct.artists_id = "";
+                album_struct.artists = "...";
+                album_struct.year = m.year;
+                album_struct.genre = m.genre;
+                add_album (album_struct);
+
                 add_track (m);
             });
-            lib_scanner.added_artist.connect (add_artist);
-            lib_scanner.added_album.connect (add_album);
-            lib_scanner.added_apa.connect (add_apa);
             lib_scanner.total_found.connect ((total_media) => {
                 total_m = total_media;
                 if (total_m > 0) {
@@ -259,84 +285,81 @@ namespace Music2 {
                 prepare_scan ();
             });
 
-            new Thread<void*> ("scan_directory", () => {
-                lib_scanner.start_scan (uri);
-                return null;
-            });
+            lib_scanner.start_scan (uri);
         }
 
         public void import_folder (string folder_uri, string music_folder) {
             started_scan ();
 
-            uint total_m = 0;
-            uint scan_m = 0;
-            uint source_id = 0;
-
-            import_manager = new Services.ImportManager (music_folder);
-            import_manager.total_found.connect ((total_media) => {
-                total_m = total_media;
-                if (total_m > 0) {
-                    source_id = GLib.Timeout.add (1000, () => {
-                        if (scan_m == 0) {
-                            return true;
-                        }
-
-                        progress_scan ((double) scan_m / total_m);
-                        return true;
-                    });
-                }
-
-                prepare_scan ();
-            });
-            import_manager.added_track.connect ((m) => {
-                scan_m++;
-            });
-            import_manager.finished_scan.connect ((scan_time) => {
-                if (source_id > 0) {
-                    GLib.Source.remove (source_id);
-                    source_id = 0;
-                }
-
-                import_manager.added_artists.foreach ((entry) => {
-                    add_artist (entry.key, entry.value);
-
-                    return true;
-                });
-
-                import_manager.added_albums.foreach ((entry) => {
-                    if (albums_hash.has_key (entry.value.album_id)) {
-                        entry.value.artist_id.foreach ((art_id) => {
-                            unowned Gee.ArrayList<int> artists = albums_hash[entry.value.album_id].artist_id;
-                            if (!artists.contains (art_id)) {
-                                artists.add (art_id);
-                            }
-
-                            return true;
-                        });
-                    } else {
-                        add_album (entry.value);
-                    }
-
-                    return true;
-                });
-
-                import_manager.added_tracks.foreach ((track) => {
-                    add_track (track);
-                    return true;
-                });
-
-                string msg = _("Import %lld tracks to the library,").printf (scan_m);
-                if (scan_time >= 0) {
-                    msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
-                }
-
-                finished_scan (msg);
-
-                import_manager = null;
-            });
-
             new Thread<void*> ("import_folder", () => {
-                import_manager.start_scan (folder_uri);
+            // uint total_m = 0;
+            // uint scan_m = 0;
+            // uint source_id = 0;
+            //
+            // import_manager = new Services.ImportManager (music_folder);
+            // import_manager.total_found.connect ((total_media) => {
+            //     total_m = total_media;
+            //     if (total_m > 0) {
+            //         source_id = GLib.Timeout.add (1000, () => {
+            //             if (scan_m == 0) {
+            //                 return true;
+            //             }
+            //
+            //             progress_scan ((double) scan_m / total_m);
+            //             return true;
+            //         });
+            //     }
+            //
+            //     prepare_scan ();
+            // });
+            // import_manager.added_track.connect ((m) => {
+            //     scan_m++;
+            // });
+            // import_manager.finished_scan.connect ((scan_time) => {
+            //     if (source_id > 0) {
+            //         GLib.Source.remove (source_id);
+            //         source_id = 0;
+            //     }
+            //
+            //     import_manager.added_artists.foreach ((entry) => {
+            //         add_artist (entry.key, entry.value);
+            //
+            //         return true;
+            //     });
+            //
+            //     import_manager.added_albums.foreach ((entry) => {
+            //         if (albums_hash.has_key (entry.value.album_id)) {
+            //             entry.value.artist_id.foreach ((art_id) => {
+            //                 unowned Gee.ArrayList<int> artists = albums_hash[entry.value.album_id].artist_id;
+            //                 if (!artists.contains (art_id)) {
+            //                     artists.add (art_id);
+            //                 }
+            //
+            //                 return true;
+            //             });
+            //         } else {
+            //             add_album (entry.value);
+            //         }
+            //
+            //         return true;
+            //     });
+            //
+            //     import_manager.added_tracks.foreach ((track) => {
+            //         add_track (track);
+            //         return true;
+            //     });
+            //
+            //     string msg = _("Import %lld tracks to the library,").printf (scan_m);
+            //     if (scan_time >= 0) {
+            //         msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
+            //     }
+            //
+            //     finished_scan (msg);
+            //
+            //     import_manager = null;
+            // });
+            //
+            //     import_manager.start_scan (folder_uri);
                 return null;
             });
         }
@@ -349,8 +372,64 @@ namespace Music2 {
             }
         }
 
+        private int sort_column_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b, Enums.ListColumn col_id) {
+            GLib.Value val_a;
+            store.get_value (a, col_id, out val_a);
+            GLib.Value val_b;
+            store.get_value (b, col_id, out val_b);
+
+            var col_type = col_id.get_data_type ();
+            if (col_type == GLib.Type.STRING) {
+                return Tools.String.compare (val_a.get_string (), val_b.get_string ());
+            } else if (col_type == GLib.Type.UINT) {
+                uint uint_a = val_a.get_uint ();
+                uint uint_b = val_b.get_uint ();
+                return uint_a == uint_b ? 0 : uint_a > uint_b ? 1 : -1;
+            }
+
+            return 0;
+        }
+
+        public int media_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
+            var l_store = store as Gtk.ListStore;
+            if (l_store != null && !l_store.iter_is_valid (a) || !l_store.iter_is_valid (b)) {
+                return 0;
+            }
+
+            int sort_column_id;
+            Gtk.SortType sort_direction;
+            l_store.get_sort_column_id (out sort_column_id, out sort_direction);
+
+            if (sort_column_id < 1) {return 0;}
+
+            int rv = 0;
+            rv = sort_column_func (store, a, b, (Enums.ListColumn) sort_column_id);
+
+            if (sort_direction == Gtk.SortType.DESCENDING) {
+                rv = (rv > 0) ? -1 : 1;
+            }
+
+            return rv;
+        }
+
+        private int grid_sort_func (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
+            int rv = 0;
+
+            Structs.Album? struct_a;
+            store.@get (a, 0, out struct_a, -1);
+
+            Structs.Album? struct_b;
+            store.@get (b, 0, out struct_b, -1);
+
+            if (struct_a != null && struct_b != null) {
+                rv = Tools.String.compare (struct_a.title, struct_b.title);
+            }
+
+            return rv;
+        }
+
         public bool dirty_library () {
-            return media_hash.size > 0 || artists_hash.size > 0 || albums_hash.size > 0 || genre_array.size > 0;
+            return media_hash.size > 0 || artists_hash.size > 0 || albums_hash.size > 0;
         }
 
         public void clear_library () {
@@ -360,9 +439,15 @@ namespace Music2 {
             }
 
             media_hash.clear ();
+            media_iter_hash.clear ();
             artists_hash.clear ();
             albums_hash.clear ();
             genre_array.clear ();
+
+            artists_store.clear ();
+            albums_store.clear ();
+            genre_store.clear ();
+            media_store.clear ();
 
             if (clear_ui) {
                 cleared_library ();
