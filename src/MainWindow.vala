@@ -630,7 +630,10 @@ namespace Music2 {
                     var import_dialog = new Dialogs.ImportFolder (this, folder.get_path ());
                     import_dialog.response.connect ((response_id) => {
                         if (response_id == Gtk.ResponseType.APPLY) {
-                            library_manager.import_folder (folder.get_uri (), music_folder);
+                            new Thread<void*> ("import_folder", () => {
+                                library_manager.import_folder (folder.get_uri (), music_folder);
+                                return null;
+                            });
                         }
 
                         import_dialog.destroy ();

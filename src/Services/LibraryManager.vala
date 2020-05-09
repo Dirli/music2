@@ -33,7 +33,7 @@ namespace Music2 {
 
         public Gtk.ListStore albums_grid_store;
 
-        public Gee.HashMap<int, Structs.Album?> albums_hash;
+        public Gee.HashMap<int, Gtk.TreeIter?> albums_hash;
         public Objects.CategoryStore albums_store;
 
         public Gee.HashMap<int, Gtk.TreeIter?> artists_hash;
@@ -61,7 +61,7 @@ namespace Music2 {
             albums_grid_store.set_sort_func (0, grid_sort_func);
 
             artists_hash = new Gee.HashMap<int, Gtk.TreeIter?> ();
-            albums_hash = new Gee.HashMap<int, Structs.Album?> ();
+            albums_hash = new Gee.HashMap<int, Gtk.TreeIter?> ();
             genre_array = new Gee.ArrayList<string> ();
         }
 
@@ -97,7 +97,7 @@ namespace Music2 {
                     (int) Enums.ListColumn.LENGTH, m.length,
                     (int) Enums.ListColumn.GENRE, m.get_display_genre (),
                     (int) Enums.ListColumn.TITLE, m.get_display_title (),
-                    (int) Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
+                    (int) Enums.ListColumn.ARTIST, GLib.Markup.escape_text (m.get_display_artist ()), -1);
 
                 media_hash[m.tid] = m;
                 media_iter_hash[m.tid] = iter;
@@ -151,13 +151,14 @@ namespace Music2 {
 
                 var genre_id = genre_array.index_of (a_struct.genre) + 1;
                 lock (albums_store) {
-                    albums_hash[a_struct.album_id] = a_struct;
                     Gtk.TreeIter album_iter;
                     albums_store.insert_with_values (out album_iter, -1,
                                                      0, a_struct.title,
                                                      1, a_struct.album_id,
                                                      2, genre_id,
                                                      3, a_struct.artists_id, -1);
+
+                     albums_hash[a_struct.album_id] = album_iter;
                 }
 
                 string custom_tooltip = a_struct.artists + "\n<span size=\"large\">%u, %s</span>".printf (a_struct.year, Markup.escape_text (a_struct.genre));
@@ -244,6 +245,24 @@ namespace Music2 {
                     source_id = 0;
                 }
 
+                lib_scanner.apa_cache.foreach ((entry) => {
+                    var artists_str = "";
+                    if (albums_hash.has_key (entry.key)) {
+                        entry.value.foreach ((artist_id) => {
+                            if (artists_str != "") {
+                                artists_str += ";";
+                            }
+
+                            artists_str += artist_id.to_string ();
+                            return true;
+                        });
+                        if (artists_str != "") {
+                            albums_store.@set (albums_hash[entry.key], 3, artists_str, -1);
+                        }
+                    }
+                    return true;
+                });
+
                 string msg = _("Added %lld tracks to the library,").printf (scan_m);
                 if (scan_time >= 0) {
                     msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
@@ -258,13 +277,7 @@ namespace Music2 {
 
                 add_artist (m.artist, artist_id);
 
-                Structs.Album album_struct = {};
-                album_struct.album_id = album_id;
-                album_struct.title = m.album;
-                album_struct.artists_id = "";
-                album_struct.artists = "...";
-                album_struct.year = m.year;
-                album_struct.genre = m.genre;
+                Structs.Album album_struct = get_album_struct (m, album_id, artist_id);
                 add_album (album_struct);
 
                 add_track (m);
@@ -291,77 +304,67 @@ namespace Music2 {
         public void import_folder (string folder_uri, string music_folder) {
             started_scan ();
 
-            new Thread<void*> ("import_folder", () => {
-            // uint total_m = 0;
-            // uint scan_m = 0;
-            // uint source_id = 0;
-            //
-            // import_manager = new Services.ImportManager (music_folder);
-            // import_manager.total_found.connect ((total_media) => {
-            //     total_m = total_media;
-            //     if (total_m > 0) {
-            //         source_id = GLib.Timeout.add (1000, () => {
-            //             if (scan_m == 0) {
-            //                 return true;
-            //             }
-            //
-            //             progress_scan ((double) scan_m / total_m);
-            //             return true;
-            //         });
-            //     }
-            //
-            //     prepare_scan ();
-            // });
-            // import_manager.added_track.connect ((m) => {
-            //     scan_m++;
-            // });
-            // import_manager.finished_scan.connect ((scan_time) => {
-            //     if (source_id > 0) {
-            //         GLib.Source.remove (source_id);
-            //         source_id = 0;
-            //     }
-            //
-            //     import_manager.added_artists.foreach ((entry) => {
-            //         add_artist (entry.key, entry.value);
-            //
-            //         return true;
-            //     });
-            //
-            //     import_manager.added_albums.foreach ((entry) => {
-            //         if (albums_hash.has_key (entry.value.album_id)) {
-            //             entry.value.artist_id.foreach ((art_id) => {
-            //                 unowned Gee.ArrayList<int> artists = albums_hash[entry.value.album_id].artist_id;
-            //                 if (!artists.contains (art_id)) {
-            //                     artists.add (art_id);
-            //                 }
-            //
-            //                 return true;
-            //             });
-            //         } else {
-            //             add_album (entry.value);
-            //         }
-            //
-            //         return true;
-            //     });
-            //
-            //     import_manager.added_tracks.foreach ((track) => {
-            //         add_track (track);
-            //         return true;
-            //     });
-            //
-            //     string msg = _("Import %lld tracks to the library,").printf (scan_m);
-            //     if (scan_time >= 0) {
-            //         msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
-            //     }
-            //
-            //     finished_scan (msg);
-            //
-            //     import_manager = null;
-            // });
-            //
-            //     import_manager.start_scan (folder_uri);
-                return null;
+            uint total_m = 0;
+            uint scan_m = 0;
+            uint source_id = 0;
+
+            import_manager = new Services.ImportManager (music_folder);
+            import_manager.total_found.connect ((total_media) => {
+                total_m = total_media;
+                if (total_m > 0) {
+                    source_id = GLib.Timeout.add (1000, () => {
+                        if (scan_m == 0) {
+                            return true;
+                        }
+
+                        progress_scan ((double) scan_m / total_m);
+                        return true;
+                    });
+                }
+
+                prepare_scan ();
             });
+            import_manager.added_track.connect ((m, artist_id, album_id) => {
+                scan_m++;
+
+                add_artist (m.artist, artist_id);
+
+                Structs.Album album_struct = get_album_struct (m, album_id, artist_id);
+                add_album (album_struct);
+
+                add_track (m);
+            });
+
+            import_manager.finished_scan.connect ((scan_time) => {
+                if (source_id > 0) {
+                    GLib.Source.remove (source_id);
+                    source_id = 0;
+                }
+
+                string msg = _("Import %lld tracks to the library,").printf (scan_m);
+                if (scan_time >= 0) {
+                    msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
+                }
+
+                finished_scan (msg);
+
+                import_manager = null;
+            });
+
+            import_manager.start_scan (folder_uri);
+        }
+
+        private Structs.Album get_album_struct (CObjects.Media m, int album_id, int artist_id) {
+            Structs.Album album_struct = {};
+
+            album_struct.album_id = album_id;
+            album_struct.title = m.album;
+            album_struct.artists_id = artist_id.to_string ();
+            album_struct.artists = "...";
+            album_struct.year = m.year;
+            album_struct.genre = m.genre;
+
+            return album_struct;
         }
 
         public void stop_scanner () {

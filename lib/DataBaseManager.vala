@@ -365,8 +365,8 @@ namespace Music2 {
             return artists_hash;
         }
 
-        public Gee.HashMap<string, int> get_artists_rev () {
-            var artists_hash = new Gee.HashMap<string, int> ();
+        public Gee.HashMap<uint, int> get_artists_hash () {
+            var artists_hash = new Gee.HashMap<uint, int> ();
             Sqlite.Statement stmt;
             string sql = """
                 SELECT id, name FROM artists;
@@ -375,7 +375,7 @@ namespace Music2 {
             db.prepare_v2 (sql, sql.length, out stmt);
 
             while (stmt.step () == Sqlite.ROW) {
-                artists_hash[stmt.column_text (1)] = stmt.column_int (0);
+                artists_hash[stmt.column_text (1).hash ()] = stmt.column_int (0);
             }
 
             stmt.reset ();
@@ -489,7 +489,7 @@ namespace Music2 {
             return return_hash;
         }
 
-        public Gee.HashMap<uint, int> get_albums_rev () {
+        public Gee.HashMap<uint, int> get_albums_hash () {
             var return_hash = new Gee.HashMap<uint, int>();
             Sqlite.Statement stmt;
 

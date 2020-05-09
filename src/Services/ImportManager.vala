@@ -23,20 +23,15 @@ namespace Music2 {
         private string base_folder;
 
         private Structs.ImportFile[] import_files;
-        private Gee.HashMap<string, int> artists_exist;
-        private Gee.HashMap<uint, int> albums_exist;
-        private Gee.HashMap<uint, Gee.ArrayList<int>> apa_cache;
+        private Gee.HashMap<uint, int> artists_cache;
+        private Gee.HashMap<uint, int> albums_cache;
 
-        public Gee.HashMap<uint, Structs.Album?> added_albums;
-        public Gee.HashMap<string, int> added_artists;
-        public Gee.ArrayList<CObjects.Media> added_tracks;
+        public Gee.HashMap<int, Gee.ArrayList<int>> apa_cache;
+
 
         public ImportManager (string music_folder) {
             base_folder = music_folder;
-            added_albums = new Gee.HashMap<uint, Structs.Album?> ();
-            added_artists = new Gee.HashMap<string, int> ();
-            added_tracks = new Gee.ArrayList<CObjects.Media?> ();
-            apa_cache = new Gee.HashMap<uint, Gee.ArrayList<int>> ();
+            apa_cache = new Gee.HashMap<int, Gee.ArrayList<int>> ();
 
             import_files = {};
         }
@@ -51,8 +46,8 @@ namespace Music2 {
                 total_found (import_files.length);
                 db_manager = new DataBaseManager ();
 
-                artists_exist = db_manager.get_artists_rev ();
-                albums_exist = db_manager.get_albums_rev ();
+                artists_cache = db_manager.get_artists_hash ();
+                albums_cache = db_manager.get_albums_hash ();
 
                 var lib_tagger = new Objects.LibraryTagger ();
                 lib_tagger.init ();
@@ -70,30 +65,36 @@ namespace Music2 {
                         continue;
                     }
 
-                    int art_id = artists_exist.has_key (m.artist) ? artists_exist[m.artist] : added_artists.has_key (m.artist) ? added_artists[m.artist] : 0;
-                    if (art_id == 0) {
+                    int art_id;
+                    if (!artists_cache.has_key (m.artist.hash ())) {
                         art_id = db_manager.insert_artist (m.artist);
-                        added_artists[m.artist] = art_id;
+                        artists_cache[m.artist.hash ()] = art_id;
+                    } else {
+                        art_id = artists_cache[m.artist.hash ()];
                     }
 
-                    var alb_hash = (m.year.to_string () + m.get_display_album ()).hash ();
-                    int alb_id = albums_exist.has_key (alb_hash) ? albums_exist[alb_hash] : added_albums.has_key (alb_hash) ? added_albums[alb_hash].album_id : 0;
-                    if (alb_id == 0) {
+                    int alb_id;
+                    var alb_hash = ("%u".printf (m.year) + m.get_display_album ()).hash ();
+                    if (!albums_cache.has_key (alb_hash)) {
                         alb_id = db_manager.insert_album (m);
-                        added_albums[alb_hash] = get_album_struct (m, alb_id);
+                        albums_cache[alb_hash] = alb_id;
                     } else {
-                        if (albums_exist.has_key (alb_hash) && !added_albums.has_key (alb_hash)) {
-                            added_albums[alb_hash] = get_album_struct (m, albums_exist[alb_hash]);
+                        alb_id = albums_cache[alb_hash];
+                    }
+
+                    if (!apa_cache.has_key (alb_id) || !apa_cache[alb_id].contains (art_id)) {
+                        db_manager.insert_artist_per_album (art_id, alb_id);
+                        if (!apa_cache.has_key (alb_id)) {
+                            var new_arr = new Gee.ArrayList<int> ();
+                            new_arr.add (art_id);
+                            apa_cache[alb_id] = new_arr;
+                        } else {
+                            apa_cache[alb_id].add (art_id);
                         }
                     }
 
-                    if (apa_cache.has_key (alb_hash) || !apa_cache[alb_hash].contains (art_id)) {
-                        db_manager.insert_artist_per_album (art_id, alb_id);
-                        apa_cache[alb_hash].add (art_id);
-                    }
+                    added_track (db_manager.insert_track (m, alb_id, art_id), art_id, alb_id);
 
-                    added_tracks.add (db_manager.insert_track (m, alb_id, art_id));
-                    added_track ();
                     if (stop_flag) {
                         break;
                     }
@@ -102,19 +103,6 @@ namespace Music2 {
 
             var finish_time = new GLib.DateTime.now ();
             finished_scan (finish_time.to_unix () - start_time.to_unix ());
-        }
-
-        private Structs.Album get_album_struct (CObjects.Media m, int album_id) {
-            Structs.Album album_struct = {};
-
-            album_struct.album_id = album_id;
-            album_struct.title = m.album;
-            album_struct.artists_id = "";
-            album_struct.artists = "...";
-            album_struct.year = m.year;
-            album_struct.genre = m.genre;
-
-            return album_struct;
         }
 
         private bool copy_media (GLib.File target_file, GLib.File dest_file) {

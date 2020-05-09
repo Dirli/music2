@@ -24,7 +24,8 @@ namespace Music2 {
 
         private Gee.HashMap<uint, int> artists_cache;
         private Gee.HashMap<uint, int> albums_cache;
-        private Gee.HashMap<int, Gee.ArrayList<int>> apa_cache;
+
+        public Gee.HashMap<int, Gee.ArrayList<int>> apa_cache;
 
         private Objects.LibraryTagger? lib_tagger;
         private DataBaseManager db_manager;
