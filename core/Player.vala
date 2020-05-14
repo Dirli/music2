@@ -73,6 +73,12 @@ namespace Music2 {
         }
 
         private dynamic Gst.Element playbin;
+        public dynamic Gst.Element audiobin;
+        public dynamic Gst.Element audiosink;
+        public dynamic Gst.Element eq_element;
+        // public dynamic Gst.Element eq_audioconvert;
+        public dynamic Gst.Element audiosinkqueue;
+
         private Gst.Bus bus;
         private Gst.Format fmt = Gst.Format.TIME;
         public unowned int64 duration {
@@ -94,7 +100,7 @@ namespace Music2 {
             }
         }
 
-        public Player () {
+        public Player (Gst.Element? eq) {
             _current_index = 0;
 
             tracks_hash = new Gee.HashMap<uint, CObjects.Media> ();
@@ -103,13 +109,52 @@ namespace Music2 {
 
             playbin = Gst.ElementFactory.make ("playbin", "play");
 
+
+            if (eq != null) {
+                audiosinkqueue = Gst.ElementFactory.make ("queue", null);
+                audiosink = Gst.ElementFactory.make ("autoaudiosink", "auto_sink");
+                audiobin = new Gst.Bin ("audiobin");
+
+                if (audiobin != null && audiosinkqueue != null && audiosink != null) {
+                    eq_element = eq;
+
+                    ((Gst.Bin) audiobin).add_many (audiosinkqueue, eq_element, audiosink);
+                    audiosinkqueue.link_many (audiosink);
+
+                    var ghost_pad = new Gst.GhostPad ("sink", audiosinkqueue.get_static_pad ("sink"));
+                    // ghost_pad.set_active (true);
+                    audiobin.add_pad (ghost_pad);
+                    playbin.set ("audio-sink", audiobin);
+                }
+            }
+
             bus = playbin.get_bus ();
             bus.add_watch (0, bus_callback);
             bus.enable_sync_message_emission ();
         }
 
+        public void enable_equalizer () {
+            if (audiobin != null) {
+                audiosinkqueue.unlink (audiosink);
+                audiosinkqueue.link (eq_element);
+                eq_element.link (audiosink);
+            }
+        }
+
+        public void disable_equalizer () {
+            if (audiobin != null) {
+                audiosinkqueue.unlink (eq_element);
+                eq_element.unlink (audiosink);
+                audiosinkqueue.link (audiosink);
+            }
+        }
+
         private void state_changed (Gst.State state) {
             playbin.set_state (state);
+
+            if (state == Gst.State.NULL) {
+                return;
+            }
 
             changed_state (get_state_str ());
         }
@@ -309,6 +354,7 @@ namespace Music2 {
                             stop ();
                             play ();
                         } else {
+                            state_changed (Gst.State.NULL);
                             next ();
                         }
                     } else {

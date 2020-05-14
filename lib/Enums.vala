@@ -140,6 +140,123 @@ namespace Music2.Enums {
         }
     }
 
+    public enum PresetGains {
+        FLAT,
+        CLASSICAL,
+        CLUB,
+        DANCE,
+        FULLBASS,
+        FULLTREBLE,
+        FULLBASETREBLE,
+        HEADPHONES,
+        LARGEHALL,
+        LIVE,
+        PARTY,
+        POP,
+        REGGAE,
+        ROCK,
+        SOFT,
+        SKA,
+        SOFTROCK,
+        TECHNO,
+        N_PRESETS;
+
+        public string to_string () {
+            switch (this) {
+                case PresetGains.FLAT:
+                    return _("Flat");
+                case PresetGains.CLASSICAL:
+                    return _("Classical");
+                case PresetGains.CLUB:
+                    return _("Club");
+                case PresetGains.DANCE:
+                    return _("Dance");
+                case PresetGains.FULLBASS:
+                    return _("Full Bass");
+                case PresetGains.FULLTREBLE:
+                    return _("Full Treble");
+                case PresetGains.FULLBASETREBLE:
+                    return _("Full Bass + Treble");
+                case PresetGains.HEADPHONES:
+                    return _("Headphones");
+                case PresetGains.LARGEHALL:
+                    return _("Large Hall");
+                case PresetGains.LIVE:
+                    return _("Live");
+                case PresetGains.PARTY:
+                    return _("Party");
+                case PresetGains.POP:
+                    return _("Pop");
+                case PresetGains.REGGAE:
+                    return _("Reggae");
+                case PresetGains.ROCK:
+                    return _("Rock");
+                case PresetGains.SOFT:
+                    return _("Soft");
+                case PresetGains.SKA:
+                    return _("Ska");
+                case PresetGains.SOFTROCK:
+                    return _("Soft Rock");
+                case PresetGains.TECHNO:
+                    return _("Techno");
+                default:
+                    GLib.assert_not_reached ();
+            }
+        }
+
+        public int[] get_gains () {
+            switch (this) {
+                case PresetGains.FLAT:
+                    return {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                case PresetGains.CLASSICAL:
+                    return {0, 0, 0, 0, 0, 0, -40, -40, -40, -50};
+                case PresetGains.CLUB:
+                    return {0, 0, 20, 30, 30, 30, 20, 0, 0, 0};
+                case PresetGains.DANCE:
+                    return {50, 35, 10, 0, 0, -30, -40, -40, 0, 0};
+                case PresetGains.FULLBASS:
+                    return {70, 70, 70, 40, 20, -45, -50, -55, -55, -55};
+                case PresetGains.FULLTREBLE:
+                    return {-50, -50, -50, -25, 15, 55, 80, 80, 80, 80};
+                case PresetGains.FULLBASETREBLE:
+                    return {35, 30, 0, -40, -25, 10, 45, 55, 60, 60};
+                case PresetGains.HEADPHONES:
+                    return {25, 50, 25, -20, 0, -30, -40, -40, 0, 0};
+                case PresetGains.LARGEHALL:
+                    return {50, 50, 30, 30, 0, -25, -25, -25, 0, 0};
+                case PresetGains.LIVE:
+                    return {-25, 0, 20, 25, 30, 30, 20, 15, 15, 10};
+                case PresetGains.PARTY:
+                    return {35, 35, 0, 0, 0, 0, 0, 0, 35, 35};
+                case PresetGains.POP:
+                    return {-10, 25, 35, 40, 25, -5, -15, -15, -10, -10};
+                case PresetGains.REGGAE:
+                    return {0, 0, -5, -30, 0, -35, -35, 0, 0, 0};
+                case PresetGains.ROCK:
+                    return {40, 25, -30, -40, -20, 20, 45, 55, 55, 55};
+                case PresetGains.SOFT:
+                    return {25, 10, -5, -15, -5, 20, 45, 50, 55, 60};
+                case PresetGains.SKA:
+                    return {-15, -25, -25, -5, 20, 30, 45, 50, 55, 50};
+                case PresetGains.SOFTROCK:
+                    return {20, 20, 10, -5, -25, -30, -20, -5, 15, 45};
+                case PresetGains.TECHNO:
+                    return {40, 30, 0, -30, -25, 0, 40, 50, 50, 45};
+                default:
+                    GLib.assert_not_reached ();
+            }
+        }
+
+        public static PresetGains[] get_all () {
+            PresetGains[] list = {};
+            for (int i = 0; i < N_PRESETS; i++) {
+                list += (PresetGains) i;
+            }
+
+            return list;
+        }
+    }
+
     public enum Category {
         GENRE = 0,
         ARTIST,

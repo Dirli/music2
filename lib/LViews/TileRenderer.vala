@@ -18,7 +18,7 @@
 
 namespace Music2 {
     public class LViews.TileRenderer : Gtk.CellRenderer {
-        public Structs.Album album { get; set; }
+        public Structs.Album? album { get; set; }
 
         private Gee.HashMap<int, Gdk.Pixbuf> covers_hash;
 
@@ -142,6 +142,10 @@ namespace Music2 {
         }
 
         private void update_layout_properties (Gtk.Widget widget) {
+            if (album == null) {
+                return;
+            }
+
             var ctx = widget.get_style_context ();
             var state = ctx.get_state ();
             var scale = ctx.get_scale ();

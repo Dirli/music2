@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2020 Dirli <litandrej85@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 namespace Music2 {
     public class Widgets.MediaMenu : Gtk.Popover {
         public signal void activate_menu_item (Enums.Hint hint, Enums.ActionType action_type, uint[] tids);
@@ -95,11 +113,14 @@ namespace Music2 {
             if (current_hint == null || current_hint != hint) {
                 current_hint = hint;
 
-                (menu_box as Gtk.Container).foreach ((exist_item) => {
-                    if (exist_item is Gtk.ModelButton) {
-                        exist_item.hide ();
-                    }
-                });
+                var container = menu_box as Gtk.Container;
+                if (container != null) {
+                    container.foreach ((exist_item) => {
+                        if (exist_item is Gtk.ModelButton) {
+                            exist_item.hide ();
+                        }
+                    });
+                }
 
                 switch (hint) {
                     case Enums.Hint.ALBUM_LIST:

@@ -56,9 +56,7 @@ namespace Music2 {
                 preset_combo.select_automatic_preset ();
             } else {
                 var preset = eq_settings.get_string ("selected-preset");
-                if (preset != null) {
-                    preset_combo.select_preset (preset);
-                }
+                preset_combo.select_preset (preset);
             }
 
             on_eq_switch_toggled ();
@@ -124,23 +122,21 @@ namespace Music2 {
                 scales.add (scale);
 
                 scale.value_changed.connect (() => {
-                    scale.value_changed.connect (() => {
-                        if (initialized && apply_changes && !preset_combo.automatic_chosen) {
-                            int index = scales.index_of (scale);
-                            int val = (int) scale.get_value ();
-                            // App.player.player.set_equalizer_gain (index, val);
+                    if (initialized && apply_changes && !preset_combo.automatic_chosen) {
+                        int index = scales.index_of (scale);
+                        int val = (int) scale.get_value ();
+                        // App.player.player.set_equalizer_gain (index, val);
 
-                            if (!in_transition) {
-                                var selected_preset = preset_combo.get_selected_preset ();
+                        if (!in_transition) {
+                            var selected_preset = preset_combo.get_selected_preset ();
 
-                                if (selected_preset.is_default) {
-                                    on_default_preset_modified ();
-                                } else {
-                                    selected_preset.set_gain (index, val);
-                                }
+                            if (selected_preset.is_default) {
+                                on_default_preset_modified ();
+                            } else {
+                                selected_preset.set_gain (index, val);
                             }
                         }
-                    });
+                    }
                 });
             }
 
@@ -186,7 +182,7 @@ namespace Music2 {
             eq_switch.notify["active"].connect (on_eq_switch_toggled);
             preset_combo.automatic_preset_chosen.connect (on_automatic_chosen);
             preset_combo.delete_preset_chosen.connect (remove_preset_clicked);
-            preset_combo.preset_selected.connect (preset_selected);
+            preset_combo.preset_selected.connect (on_preset_selected);
             new_preset_entry.activate.connect (add_new_preset);
             new_preset_entry.icon_press.connect (new_preset_entry_icon_pressed);
             new_preset_entry.focus_out_event.connect (on_entry_focus_out);
@@ -257,7 +253,7 @@ namespace Music2 {
             }
         }
 
-        private void preset_selected (CObjects.EqualizerPreset p) {
+        private void on_preset_selected (CObjects.EqualizerPreset p) {
             if (!initialized) {
                 return;
             }
@@ -453,24 +449,9 @@ namespace Music2 {
         private CObjects.EqualizerPreset[] get_default_presets () {
             CObjects.EqualizerPreset[] default_presets = {};
 
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Flat"), {0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Classical"), {0, 0, 0, 0, 0, 0, -40, -40, -40, -50});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Club"), {0, 0, 20, 30, 30, 30, 20, 0, 0, 0});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Dance"), {50, 35, 10, 0, 0, -30, -40, -40, 0, 0});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Full Bass"), {70, 70, 70, 40, 20, -45, -50, -55, -55, -55});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Full Treble"), {-50, -50, -50, -25, 15, 55, 80, 80, 80, 80});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Full Bass + Treble"), {35, 30, 0, -40, -25, 10, 45, 55, 60, 60});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Headphones"), {25, 50, 25, -20, 0, -30, -40, -40, 0, 0});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Large Hall"), {50, 50, 30, 30, 0, -25, -25, -25, 0, 0});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Live"), {-25, 0, 20, 25, 30, 30, 20, 15, 15, 10});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Party"), {35, 35, 0, 0, 0, 0, 0, 0, 35, 35});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Pop"), {-10, 25, 35, 40, 25, -5, -15, -15, -10, -10});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Reggae"), {0, 0, -5, -30, 0, -35, -35, 0, 0, 0});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Rock"), {40, 25, -30, -40, -20, 20, 45, 55, 55, 55});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Soft"), {25, 10, -5, -15, -5, 20, 45, 50, 55, 60});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Ska"), {-15, -25, -25, -5, 20, 30, 45, 50, 55, 50});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Soft Rock"), {20, 20, 10, -5, -25, -30, -20, -5, 15, 45});
-            default_presets += new CObjects.EqualizerPreset.with_gains (_("Techno"), {40, 30, 0, -30, -25, 0, 40, 50, 50, 45});
+            foreach (unowned Enums.PresetGains preset_gains in Enums.PresetGains.get_all ()) {
+                default_presets += new CObjects.EqualizerPreset.with_gains (preset_gains.to_string (), preset_gains.get_gains ());
+            }
 
             return default_presets;
         }

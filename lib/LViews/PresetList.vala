@@ -15,7 +15,6 @@ namespace Music2 {
 
         private int ncustompresets {get; set;}
         private bool modifying_list;
-        private const string SEPARATOR_NAME = "<separator_item_unique_name>";
         private static string automatic_mode = _("Automatic");
         private static string delete_preset = _("Delete Current");
 
@@ -35,7 +34,7 @@ namespace Music2 {
                 string content = "";
                 model.get (iter, 1, out content);
 
-                return content == SEPARATOR_NAME;
+                return content == Constants.SEPARATOR_NAME;
             });
 
             var cell = new Gtk.CellRendererText ();
@@ -60,7 +59,7 @@ namespace Music2 {
         public void add_separator () {
             Gtk.TreeIter iter;
             store.append (out iter);
-            store.set (iter, 0, null, 1, SEPARATOR_NAME);
+            store.set (iter, 0, null, 1, Constants.SEPARATOR_NAME);
         }
 
         public void add_preset (CObjects.EqualizerPreset ep) {
@@ -91,12 +90,14 @@ namespace Music2 {
             for (int i = 0; store.get_iter_from_string (out iter, i.to_string ()); ++i) {
                 GLib.Object o;
                 store.get (iter, 0, out o);
-
-                if (o != null && o is CObjects.EqualizerPreset && ((CObjects.EqualizerPreset) o) == last_selected_preset) {
-                    if (!((CObjects.EqualizerPreset) o).is_default) {
-                        ncustompresets--;
-                        store.remove (ref iter);
-                        break;
+                if (o != null && o is CObjects.EqualizerPreset) {
+                    var eq_preset = o as CObjects.EqualizerPreset;
+                    if (eq_preset != null && eq_preset == last_selected_preset) {
+                        if (!eq_preset.is_default) {
+                            ncustompresets--;
+                            store.remove (ref iter);
+                            break;
+                        }
                     }
                 }
             }
@@ -121,18 +122,26 @@ namespace Music2 {
             GLib.Object o;
             store.get (it, 0, out o);
 
-            if (o != null && o is CObjects.EqualizerPreset) {
-                last_selected_preset = o as CObjects.EqualizerPreset;
-
-                if (!(o as CObjects.EqualizerPreset).is_default) {
-                    add_delete_preset_option ();
-                } else {
-                    remove_delete_option ();
-                }
-
-                automatic_selected = false;
-                preset_selected (o as CObjects.EqualizerPreset);
+            if (o == null) {
                 return;
+            }
+
+
+            if (o is CObjects.EqualizerPreset) {
+                var eq_preset = o as CObjects.EqualizerPreset;
+                if (eq_preset != null) {
+                    last_selected_preset = eq_preset;
+
+                    if (!eq_preset.is_default) {
+                        add_delete_preset_option ();
+                    } else {
+                        remove_delete_option ();
+                    }
+
+                    automatic_selected = false;
+                    preset_selected (eq_preset);
+                    return;
+                }
             }
 
             string option;
@@ -160,11 +169,14 @@ namespace Music2 {
                     GLib.Object o;
                     store.get (iter, 0, out o);
 
-                    if (o != null && o is CObjects.EqualizerPreset && (o as CObjects.EqualizerPreset).name == preset_name) {
-                        set_active_iter (iter);
-                        automatic_selected = false;
-                        preset_selected (o as CObjects.EqualizerPreset);
-                        return;
+                    if (o != null && o is CObjects.EqualizerPreset) {
+                        var eq_preset = o as CObjects.EqualizerPreset;
+                        if (eq_preset != null && eq_preset.name == preset_name) {
+                            set_active_iter (iter);
+                            automatic_selected = false;
+                            preset_selected (eq_preset);
+                            return;
+                        }
                     }
                 }
             }
@@ -224,7 +236,7 @@ namespace Music2 {
                 string text;
                 store.get (iter, 1, out text);
 
-                if ((nitems - index == count || index == -1) && text != null && text == SEPARATOR_NAME) {
+                if ((nitems - index == count || index == -1) && text != null && text == Constants.SEPARATOR_NAME) {
                     store.remove (ref iter);
                     break;
                 }
@@ -239,7 +251,7 @@ namespace Music2 {
                 string text;
                 store.get (last_iter, 1, out text);
 
-                if (text != null && text == SEPARATOR_NAME) {
+                if (text != null && text == Constants.SEPARATOR_NAME) {
                     new_iter = last_iter;
 
                     if (store.iter_next (ref new_iter)) {
@@ -261,7 +273,7 @@ namespace Music2 {
             last_iter = new_iter;
 
             store.insert_after (out new_iter, last_iter);
-            store.set (new_iter, 0, null, 1, SEPARATOR_NAME);
+            store.set (new_iter, 0, null, 1, Constants.SEPARATOR_NAME);
         }
     }
 }

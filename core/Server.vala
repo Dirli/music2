@@ -31,7 +31,9 @@ namespace Music2 {
         private int queue_id;
 
         private GLib.Settings settings;
+        private GLib.Settings eq_settings;
         private Core.Player player;
+        private Core.Equalizer eq;
 
         private Enums.SourceType? active_source_type = null;
 
@@ -44,8 +46,10 @@ namespace Music2 {
         public Server (GLib.Application app) {
             this.app = app;
             settings = new GLib.Settings (Constants.APP_NAME);
+            eq_settings = new GLib.Settings (Constants.APP_NAME + ".equalizer");
 
-            player = new Core.Player ();
+            eq =  new Core.Equalizer ();
+            player = new Core.Player (eq.element);
             player.set_volume (settings.get_double ("volume"));
 
             init_mpris ();
@@ -59,10 +63,16 @@ namespace Music2 {
             on_changed_shuffle ();
             on_changed_sleep ();
 
+            on_selected_preset ();
+            on_equalizer_enabled ();
+
             settings.changed["repeat-mode"].connect (on_changed_repeat);
             settings.changed["shuffle-mode"].connect (on_changed_shuffle);
             settings.changed["source-type"].connect (on_changed_source);
             settings.changed["block-sleep-mode"].connect (on_changed_sleep);
+
+            eq_settings.changed["selected-preset"].connect (on_selected_preset);
+            eq_settings.changed["equalizer-enabled"].connect (on_equalizer_enabled);
         }
 
         private void on_changed_track (CObjects.Media m) {
@@ -78,7 +88,6 @@ namespace Music2 {
             if (m.album != null) {
                 cover_path = Tools.FileUtils.get_cover_path (m.year, m.get_display_album ());
             }
-
 
             show_notification (m.get_display_title (),
                                notification_body,
@@ -108,6 +117,55 @@ namespace Music2 {
             } else {
                 uninhibit ();
                 scrsaver_iface = null;
+            }
+        }
+
+        private void on_equalizer_enabled () {
+            if (eq_settings.get_boolean ("equalizer-enabled")) {
+                player.enable_equalizer ();
+            } else {
+                player.disable_equalizer ();
+            }
+        }
+
+        private void on_selected_preset () {
+            var selected_preset = eq_settings.get_string ("selected-preset");
+            if (selected_preset == "") {
+                int i = 0;
+                while (i < 10) {
+                    eq.set_gain (i++, 0.0);
+                }
+            } else {
+                int[] gains_arr = {};
+
+                foreach (unowned Enums.PresetGains preset_gains in Enums.PresetGains.get_all ()) {
+                    if (preset_gains.to_string () == selected_preset) {
+                        gains_arr = preset_gains.get_gains ();
+                        break;
+                    }
+                }
+
+                if (gains_arr.length == 0) {
+                    string[] custom_presets = eq_settings.get_strv ("custom-presets");
+
+                    for (int i = 0; i < custom_presets.length; i++) {
+                        var vals = custom_presets[i].split ("/", 0);
+
+                        if (vals[0] == selected_preset) {
+                            for (int j = 1; j < vals.length; j++) {
+                                gains_arr += int.parse (vals[j]);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (gains_arr.length > 0) {
+                    int gain_i = 0;
+                    foreach (var gain in gains_arr) {
+                        eq.set_gain (gain_i++, (double) gain);
+                    }
+                }
             }
         }
 
@@ -372,20 +430,20 @@ namespace Music2 {
                                         GLib.NotificationPriority priority = GLib.NotificationPriority.LOW,
                                         string context = "music2") {
 
-           var notification = new GLib.Notification (title);
-           notification.set_body (body);
-           notification.set_priority (priority);
-           if (icon_path != "") {
-               try {
-                   notification.set_icon (GLib.Icon.new_for_string (icon_path));
-               } catch (Error e) {
-                   warning (e.message);
-               }
-           } else {
-               notification.set_icon (new GLib.ThemedIcon ("multimedia-audio-player"));
-           }
+            var notification = new GLib.Notification (title);
+            notification.set_body (body);
+            notification.set_priority (priority);
+            if (icon_path != "") {
+                try {
+                    notification.set_icon (GLib.Icon.new_for_string (icon_path));
+                } catch (Error e) {
+                    warning (e.message);
+                }
+            } else {
+                notification.set_icon (new GLib.ThemedIcon ("multimedia-audio-player"));
+            }
 
-           app.send_notification (context, notification);
+            app.send_notification (context, notification);
         }
 
         private void inhibit () {

@@ -1,6 +1,7 @@
 executable(
     meson.project_name() + 'd',
     'Daemon.vala',
+    'Equalizer.vala',
     'MprisPlayer.vala',
     'MprisRoot.vala',
     'MprisTrackList.vala',
