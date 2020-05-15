@@ -25,6 +25,10 @@ namespace Music2 {
         public signal void progress_scan (double progress_val);
         public signal void cleared_library ();
 
+        private uint source_id = 0;
+        private uint scan_m = 0;
+        private uint total_m = 0;
+
         public bool loaded = false;
 
         public Gee.HashMap<uint, CObjects.Media> media_hash;
@@ -42,8 +46,7 @@ namespace Music2 {
         public Gee.ArrayList<string> genre_array;
         public Objects.CategoryStore genre_store;
 
-        private Services.LibraryScanner lib_scanner;
-        private Services.ImportManager import_manager;
+        private Interfaces.Scanner scanner;
 
         public LibraryManager () {
             Tools.FileUtils.get_cache_directory ("covers");
@@ -131,12 +134,6 @@ namespace Music2 {
             return media_iter_hash[tid];
         }
 
-        public void add_apa (int art_id, int alb_id) {
-            // lock (albums_hash) {
-            //     albums_hash[alb_id].artist_id.add (art_id);
-            // }
-        }
-
         public void add_album (Structs.Album a_struct) {
             if (!albums_hash.has_key (a_struct.album_id)) {
                 if (!genre_array.contains (a_struct.genre)) {
@@ -177,6 +174,8 @@ namespace Music2 {
             if (!db_manager.check_db) {
                 return;
             }
+
+            clear_stores ();
 
             db_manager.get_artists ().foreach ((entry) => {
                 add_artist (entry.value, entry.key);
@@ -234,18 +233,13 @@ namespace Music2 {
         public void scan_library (string uri) {
             started_scan ();
 
-            uint total_m = 0;
-            uint scan_m = 0;
-            uint source_id = 0;
+            source_id = 0;
 
-            lib_scanner = new Services.LibraryScanner ();
-            lib_scanner.finished_scan.connect ((scan_time) => {
-                if (source_id > 0) {
-                    GLib.Source.remove (source_id);
-                    source_id = 0;
-                }
-
-                lib_scanner.apa_cache.foreach ((entry) => {
+            scanner = new Services.LibraryScanner ();
+            scanner.total_found.connect (on_total_found);
+            scanner.added_track.connect (on_added_track);
+            scanner.finished_scan.connect ((scan_time) => {
+                ((Services.LibraryScanner) scanner).apa_cache.foreach ((entry) => {
                     var artists_str = "";
                     if (albums_hash.has_key (entry.key)) {
                         entry.value.foreach ((artist_id) => {
@@ -263,95 +257,70 @@ namespace Music2 {
                     return true;
                 });
 
-                string msg = _("Added %lld tracks to the library,").printf (scan_m);
-                if (scan_time >= 0) {
-                    msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
-                }
-
-                finished_scan (msg);
-
-                lib_scanner = null;
-            });
-            lib_scanner.added_track.connect ((m, artist_id, album_id) => {
-                scan_m++;
-
-                add_artist (m.artist, artist_id);
-
-                Structs.Album album_struct = get_album_struct (m, album_id, artist_id);
-                add_album (album_struct);
-
-                add_track (m);
-            });
-            lib_scanner.total_found.connect ((total_media) => {
-                total_m = total_media;
-                if (total_m > 0) {
-                    source_id = GLib.Timeout.add (1000, () => {
-                        if (scan_m == 0) {
-                            return true;
-                        }
-
-                        progress_scan ((double) scan_m / total_m);
-                        return true;
-                    });
-                }
-
-                prepare_scan ();
+                on_finished_scan (scan_time);
             });
 
-            lib_scanner.start_scan (uri);
+            scanner.start_scan (uri);
         }
 
         public void import_folder (string folder_uri, string music_folder) {
             started_scan ();
 
-            uint total_m = 0;
-            uint scan_m = 0;
-            uint source_id = 0;
+            source_id = 0;
 
-            import_manager = new Services.ImportManager (music_folder);
-            import_manager.total_found.connect ((total_media) => {
-                total_m = total_media;
-                if (total_m > 0) {
-                    source_id = GLib.Timeout.add (1000, () => {
-                        if (scan_m == 0) {
-                            return true;
-                        }
+            scanner = new Services.ImportManager (music_folder);
+            scanner.total_found.connect (on_total_found);
+            scanner.added_track.connect (on_added_track);
+            scanner.finished_scan.connect (on_finished_scan);
 
-                        progress_scan ((double) scan_m / total_m);
+            scanner.start_scan (folder_uri);
+        }
+
+        private void on_added_track (CObjects.Media m, int artist_id, int album_id) {
+            scan_m++;
+
+            add_artist (m.artist, artist_id);
+
+            Structs.Album album_struct = get_album_struct (m, album_id, artist_id);
+            add_album (album_struct);
+
+            add_track (m);
+        }
+
+        private void on_total_found (uint total_media) {
+            total_m = total_media;
+
+            scan_m = 0;
+            if (total_m > 0) {
+                source_id = GLib.Timeout.add (1000, () => {
+                    if (scan_m == 0) {
                         return true;
-                    });
-                }
+                    }
 
-                prepare_scan ();
-            });
-            import_manager.added_track.connect ((m, artist_id, album_id) => {
-                scan_m++;
+                    progress_scan ((double) scan_m / total_m);
+                    return true;
+                });
+            }
 
-                add_artist (m.artist, artist_id);
+            prepare_scan ();
+        }
 
-                Structs.Album album_struct = get_album_struct (m, album_id, artist_id);
-                add_album (album_struct);
+        private void on_finished_scan (int64 scan_time) {
+            if (source_id > 0) {
+                GLib.Source.remove (source_id);
+                source_id = 0;
+            }
 
-                add_track (m);
-            });
+            string msg = _("Added %lld tracks to the library,").printf (scan_m);
+            if (scan_time >= 0) {
+                msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
+            }
 
-            import_manager.finished_scan.connect ((scan_time) => {
-                if (source_id > 0) {
-                    GLib.Source.remove (source_id);
-                    source_id = 0;
-                }
+            finished_scan (msg);
+            total_m = 0;
+            scan_m = 0;
 
-                string msg = _("Import %lld tracks to the library,").printf (scan_m);
-                if (scan_time >= 0) {
-                    msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
-                }
-
-                finished_scan (msg);
-
-                import_manager = null;
-            });
-
-            import_manager.start_scan (folder_uri);
+            scanner = null;
         }
 
         private Structs.Album get_album_struct (CObjects.Media m, int album_id, int artist_id) {
@@ -368,10 +337,13 @@ namespace Music2 {
         }
 
         public void stop_scanner () {
-            if (lib_scanner != null) {
-                lib_scanner.stop_scan ();
-            } else if (import_manager != null) {
-                import_manager.stop_scan ();
+            if (source_id > 0) {
+                if (scanner != null) {
+                    scanner.stop_scan ();
+                } else {
+                    GLib.Source.remove (source_id);
+                    source_id = 0;
+                }
             }
         }
 
@@ -435,6 +407,16 @@ namespace Music2 {
             return media_hash.size > 0 || artists_hash.size > 0 || albums_hash.size > 0;
         }
 
+        private void clear_stores () {
+            media_store.clear ();
+
+            artists_store.clear ();
+            genre_store.clear ();
+            albums_store.clear ();
+
+            albums_grid_store.clear ();
+        }
+
         public void clear_library () {
             bool clear_ui = false;
             if (dirty_library ()) {
@@ -447,10 +429,7 @@ namespace Music2 {
             albums_hash.clear ();
             genre_array.clear ();
 
-            artists_store.clear ();
-            albums_store.clear ();
-            genre_store.clear ();
-            media_store.clear ();
+            clear_stores ();
 
             if (clear_ui) {
                 cleared_library ();

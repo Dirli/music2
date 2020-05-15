@@ -21,7 +21,7 @@ namespace Music2 {
         public abstract void start_scan (string uri);
 
         public signal void finished_scan (int64 scan_time = -1);
-        public signal void added_track (CObjects.Media? m = null, int artist_id = -1, int album_id = -1);
+        public signal void added_track (CObjects.Media m, int artist_id, int album_id);
         public signal void total_found (uint total);
 
         protected bool stop_flag;
