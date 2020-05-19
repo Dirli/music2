@@ -35,6 +35,9 @@ namespace Music2 {
             this.player = player;
             player.added_to_queue.connect (on_added_to_queue);
             player.tracklist_replaced.connect (on_tracklist_replaced);
+            player.removed_from_queue.connect ((tid) => {
+                track_removed (tid);
+            });
         }
 
         // missing from the specification
@@ -57,7 +60,11 @@ namespace Music2 {
 
         public void add_track (string uri, uint after, bool current) throws GLib.Error {}
 
-        public void remove_track (uint tid) throws GLib.Error {}
+        public void remove_track (uint tid) throws GLib.Error {
+            if (tid > 0) {
+                player.remove_track (tid);
+            }
+        }
 
         public void go_to (uint tid) throws GLib.Error {
             if (tid > 0) {

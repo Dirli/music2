@@ -132,9 +132,7 @@ namespace Music2 {
                         queue_media.show ();
                         separator2.show ();
                         remove_media.show ();
-                        if (hint == Enums.Hint.MUSIC) {
-                            remove_media.set_label (_("Remove from Library…"));
-                        }
+                        remove_media.set_label (hint == Enums.Hint.MUSIC ? _("Remove from Library") : _("Remove from Playlist"));
                         break;
                     case Enums.Hint.SMART_PLAYLIST:
                         edit_media.show ();

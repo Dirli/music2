@@ -55,6 +55,7 @@ namespace Music2 {
             init_mpris ();
 
             player.changed_track.connect (on_changed_track);
+            player.removed_from_queue.connect (on_removed_from_queue);
             player.changed_volume.connect ((volume_value) => {
                 settings.set_double ("volume", volume_value);
             });
@@ -92,6 +93,20 @@ namespace Music2 {
             show_notification (m.get_display_title (),
                                notification_body,
                                cover_path);
+        }
+
+        private void on_removed_from_queue (uint tid) {
+            var t = tid;
+            if (t > 0) {
+                if (!init_db ()) {
+                    return;
+                }
+
+                new Thread<void*> ("remove_from _queue", () => {
+                    db_manager.remove_from_playlist (queue_id, t);
+                    return null;
+                });
+            }
         }
 
         private void on_changed_repeat () {

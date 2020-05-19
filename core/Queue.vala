@@ -37,6 +37,20 @@ namespace Music2 {
             }
         }
 
+        public bool remove_index (uint i) {
+            if (tracks_queue.index_of (i) >= 0) {
+                if (tracks_queue.remove (i)) {
+                    return true;
+                }
+            } else if (past_tracks.index_of (i) >= 0) {
+                if (past_tracks.remove (i)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void set_index (uint i) {
             if (tracks_queue.size > 0 && i != tracks_queue[0]) {
                 var index = tracks_queue.index_of (i);

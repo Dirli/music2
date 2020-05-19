@@ -23,11 +23,12 @@ namespace Music2 {
         public signal void changed_volume (double v);
         public signal void changed_duration (int64 d);
         public signal void added_to_queue (CObjects.Media m);
+        public signal void removed_from_queue (uint tid);
         public signal void tracklist_replaced (uint[] tracks_id);
 
         private Gee.HashMap<uint, CObjects.Media> tracks_hash;
         private Core.Queue tracks_queue;
-        private uint[] tracks_list;
+        private GLib.Array<uint> tracks_list;
 
         public bool launch = false;
 
@@ -49,7 +50,7 @@ namespace Music2 {
                 _shuffle_mode = value;
                 tracks_queue.shuffle_mode = value;
                 if (_current_index > 0) {
-                    tracks_queue.reset_queue (tracks_list);
+                    tracks_queue.reset_queue (tracks_list.data);
                     tracks_queue.set_index (_current_index);
                 }
             }
@@ -76,7 +77,6 @@ namespace Music2 {
         public dynamic Gst.Element audiobin;
         public dynamic Gst.Element audiosink;
         public dynamic Gst.Element eq_element;
-        // public dynamic Gst.Element eq_audioconvert;
         public dynamic Gst.Element audiosinkqueue;
 
         private Gst.Bus bus;
@@ -105,7 +105,7 @@ namespace Music2 {
 
             tracks_hash = new Gee.HashMap<uint, CObjects.Media> ();
             tracks_queue = new Core.Queue ();
-            tracks_list = {};
+            tracks_list = new GLib.Array<uint> ();
 
             playbin = Gst.ElementFactory.make ("playbin", "play");
 
@@ -264,7 +264,7 @@ namespace Music2 {
             var tid = m.tid;
             tracks_hash[tid] = m;
             tracks_queue.add_index (tid);
-            tracks_list += tid;
+            tracks_list.append_val (tid);
         }
 
         public uint[] adds_to_queue (Gee.ArrayQueue<CObjects.Media> new_queue) {
@@ -304,7 +304,7 @@ namespace Music2 {
 
                 foreach (var t in past_tracks) {
                     tracks_id += t;
-                    tracks_list += t;
+                    tracks_list.append_val (t);
                 }
 
                 tracklist_replaced (tracks_id);
@@ -314,12 +314,37 @@ namespace Music2 {
         }
 
         public uint[] get_queue () {
-            return tracks_list;
+            return tracks_list.data;
+        }
+
+        public void remove_track (uint tid) {
+            if (current_index == tid) {
+                next ();
+            }
+
+            int t_index = 0;
+            bool t_found = false;
+            foreach (uint t in tracks_list.data) {
+                if (t == tid) {
+                    t_found = true;
+                    break;
+                }
+
+                t_index++;
+            }
+
+            if (t_found) {
+                tracks_list._remove_index (t_index);
+            }
+
+            if (tracks_queue.remove_index (tid)) {
+                removed_from_queue (tid);
+            }
         }
 
         private void reset_queue () {
             state_changed (Gst.State.NULL);
-            tracks_queue.reset_queue (tracks_list);
+            tracks_queue.reset_queue (tracks_list.data);
 
             _current_index = tracks_queue.get_first ();
 
@@ -334,7 +359,7 @@ namespace Music2 {
             state_changed (Gst.State.NULL);
             tracks_hash.clear ();
             tracks_queue.clear_queue ();
-            tracks_list = {};
+            tracks_list = new GLib.Array<uint> ();;
         }
 
         private bool bus_callback (Gst.Bus bus, Gst.Message message) {

@@ -120,6 +120,7 @@ namespace Music2 {
                 dbus_tracklist = GLib.Bus.get_proxy_sync (BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
                 dbus_tracklist.track_added.connect (on_track_added);
                 dbus_tracklist.track_list_replaced.connect (on_track_list_replaced);
+                dbus_tracklist.track_removed.connect (on_track_removed);
                 dbus_prop = GLib.Bus.get_proxy_sync (BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
                 dbus_prop.properties_changed.connect (on_properties_changed);
 
@@ -218,7 +219,6 @@ namespace Music2 {
 
                 return true;
             });
-
         }
 
         private void build_ui () {
@@ -337,7 +337,7 @@ namespace Music2 {
             action_stack.dnd_button_clicked.connect (on_dnd_button_clicked);
 
             status_bar = new Widgets.StatusBar ();
-            status_bar.create_new_pl.connect (() => {});
+            status_bar.create_new_pl.connect (playlist_manager.create_playlist);
             status_bar.show_pl_editor.connect (() => {});
             status_bar.changed_volume.connect ((new_volume) => {
                 dbus_player.volume = new_volume;
@@ -548,6 +548,10 @@ namespace Music2 {
             }
         }
 
+        private void on_track_removed (uint tid) {
+            queue_stack.remove_iter (tid);
+        }
+
         // signals
         private void on_changed_source () {
             active_source_type = (Enums.SourceType) settings.get_enum ("source-type");
@@ -587,6 +591,28 @@ namespace Music2 {
             switch (action_type) {
                 case Enums.ActionType.BROWSE:
                     show_in_browser (hint, tids[0]);
+                    break;
+                case Enums.ActionType.REMOVE:
+                    var view_name = view_stack.get_visible_child_name ();
+                    if (view_name != null) {
+                        switch (view_name) {
+                            case Constants.QUEUE:
+                                try {
+                                    dbus_tracklist.remove_track (tids[0]);
+                                } catch (Error e) {
+                                    warning (e.message);
+                                }
+                                break;
+                            case "playlist":
+                                //
+                                break;
+                            case "music":
+                                //
+                                break;
+
+                        }
+                    }
+
                     break;
                 case Enums.ActionType.SCROLL:
                     var visible_widget = view_stack.get_visible_child ();

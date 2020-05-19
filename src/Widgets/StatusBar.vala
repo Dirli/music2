@@ -18,7 +18,7 @@
 
 namespace Music2 {
     public class Widgets.StatusBar : Gtk.ActionBar {
-        public signal void create_new_pl ();
+        public signal int create_new_pl (string name);
         public signal void show_pl_editor ();
         public signal void changed_volume (double volume_value);
 
@@ -87,7 +87,7 @@ namespace Music2 {
             pack_end (volume_menubutton);
 
             pl_button.clicked.connect (() => {
-                create_new_pl ();
+                create_new_pl (_("New playlist"));
             });
 
             spl_button.clicked.connect (() => {

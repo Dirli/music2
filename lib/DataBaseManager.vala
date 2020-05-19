@@ -287,6 +287,27 @@ namespace Music2 {
             }
         }
 
+        public void remove_from_playlist (int pid, uint tid) {
+            Sqlite.Statement stmt;
+
+            string sql = """
+                DELETE FROM playlist_tracks WHERE playlist_id=$PID and track_id=$TID;
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$PID"), pid);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$TID"), (int) tid);
+            assert (res == Sqlite.OK);
+
+            if (stmt.step () != Sqlite.DONE) {
+                warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+            }
+
+            stmt.reset ();
+        }
+
         public void clear_playlist (int playlist_id) {
             Sqlite.Statement stmt;
             string sql = """
