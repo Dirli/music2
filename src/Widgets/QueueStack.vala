@@ -52,12 +52,17 @@ namespace Music2 {
             return ++queue_size;
         }
 
-        public void remove_iter (uint tid) {
+        public override int remove_iter (uint tid) {
             if (iter_hash.has_key (tid)) {
                 Gtk.TreeIter iter = iter_hash[tid];
                 list_store.remove (ref iter);
                 iter_hash.unset (tid);
+                if (queue_size > 0) {
+                    --queue_size;
+                }
             }
+
+            return queue_size;
         }
 
         public override void clear_stack () {

@@ -179,6 +179,7 @@ namespace Music2 {
                     }
                 }
             });
+            playlist_manager.remove_view.connect (playlist_stack.remove_iter);
             playlist_manager.selected_playlist.connect (on_selected_playlist);
             playlist_manager.added_playlist.connect ((pid, name, hint, icon) =>  {
                 source_list_view.add_item (pid, name, hint, icon);
@@ -549,7 +550,8 @@ namespace Music2 {
         }
 
         private void on_track_removed (uint tid) {
-            queue_stack.remove_iter (tid);
+            var inc_size = queue_stack.remove_iter (tid);
+            source_list_view.update_badge (queue_id, inc_size);
         }
 
         // signals
@@ -604,7 +606,7 @@ namespace Music2 {
                                 }
                                 break;
                             case "playlist":
-                                //
+                                playlist_manager.remove_from_playlist (playlist_stack.pid, tids[0]);
                                 break;
                             case "music":
                                 //

@@ -82,7 +82,7 @@ namespace Music2 {
                     Gtk.TreeIter iter;
                     if (list_store.get_iter (out iter, iter_path)) {
                         uint tid;
-                        list_store.@get (iter, (int) Enums.ListColumn.TRACKID, out tid);
+                        list_store.@get (iter, Enums.ListColumn.TRACKID, out tid, -1);
                         tids += tid;
                     }
                 });
@@ -93,7 +93,7 @@ namespace Music2 {
                     Gtk.TreeIter iter;
                     if (list_store.get_iter (out iter, cursor_path)) {
                         uint tid;
-                        list_store.@get (iter, (int) Enums.ListColumn.TRACKID, out tid, -1);
+                        list_store.@get (iter, Enums.ListColumn.TRACKID, out tid, -1);
                         tids = {tid};
                     }
                 }

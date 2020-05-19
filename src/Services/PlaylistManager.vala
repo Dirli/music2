@@ -20,6 +20,7 @@ namespace Music2 {
     public class Services.PlaylistManager : GLib.Object {
         public signal void selected_playlist (int pid, Enums.Hint hint, Enums.SourceType type);
         public signal void add_view (uint tid, uint count);
+        public signal int remove_view (uint tid);
         public signal void added_playlist (int pid, string name, Enums.Hint hint, GLib.Icon icon);
 
         private int active_pid = -1;
@@ -150,6 +151,21 @@ namespace Music2 {
             }
 
             return "";
+        }
+
+        public void remove_from_playlist (int pid, uint tid) {
+            if (playlists_hash.has_key (pid) && playlists_hash[pid].tracks.contains (tid)) {
+                playlists_hash[pid].tracks.remove (tid);
+
+                new Thread<void*> ("remove_from _playlist", () => {
+                    db_manager.remove_from_playlist (pid, tid);
+                    return null;
+                });
+
+                if (active_pid == pid) {
+                    remove_view (tid);
+                }
+            }
         }
 
         public void select_playlist (int pid, Enums.Hint hint) {

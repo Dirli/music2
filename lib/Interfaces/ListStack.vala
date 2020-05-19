@@ -21,6 +21,7 @@ namespace Music2 {
         protected Gee.HashMap<uint, Gtk.TreeIter?> iter_hash;
 
         public abstract int add_iter (CObjects.Media m);
+        public abstract int remove_iter (uint tid);
 
         public new void select_run_row (uint tid) {
             if (iter_hash.has_key (tid) && has_list_view) {

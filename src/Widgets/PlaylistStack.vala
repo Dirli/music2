@@ -59,6 +59,28 @@ namespace Music2 {
             return 1;
         }
 
+        public override int remove_iter (uint tid) {
+            if (iter_hash.has_key (tid)) {
+                Gtk.TreeIter iter = iter_hash[tid];
+
+                uint t_number = 0;
+                list_store.@get (iter, Enums.ListColumn.TRACK, out t_number, -1);
+
+                list_store.remove (ref iter);
+                if (list_store.iter_is_valid (iter)) {
+                    list_store.@set (iter, Enums.ListColumn.TRACK, t_number, -1);
+
+                    while (list_store.iter_next (ref iter)) {
+                        list_store.@set (iter, Enums.ListColumn.TRACK, ++t_number, -1);
+                    }
+                }
+
+                iter_hash.unset (tid);
+            }
+
+            return 1;
+        }
+
         public override void clear_stack () {
             show_alert ();
             iter_hash.clear ();
@@ -86,7 +108,7 @@ namespace Music2 {
                     alert_view.show_action (_("Edit Smart Playlist"));
 
                     alert_view.action_activated.connect (() => {
-                        // 
+                        //
                     });
 
                     message_head = _("No Songs");
