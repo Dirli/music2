@@ -25,6 +25,7 @@ namespace Music2 {
         public signal void added_to_queue (CObjects.Media m);
         public signal void removed_from_queue (uint tid);
         public signal void tracklist_replaced (uint[] tracks_id);
+        public signal void try_add (string uri);
 
         private Gee.HashMap<uint, CObjects.Media> tracks_hash;
         private Core.Queue tracks_queue;
@@ -260,11 +261,17 @@ namespace Music2 {
             }
         }
 
-        public void add_to_queue (CObjects.Media m) {
+        public bool add_to_queue (CObjects.Media m) {
             var tid = m.tid;
+            if (tracks_hash.has_key (tid)) {
+                return false;
+            }
+
             tracks_hash[tid] = m;
             tracks_queue.add_index (tid);
             tracks_list.append_val (tid);
+
+            return true;
         }
 
         public uint[] adds_to_queue (Gee.ArrayQueue<CObjects.Media> new_queue) {

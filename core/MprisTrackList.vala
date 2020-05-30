@@ -31,8 +31,8 @@ namespace Music2 {
             }
         }
 
-        public MprisTrackList (Core.Player player) {
-            this.player = player;
+        public MprisTrackList (Core.Player p) {
+            player = p;
             player.added_to_queue.connect (on_added_to_queue);
             player.tracklist_replaced.connect (on_tracklist_replaced);
             player.removed_from_queue.connect ((tid) => {
@@ -58,7 +58,9 @@ namespace Music2 {
             return tracks_arr;
         }
 
-        public void add_track (string uri, uint after, bool current) throws GLib.Error {}
+        public void add_track (string uri, uint after, bool current) throws GLib.Error {
+            player.try_add (uri);
+        }
 
         public void remove_track (uint tid) throws GLib.Error {
             if (tid > 0) {

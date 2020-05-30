@@ -41,6 +41,19 @@ namespace Music2 {
             return db_manager.get_playlist_id (name);
         }
 
+        public Gee.HashMap<int, string> get_available_playlists (uint tid) {
+            var available_hash = new Gee.HashMap<int, string> ();
+            playlists_hash.values.foreach ((pl) => {
+                if (!pl.tracks.contains (tid)) {
+                    available_hash[pl.id] = pl.name;
+                }
+
+                return true;
+            });
+
+            return available_hash;
+        }
+
         public Gee.ArrayList<uint>? get_playlist (int pid) {
             if (playlists_hash.has_key (pid)) {
                 return playlists_hash[pid].tracks;
@@ -61,7 +74,7 @@ namespace Music2 {
         public void update_playlist_sync () {
             if (modified_pid > 0 && playlists_hash.has_key (modified_pid)) {
                 uint[] arr_to_write = playlists_hash[modified_pid].tracks.to_array ();
-                db_manager.update_playlist (modified_pid, arr_to_write);
+                db_manager.update_playlist (modified_pid, arr_to_write, true);
             }
         }
 
@@ -69,7 +82,7 @@ namespace Music2 {
             if (playlists_hash.has_key (pid)) {
                 new Thread<void*> ("update_playlist", () => {
                     uint[] arr_to_write = playlists_hash[pid].tracks.to_array ();
-                    db_manager.update_playlist (pid, arr_to_write);
+                    db_manager.update_playlist (pid, arr_to_write, true);
                     if (clear) {
                         modified_pid = 0;
                     }
@@ -118,6 +131,10 @@ namespace Music2 {
         }
 
         public void add_to_playlist (int pid, uint tid) {
+            if (tid == 0) {
+                return;
+            }
+
             if (playlists_hash.has_key (pid) && !playlists_hash[pid].tracks.contains (tid)) {
                 if (modified_pid != 0 && modified_pid != pid) {
                     update_playlist (modified_pid);
@@ -145,6 +162,7 @@ namespace Music2 {
                     if (db_manager.edit_playlist_name (pid, new_name)) {
                         names_list.remove (old_name);
                         names_list.add (new_name);
+                        playlists_hash[pid].name = new_name;
                         return new_name == name ? "" : new_name;
                     }
                 }

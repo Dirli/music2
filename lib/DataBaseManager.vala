@@ -257,17 +257,36 @@ namespace Music2 {
             return get_playlist_id (playlist_name);
         }
 
-        public void update_playlist (int playlist_id, uint[] tracks_arr) {
-            clear_playlist (playlist_id);
-
+        public void update_playlist (int playlist_id, uint[] tracks_arr, bool rewrite) {
             Sqlite.Statement stmt;
+            int nums = 1;
+            if (rewrite) {
+                clear_playlist (playlist_id);
+            } else {
+                string sql = """
+                    SELECT COUNT() FROM playlist_tracks WHERE playlist_id=$ID;
+                """;
+
+                int res = db.prepare_v2 (sql, sql.length, out stmt);
+                assert (res == Sqlite.OK);
+                res = stmt.bind_int (stmt.bind_parameter_index ("$ID"), playlist_id);
+                assert (res == Sqlite.OK);
+
+                if (stmt.step () == Sqlite.ROW) {
+                    nums = stmt.column_int (0) + 1;
+                } else {
+                    warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                    stmt.reset ();
+                    return;
+                }
+
+                stmt.reset ();
+            }
 
             string sql = """
                 INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, number) VALUES ($PLAYLIST, $TRACK, $NUM);
             """;
 
-
-            int nums = 0;
             foreach (var t in tracks_arr) {
                 int res = db.prepare_v2 (sql, sql.length, out stmt);
                 assert (res == Sqlite.OK);
@@ -275,12 +294,13 @@ namespace Music2 {
                 assert (res == Sqlite.OK);
                 res = stmt.bind_int (stmt.bind_parameter_index ("$TRACK"), (int) t);
                 assert (res == Sqlite.OK);
-                res = stmt.bind_int (stmt.bind_parameter_index ("$NUM"), ++nums);
+                res = stmt.bind_int (stmt.bind_parameter_index ("$NUM"), nums);
                 assert (res == Sqlite.OK);
 
                 if (stmt.step () != Sqlite.DONE) {
                     warning ("Error: %d: %s", db.errcode (), db.errmsg ());
-                    break;
+                } else {
+                    nums++;
                 }
 
                 stmt.reset ();
@@ -570,6 +590,41 @@ namespace Music2 {
 
             stmt.reset ();
             return album_id;
+        }
+
+        public CObjects.Media? get_track (string uri) {
+            Sqlite.Statement stmt;
+
+            string sql = """
+                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
+                FROM media
+                INNER JOIN albums
+                ON media.album_id = albums.id
+                INNER JOIN artists
+                ON media.artist_id = artists.id
+                WHERE media.path=$URI
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), uri);
+            assert (res == Sqlite.OK);
+
+            CObjects.Media? m = null;
+            if (stmt.step () == Sqlite.ROW) {
+                m = new CObjects.Media (stmt.column_text (4));
+                m.tid = (uint) stmt.column_int64 (0);
+                m.title = stmt.column_text (1);
+                m.genre = stmt.column_text (2);
+                m.track = (uint) stmt.column_int64 (3);
+                m.length = (uint) stmt.column_int64 (5);
+                m.album = stmt.column_text (6);
+                m.year = (uint) stmt.column_int (7);
+                m.artist = stmt.column_text (8);
+            }
+
+            return m;
         }
 
         public Gee.ArrayQueue<CObjects.Media> get_tracks (Enums.Category? category, string filter = "") {

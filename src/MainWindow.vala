@@ -39,7 +39,6 @@ namespace Music2 {
         private Widgets.StatusBar status_bar;
         private Widgets.TopDisplay top_display;
         private Widgets.ActionStack action_stack;
-        private Widgets.MediaMenu? media_menu = null;
 
         private Gtk.Button play_button;
         private Gtk.Button previous_button;
@@ -80,24 +79,36 @@ namespace Music2 {
         }
 
         public const string ACTION_PREFIX = "win.";
+        public const string ACTION_EDIT_SONG = "action_edit_song";
         public const string ACTION_IMPORT = "action_import";
         public const string ACTION_PLAY = "action_play";
         public const string ACTION_PLAY_NEXT = "action_play_next";
         public const string ACTION_PLAY_PREVIOUS = "action_play_previous";
         public const string ACTION_QUIT = "action_quit";
+        public const string ACTION_REMOVE_TRACK = "action_remove_track";
+        public const string ACTION_TO_PLAYLIST = "action_to_playlist";
+        public const string ACTION_TO_QUEUE = "action_to_queue";
         public const string ACTION_SEARCH = "action_search";
+        public const string ACTION_SHOW_BROWSER = "action_show_browser";
+        public const string ACTION_SHOW_CURRENT = "action_show_current";
         public const string ACTION_VIEW_ALBUMS = "action_view_albums";
         public const string ACTION_VIEW_COLUMNS = "action_view_columns";
 
         private const GLib.ActionEntry[] ACTION_ENTRIES = {
+            { ACTION_EDIT_SONG, action_edit_song, },
             { ACTION_IMPORT, action_import },
             { ACTION_PLAY, action_play, null, "false" },
             { ACTION_PLAY_NEXT, action_play_next },
             { ACTION_PLAY_PREVIOUS, action_play_previous },
             { ACTION_QUIT, action_quit },
+            { ACTION_REMOVE_TRACK, action_remove_track, "i" },
+            { ACTION_TO_PLAYLIST, action_to_playlist, "(ii)" },
+            { ACTION_TO_QUEUE, action_to_queue, "i" },
             { ACTION_SEARCH, action_search },
+            { ACTION_SHOW_BROWSER, action_show_browser, "(ii)" },
+            { ACTION_SHOW_CURRENT, action_show_current },
             { ACTION_VIEW_ALBUMS, action_view_albums },
-            { ACTION_VIEW_COLUMNS, action_view_columns }
+            { ACTION_VIEW_COLUMNS, action_view_columns },
         };
 
         public MainWindow (Gtk.Application application) {
@@ -486,6 +497,103 @@ namespace Music2 {
             view_selector.mode_button.selected = Enums.ViewMode.COLUMN;
         }
 
+        private void action_show_current () {
+            var visible_widget = view_stack.get_visible_child ();
+            if (visible_widget is Widgets.MusicStack) {
+                var stack_wrapper = visible_widget as Interfaces.StackWrapper;
+                if (stack_wrapper != null) {
+                    var iter = library_manager.get_media_iter (active_track);
+                    if (iter != null) {
+                        stack_wrapper.scroll_to_current (iter);
+                    }
+                }
+            } else if (visible_widget is Interfaces.ListStack) {
+                var list_stack = visible_widget as Interfaces.ListStack;
+                if (list_stack != null) {
+                    list_stack.scroll_to_current (active_track);
+                }
+            }
+        }
+
+        private void action_show_browser (GLib.SimpleAction action, GLib.Variant? pars) {
+            int hint;
+            int tid;
+            pars.@get ("(ii)", out hint, out tid);
+
+            CObjects.Media? media = null;
+            if (Enums.Hint.QUEUE == hint) {
+                try {
+                    uint[] tids = {(uint) tid};
+                    var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
+                    if (tracks_meta.length > 0) {
+                        media = metadata_to_media (tracks_meta[0]);
+                    }
+                } catch (Error e) {
+                    warning (e.message);
+                }
+            } else if (Enums.Hint.MUSIC == hint) {
+                media = library_manager.get_media ((uint) tid);
+            }
+
+            if (media != null) {
+                try {
+                    var m_file = GLib.File.new_for_uri (media.uri);
+                    Gtk.show_uri (null, m_file.get_parent ().get_uri (), Gdk.CURRENT_TIME);
+                } catch (Error err) {
+                    warning ("Could not browse media %s: %s\n", media.uri, err.message);
+                }
+            }
+        }
+
+        private void action_edit_song () {
+
+        }
+
+        private void action_to_queue (GLib.SimpleAction action, GLib.Variant? pars) {
+            int tid;
+            pars.@get ("i", out tid);
+            var m = library_manager.get_media (tid);
+            if (m != null) {
+                try {
+                    dbus_tracklist.add_track (m.uri, 0, false);
+                } catch (Error e) {
+                    warning (e.message);
+                }
+            }
+        }
+
+        private void action_to_playlist (GLib.SimpleAction action, GLib.Variant? pars) {
+            int pid;
+            int tid;
+            pars.@get ("(ii)", out pid, out tid);
+
+            playlist_manager.add_to_playlist (pid, (uint) tid);
+        }
+
+        private void action_remove_track (GLib.SimpleAction action, GLib.Variant? pars) {
+            int tid;
+            pars.get ("i", out tid);
+            var view_name = view_stack.get_visible_child_name ();
+            if (view_name != null) {
+                switch (view_name) {
+                    case Constants.QUEUE:
+                        try {
+                            dbus_tracklist.remove_track ((uint) tid);
+                        } catch (Error e) {
+                            warning (e.message);
+                        }
+                        break;
+                    case "playlist":
+                        playlist_manager.remove_from_playlist (playlist_stack.pid, (uint) tid);
+                        break;
+                    case "music":
+                        //
+                        break;
+
+                }
+            }
+        }
+
         // dbus signal handler
         private void on_properties_changed (string iface, GLib.HashTable<string, GLib.Variant> changed_prop, string[] invalid) {
             if (iface == "org.mpris.MediaPlayer2.Player") {
@@ -568,73 +676,53 @@ namespace Music2 {
         }
 
         private void on_popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget? w) {
-            if (media_menu == null) {
-                media_menu = new Widgets.MediaMenu ();
-                media_menu.popdown ();
-                media_menu.activate_menu_item.connect (on_activate_item);
+            var main_menu = new GLib.Menu ();
+
+            if (active_track > 0 && hint == Enums.Hint.QUEUE) {
+                var scroll_item = new GLib.MenuItem (_("Scroll to Current Song"), ACTION_PREFIX + ACTION_SHOW_CURRENT);
+                main_menu.append_item (scroll_item);
             }
 
-            if (hint == Enums.Hint.NONE) {
-                return;
+            var browser_item = new GLib.MenuItem (_("Show in File Browser"), "win.action_show_browser((%d,%d))".printf (hint, (int) tids[0]));
+            main_menu.append_item (browser_item);
+            var edit_item = new GLib.MenuItem (_("Edit Song Info…"), ACTION_PREFIX + ACTION_EDIT_SONG);
+            main_menu.append_item (edit_item);
+
+            if (hint == Enums.Hint.MUSIC || hint == Enums.Hint.PLAYLIST) {
+                if ((active_source_type == Enums.SourceType.LIBRARY || active_source_type == Enums.SourceType.PLAYLIST) && !queue_stack.exist_iter (tids[0])) {
+                    var queue_item = new GLib.MenuItem (_("Add to Queue"), "win.action_to_queue(%d)".printf ((int) tids[0]));
+                    main_menu.append_item (queue_item);
+                }
             }
 
-            media_menu.active_media = active_track > 0;
+            string remove_label = hint == Enums.Hint.QUEUE ? _("Remove from Queue") :
+                                  hint == Enums.Hint.MUSIC ? _("Remove from Library") :
+                                  hint == Enums.Hint.PLAYLIST ? _("Remove from Playlist") : "";
 
+            var remove_item = new GLib.MenuItem (remove_label, "win.action_remove_track(%d)".printf ((int) tids[0]));
+            main_menu.append_item (remove_item);
+
+            if (hint == Enums.Hint.MUSIC || hint == Enums.Hint.QUEUE) {
+                var available_pl = playlist_manager.get_available_playlists (tids[0]);
+                if (available_pl.size > 0) {
+                    var playlist_menu = new GLib.Menu ();
+
+                    var playlist_item = new GLib.MenuItem.submenu (_("Add to playlist..."), playlist_menu);
+                    main_menu.append_item (playlist_item);
+
+                    available_pl.foreach ((playlist) => {
+                        var pl = new GLib.MenuItem (playlist.value, "win.action_to_playlist((%d,%d))".printf (playlist.key, (int) tids[0]));
+                        playlist_menu.append_item (pl);
+
+                        return true;
+                    });
+                }
+            }
+
+            var media_menu = new Gtk.Popover.from_model (w == null ? top_display : w, main_menu);
             media_menu.set_pointing_to (rect);
-            media_menu.set_relative_to (w == null ? top_display : w);
-            media_menu.popup_media_menu (hint, tids, w == null);
-        }
 
-        private void on_activate_item (Enums.Hint hint, Enums.ActionType action_type, uint[] tids) {
-            if (tids.length == 0) {
-                return;
-            }
-
-            switch (action_type) {
-                case Enums.ActionType.BROWSE:
-                    show_in_browser (hint, tids[0]);
-                    break;
-                case Enums.ActionType.REMOVE:
-                    var view_name = view_stack.get_visible_child_name ();
-                    if (view_name != null) {
-                        switch (view_name) {
-                            case Constants.QUEUE:
-                                try {
-                                    dbus_tracklist.remove_track (tids[0]);
-                                } catch (Error e) {
-                                    warning (e.message);
-                                }
-                                break;
-                            case "playlist":
-                                playlist_manager.remove_from_playlist (playlist_stack.pid, tids[0]);
-                                break;
-                            case "music":
-                                //
-                                break;
-
-                        }
-                    }
-
-                    break;
-                case Enums.ActionType.SCROLL:
-                    var visible_widget = view_stack.get_visible_child ();
-                    if (visible_widget is Widgets.MusicStack) {
-                        var stack_wrapper = visible_widget as Interfaces.StackWrapper;
-                        if (stack_wrapper != null) {
-                            var iter = library_manager.get_media_iter (active_track);
-                            if (iter != null) {
-                                stack_wrapper.scroll_to_current (iter);
-                            }
-                        }
-                    } else if (visible_widget is Interfaces.ListStack) {
-                        var list_stack = visible_widget as Interfaces.ListStack;
-                        if (list_stack != null) {
-                            list_stack.scroll_to_current (active_track);
-                        }
-                    }
-
-                    break;
-            }
+            media_menu.show_all ();
         }
 
         private void on_preferences_click () {
@@ -932,12 +1020,6 @@ namespace Music2 {
                 foreach (var tid in tids) {
                     var m = library_manager.get_media (tid);
                     if (m != null) {
-                        // var queue_size = queue_stack.add_iter (m);
-                        // source_list_view.update_badge (queue_id, queue_size);
-                        //
-                        // if (active_track >= 0 && m.tid == active_track) {
-                        //     queue_stack.select_run_row (active_track);
-                        // }
                         add_to_queue (m);
                     }
                 }
@@ -980,32 +1062,6 @@ namespace Music2 {
 
                 return false;
             });
-        }
-
-        private void show_in_browser (Enums.Hint hint, uint tid) {
-            CObjects.Media? media = null;
-            if (Enums.Hint.QUEUE == hint) {
-                try {
-                    uint[] tids = {tid};
-                    var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
-                    if (tracks_meta.length > 0) {
-                        media = metadata_to_media (tracks_meta[0]);
-                    }
-                } catch (Error e) {
-                    warning (e.message);
-                }
-            } else if (Enums.Hint.MUSIC == hint) {
-                media = library_manager.get_media (tid);
-            }
-
-            if (media != null) {
-                try {
-                    var m_file = GLib.File.new_for_uri (media.uri);
-                    Gtk.show_uri (null, m_file.get_parent ().get_uri (), Gdk.CURRENT_TIME);
-                } catch (Error err) {
-                    warning ("Could not browse media %s: %s\n", media.uri, err.message);
-                }
-            }
         }
 
         private void export_playlist (Views.SourceListItem item) {

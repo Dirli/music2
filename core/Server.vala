@@ -29,6 +29,9 @@ namespace Music2 {
 
         private uint owner_id;
         private int queue_id;
+        private uint write_id = 0;
+
+        private uint[] queue_for_write;
 
         private GLib.Settings settings;
         private GLib.Settings eq_settings;
@@ -56,6 +59,7 @@ namespace Music2 {
 
             player.changed_track.connect (on_changed_track);
             player.removed_from_queue.connect (on_removed_from_queue);
+            player.try_add.connect (on_try_add);
             player.changed_volume.connect ((volume_value) => {
                 settings.set_double ("volume", volume_value);
             });
@@ -74,6 +78,8 @@ namespace Music2 {
 
             eq_settings.changed["selected-preset"].connect (on_selected_preset);
             eq_settings.changed["equalizer-enabled"].connect (on_equalizer_enabled);
+
+            queue_for_write = {};
         }
 
         private void on_changed_track (CObjects.Media m) {
@@ -93,6 +99,38 @@ namespace Music2 {
             show_notification (m.get_display_title (),
                                notification_body,
                                cover_path);
+        }
+
+        private void on_try_add (string uri) {
+            if (active_source_type == Enums.SourceType.LIBRARY || active_source_type == Enums.SourceType.PLAYLIST) {
+                if (!init_db ()) {
+                    return;
+                }
+
+                var m = db_manager.get_track (uri);
+                if (m != null) {
+                    if (player.add_to_queue (m)) {
+                        player.added_to_queue (m);
+                        queue_for_write += m.tid;
+
+                        if (write_id == 0) {
+                            write_id = GLib.Timeout.add_seconds (240, write_to_db);
+                        }
+                    }
+                }
+            }
+
+            // if (scanner != null) {
+            //     stop_scanner ();
+            // }
+            //
+            // GLib.Array<string> tracks = new GLib.Array<string> ();
+            // tracks.append_val (uri);
+            //
+            // scanner = new CObjects.Scanner ();
+            // scanner.init ();
+            // scanner.discovered_new_item.connect (on_new_item);
+            // scanner.scan_tracks (tracks);
         }
 
         private void on_removed_from_queue (uint tid) {
@@ -285,6 +323,10 @@ namespace Music2 {
                 return;
             }
 
+            if (write_id > 0) {
+                GLib.Source.remove (write_id);
+            }
+
             GLib.Bus.unown_name (owner_id);
 
             player.stop ();
@@ -339,6 +381,20 @@ namespace Music2 {
             }
         }
 
+        private bool write_to_db () {
+            new Thread<void*> ("write_to_database", () => {
+                lock (queue_for_write) {
+                    db_manager.update_playlist (queue_id, queue_for_write, false);
+                    queue_for_write = {};
+                }
+
+                return null;
+            });
+
+            write_id = 0;
+            return false;
+        }
+
         private void stop_scanner () {
             scanner.discovered_new_item.disconnect (on_new_item);
             scanner.stop_scan ();
@@ -366,7 +422,7 @@ namespace Music2 {
             uint[] tracks = player.adds_to_queue (tracks_queue);
             if (tracks.length > 0) {
                 new Thread<void*> ("fill_queue", () => {
-                    db_manager.update_playlist (queue_id, tracks);
+                    db_manager.update_playlist (queue_id, tracks, true);
                     return null;
                 });
             }
@@ -407,7 +463,7 @@ namespace Music2 {
                 uint[] tracks = player.adds_to_queue (tracks_queue);
                 if (tracks.length > 0) {
                     new Thread<void*> ("update_playlist", () => {
-                        db_manager.update_playlist (queue_id, tracks);
+                        db_manager.update_playlist (queue_id, tracks, true);
                         return null;
                     });
                 }
@@ -427,10 +483,11 @@ namespace Music2 {
 
         private void on_new_item (CObjects.Media? m) {
             if (m != null) {
-                player.add_to_queue (m);
-                player.added_to_queue (m);
-                if (player.current_index == 0 || player.current_index == m.tid) {
-                    player.current_index = m.tid;
+                if (player.add_to_queue (m)) {
+                    player.added_to_queue (m);
+                    if (player.current_index == 0 || player.current_index == m.tid) {
+                        player.current_index = m.tid;
+                    }
                 }
             }
 

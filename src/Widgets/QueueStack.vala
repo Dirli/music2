@@ -65,6 +65,10 @@ namespace Music2 {
             return queue_size;
         }
 
+        public bool exist_iter (uint tid) {
+            return iter_hash.has_key (tid);
+        }
+
         public override void clear_stack () {
             queue_size = 0;
             show_alert ();
