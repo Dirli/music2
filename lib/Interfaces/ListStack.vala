@@ -52,5 +52,16 @@ namespace Music2 {
                 }
             }
         }
+
+        protected override uint get_selected_tid (Gtk.TreePath iter_path) {
+            Gtk.TreeIter iter;
+            if (list_store.get_iter (out iter, iter_path)) {
+                uint tid;
+                list_store.@get (iter, Enums.ListColumn.TRACKID, out tid, -1);
+                return tid;
+            }
+
+            return 0;
+        }
     }
 }

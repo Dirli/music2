@@ -141,6 +141,21 @@ namespace Music2 {
             }
         }
 
+        protected override uint get_selected_tid (Gtk.TreePath filter_path) {
+            if (music_filter != null) {
+                Gtk.TreeIter filter_iter;
+                if (music_filter.get_iter (out filter_iter, filter_path)) {
+                    Gtk.TreeIter child_iter;
+                    music_filter.convert_iter_to_child_iter (out child_iter, filter_iter);
+                    uint tid;
+                    list_store.@get (child_iter, Enums.ListColumn.TRACKID, out tid, -1);
+                    return tid;
+                }
+            }
+
+            return 0;
+        }
+
         public new void select_run_row (Gtk.TreeIter? iter) {
             if (iter != null) {
                 album_view.select_run_row (iter);

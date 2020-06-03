@@ -22,6 +22,7 @@ namespace Music2 {
         public signal void popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget w);
 
         public abstract void clear_stack ();
+        protected abstract uint get_selected_tid (Gtk.TreePath iter_path);
 
         public Gtk.ListStore list_store;
         protected Enums.SourceType source_type;
@@ -79,10 +80,9 @@ namespace Music2 {
                         contains_cursor_path = cursor_path != null && iter_path.compare (cursor_path) == 0 ? true : false;
                     }
 
-                    Gtk.TreeIter iter;
-                    if (list_store.get_iter (out iter, iter_path)) {
-                        uint tid;
-                        list_store.@get (iter, Enums.ListColumn.TRACKID, out tid, -1);
+                    var tid = get_selected_tid (iter_path);
+
+                    if (tid > 0) {
                         tids += tid;
                     }
                 });
@@ -90,10 +90,10 @@ namespace Music2 {
                 if (!contains_cursor_path && cursor_path != null) {
                     tree_sel.unselect_all ();
                     tree_sel.select_path (cursor_path);
-                    Gtk.TreeIter iter;
-                    if (list_store.get_iter (out iter, cursor_path)) {
-                        uint tid;
-                        list_store.@get (iter, Enums.ListColumn.TRACKID, out tid, -1);
+
+                    var tid = get_selected_tid (cursor_path);
+
+                    if (tid > 0) {
                         tids = {tid};
                     }
                 }

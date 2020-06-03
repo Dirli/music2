@@ -28,5 +28,9 @@ namespace Music2 {
         public override void clear_stack () {
             show_alert ();
         }
+
+        protected override uint get_selected_tid (Gtk.TreePath filter_path) {
+            return 0;
+        }
     }
 }
