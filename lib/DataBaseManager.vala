@@ -261,7 +261,9 @@ namespace Music2 {
             Sqlite.Statement stmt;
             int nums = 1;
             if (rewrite) {
-                clear_playlist (playlist_id);
+                if (!clear_playlist (playlist_id)) {
+                    return;
+                }
             } else {
                 string sql = """
                     SELECT COUNT() FROM playlist_tracks WHERE playlist_id=$ID;
@@ -328,7 +330,7 @@ namespace Music2 {
             stmt.reset ();
         }
 
-        public void clear_playlist (int playlist_id) {
+        public bool clear_playlist (int playlist_id) {
             Sqlite.Statement stmt;
             string sql = """
                 DELETE FROM playlist_tracks WHERE playlist_id=$ID;
@@ -341,9 +343,11 @@ namespace Music2 {
 
             if (stmt.step () != Sqlite.DONE) {
                 warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                return false;
             }
 
             stmt.reset ();
+            return true;
         }
 
         public bool edit_playlist_name (int pid, string name) {

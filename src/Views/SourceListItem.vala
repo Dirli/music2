@@ -42,13 +42,16 @@ namespace Music2 {
                     var playlist_rename = new Gtk.MenuItem.with_label (_("Rename"));
                     var playlist_remove = new Gtk.MenuItem.with_label (_("Remove"));
                     var playlist_export = new Gtk.MenuItem.with_label (_("Export…"));
+                    var playlist_clear = new Gtk.MenuItem.with_label (_("Clear…"));
 
                     playlist_menu.append (playlist_rename);
                     playlist_menu.append (playlist_remove);
                     playlist_menu.append (playlist_export);
+                    playlist_menu.append (playlist_clear);
                     playlist_rename.activate.connect (() => {menu_item_activated (this, Enums.ActionType.RENAME);});
                     playlist_remove.activate.connect (() => {menu_item_activated (this, Enums.ActionType.REMOVE);});
                     playlist_export.activate.connect (() => {menu_item_activated (this, Enums.ActionType.EXPORT);});
+                    playlist_clear.activate.connect (() => {menu_item_activated (this, Enums.ActionType.CLEAR);});
                     break;
                 case Enums.Hint.SMART_PLAYLIST:
                     var playlist_rename = new Gtk.MenuItem.with_label (_("Rename"));

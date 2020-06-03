@@ -192,6 +192,7 @@ namespace Music2 {
             });
             playlist_manager.remove_view.connect (playlist_stack.remove_iter);
             playlist_manager.selected_playlist.connect (on_selected_playlist);
+            playlist_manager.cleared_playlist.connect (playlist_stack.clear_stack);
             playlist_manager.added_playlist.connect ((pid, name, hint, icon) =>  {
                 source_list_view.add_item (pid, name, hint, icon);
             });
@@ -853,7 +854,11 @@ namespace Music2 {
                 case Enums.ActionType.CLEAR:
                     if (item.hint == Enums.Hint.QUEUE) {
                         settings.set_enum ("source-type", Enums.SourceType.NONE);
+                    } else if (item.hint == Enums.Hint.PLAYLIST) {
+                        var pid = item.pid;
+                        playlist_manager.clear_playlist (pid);
                     }
+
                     break;
                 case Enums.ActionType.SAVE:
                     if (item.hint == Enums.Hint.QUEUE) {
@@ -888,10 +893,12 @@ namespace Music2 {
             }
         }
 
-        private void on_selected_playlist (int pid, Enums.Hint playlist_hint, Enums.SourceType playlist_type) {
+        private bool on_selected_playlist (int pid, Enums.Hint playlist_hint, Enums.SourceType playlist_type) {
             if (playlist_stack.pid != pid) {
-                playlist_stack.init_store (pid, playlist_hint, playlist_type);
+                return playlist_stack.init_store (pid, playlist_hint, playlist_type);
             }
+
+            return true;
         }
 
         private void on_edited_playlist (int pid, string playlist_name) {

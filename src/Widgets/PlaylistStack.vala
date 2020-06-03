@@ -18,7 +18,10 @@
 
 namespace Music2 {
     public class Widgets.PlaylistStack : Interfaces.ListStack {
-        public int pid;
+        public int pid {
+            get;
+            private set;
+        }
         public Enums.Hint playlist_hint;
 
         construct {
@@ -33,7 +36,7 @@ namespace Music2 {
             show_alert ();
         }
 
-        public void init_store (int p_id, Enums.Hint hint, Enums.SourceType type) {
+        public bool init_store (int p_id, Enums.Hint hint, Enums.SourceType type) {
             clear_stack ();
             pid = p_id;
             source_type = type;
@@ -42,6 +45,8 @@ namespace Music2 {
                 playlist_hint = hint;
                 update_visible ();
             }
+
+            return true;
         }
 
         public override int add_iter (CObjects.Media m) {

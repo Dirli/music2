@@ -18,7 +18,8 @@
 
 namespace Music2 {
     public class Services.PlaylistManager : GLib.Object {
-        public signal void selected_playlist (int pid, Enums.Hint hint, Enums.SourceType type);
+        public signal bool selected_playlist (int pid, Enums.Hint hint, Enums.SourceType type);
+        public signal void cleared_playlist ();
         public signal void add_view (uint tid, uint count);
         public signal int remove_view (uint tid);
         public signal void added_playlist (int pid, string name, Enums.Hint hint, GLib.Icon icon);
@@ -120,6 +121,22 @@ namespace Music2 {
             return -1;
         }
 
+        public void clear_playlist (int pid) {
+            new Thread<void*> ("clear_pl", () => {
+                if (db_manager.clear_playlist (pid)) {
+                    if (playlists_hash.has_key (pid)) {
+                        playlists_hash[pid].tracks.clear ();
+
+                        if (active_pid == pid) {
+                            cleared_playlist ();
+                        }
+                    }
+                }
+
+                return null;
+            });
+        }
+
         public bool remove_playlist (int pid) {
             if (playlists_hash.has_key (pid) && db_manager.remove_playlist (pid)) {
                 names_list.remove (playlists_hash[pid].name);
@@ -190,15 +207,15 @@ namespace Music2 {
             if (playlists_hash.has_key (pid)) {
                 var type = playlists_hash[pid].type;
 
-                selected_playlist (pid, hint, type);
-
-                if (pid != active_pid) {
-                    active_pid = pid;
-                    uint total = 0;
-                    playlists_hash[pid].tracks.foreach ((t) => {
-                        add_view (t, ++total);
-                        return true;
-                    });
+                if (selected_playlist (pid, hint, type)) {
+                    if (pid != active_pid) {
+                        active_pid = pid;
+                        uint total = 0;
+                        playlists_hash[pid].tracks.foreach ((t) => {
+                            add_view (t, ++total);
+                            return true;
+                        });
+                    }
                 }
             }
         }
