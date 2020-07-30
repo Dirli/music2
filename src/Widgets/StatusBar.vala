@@ -24,9 +24,7 @@ namespace Music2 {
 
         private Gtk.MenuButton playlist_menubutton;
         private Gtk.MenuButton eq_menubutton;
-        private Gtk.MenuButton volume_menubutton;
-        private Gtk.Image volume_icon;
-        private Gtk.Scale volume_scale;
+        private Gtk.VolumeButton volume_button;
 
         public StatusBar () {
             var pl_button = new Gtk.ModelButton ();
@@ -50,27 +48,7 @@ namespace Music2 {
             playlist_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
             playlist_menubutton.sensitive = false;
 
-            volume_scale = new Gtk.Scale.with_range (Gtk.Orientation.HORIZONTAL, 0, 100, 5);
-            volume_scale.hexpand = true;
-
-            var volume_layout = new Gtk.Grid ();
-            volume_layout.margin = 8;
-            volume_layout.orientation = Gtk.Orientation.HORIZONTAL;
-            volume_layout.row_spacing = 12;
-
-            volume_layout.add (volume_scale);
-            volume_layout.show_all ();
-
-            var volume_popover = new Gtk.Popover (null);
-            volume_popover.width_request = 200;
-            volume_popover.add (volume_layout);
-
-            volume_icon = new Gtk.Image ();
-
-            volume_menubutton = new Gtk.MenuButton ();
-            volume_menubutton.popover = volume_popover;
-            volume_menubutton.add (volume_icon);
-            volume_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
+            volume_button = new Gtk.VolumeButton ();
 
             var eq_popover = new Widgets.EqualizerPopover ();
             eq_popover.preset_changed.connect (update_tooltip);
@@ -84,7 +62,7 @@ namespace Music2 {
 
             pack_start (playlist_menubutton);
             pack_end (eq_menubutton);
-            pack_end (volume_menubutton);
+            pack_end (volume_button);
 
             pl_button.clicked.connect (() => {
                 create_new_pl (_("New playlist"));
@@ -95,31 +73,18 @@ namespace Music2 {
             });
         }
 
-        private void on_value_changed () {
-            double val = volume_scale.get_value ();
-            changed_volume (val / 100);
+        private void on_value_changed (double new_vol) {
+            changed_volume (new_vol);
         }
 
         public void set_new_volume (double val) {
-            volume_scale.value_changed.disconnect (on_value_changed);
+            volume_button.value_changed.disconnect (on_value_changed);
 
-            string icon_name = "audio-volume-muted-symbolic";
+            volume_button.set_value (val > 1.0 ? 1.0 :
+                                     val < 0.0 ? 0.0 :
+                                     val);
 
-            volume_scale.set_value (val * 100);
-
-            if (val < 0.05) {
-                icon_name = "audio-volume-muted-symbolic";
-            } else if (val < 0.40) {
-                icon_name = "audio-volume-low-symbolic";
-            } else if (val < 0.75) {
-                icon_name = "audio-volume-medium-symbolic";
-            } else {
-                icon_name = "audio-volume-high-symbolic";
-            }
-            volume_icon.set_from_icon_name (icon_name, Gtk.IconSize.MENU);
-            volume_menubutton.tooltip_text = "%.0lf".printf (val * 100);
-
-            volume_scale.value_changed.connect (on_value_changed);
+            volume_button.value_changed.connect (on_value_changed);
         }
 
         private void update_tooltip (string eq_preset_name) {
