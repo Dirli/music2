@@ -1,5 +1,6 @@
-conf_data = configuration_data()
-conf_data.set('EXEC_PATH', join_paths (get_option('prefix'), get_option('bindir'), meson.project_name() + 'd'))
+conf_data = configuration_data ()
+conf_data.set ('EXEC_PATH', join_paths (get_option ('prefix'), get_option ('bindir'), meson.project_name () + 'd'))
+conf_data.set_quoted('VERSION', meson.project_version ())
 
 configure_file(
     input: meson.project_name() + '.service.in',

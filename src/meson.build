@@ -2,6 +2,7 @@ executable(
     meson.project_name(),
     'Application.vala',
     'MainWindow.vala',
+    'Dialogs/About.vala',
     'Dialogs/ImportFolder.vala',
     'Dialogs/MusicFolderConfirmation.vala',
     'Dialogs/PreferencesWindow.vala',
@@ -35,6 +36,7 @@ executable(
     'Widgets/ViewStack.vala',
     app_files,
     cssresources,
+    config_header,
     vala_args: vala_args,
     dependencies: app_deps,
     install : true

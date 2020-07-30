@@ -274,9 +274,17 @@ namespace Music2 {
             preferences_menuitem.text = _("Preferences");
             preferences_menuitem.clicked.connect (on_preferences_click);
 
+            var about_menuitem = new Gtk.ModelButton ();
+            about_menuitem.text = _("About");
+            about_menuitem.clicked.connect (() => {
+                var about = new Dialogs.About ();
+                about.run ();
+            });
+
             var menu_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
             menu_box.add (import_menuitem);
             menu_box.add (preferences_menuitem);
+            menu_box.add (about_menuitem);
             menu_box.show_all ();
 
             var menu_popover = new Gtk.Popover (null);

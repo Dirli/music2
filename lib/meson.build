@@ -1,3 +1,9 @@
+config_header = configure_file (
+    input : 'config.vala.in',
+    output : 'config.vala',
+    configuration : conf_data
+)
+
 common_files = files (
     'Enums.vala',
     'Constants.vala',
