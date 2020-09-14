@@ -177,13 +177,16 @@ namespace Music2 {
 
             clear_stores ();
 
-            db_manager.get_artists ().foreach ((entry) => {
-                add_artist (entry.value, entry.key);
+
+            var artists_map = db_manager.get_artists ();
+            artists_map.keys.foreach ((k) => {
+                add_artist (artists_map[k], k);
                 return true;
             });
 
             var apa_cache = db_manager.get_artists_per_albums ();
-            db_manager.get_albums ().foreach ((entry) => {
+            var albums = db_manager.get_albums ();
+            albums.foreach ((entry) => {
                 if (apa_cache.has_key (entry.album_id)) {
                     var artists_string = "";
                     var artists_id = "";
@@ -222,7 +225,8 @@ namespace Music2 {
                 return true;
             });
 
-            db_manager.get_tracks (null).foreach ((m) => {
+            var tracks_queue = db_manager.get_tracks (null);
+            tracks_queue.foreach ((m) => {
                 add_track (m);
                 return true;
             });
