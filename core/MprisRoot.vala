@@ -49,7 +49,7 @@ namespace Music2 {
         }
 
         public void raise () throws GLib.Error {
-            //
+            service.run_gui ();
         }
     }
 }

@@ -328,6 +328,17 @@ namespace Music2 {
             return true;
         }
 
+        public void run_gui () {
+            var app_info = new GLib.DesktopAppInfo (Constants.APP_NAME + ".desktop");
+            if (app_info == null) {return;}
+
+            try {
+                app_info.launch (null, null);
+            } catch (Error e) {
+                warning (@"Unable to launch $(Constants.APP_NAME): $(e.message)");
+            }
+        }
+
         public void close_player () {
             if (!settings.get_boolean ("close-while-playing") && player.get_state () == Gst.State.PLAYING) {
                 return;
