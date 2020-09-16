@@ -48,11 +48,6 @@ namespace Music2 {
             service.close_player ();
         }
 
-        // missing from the specification
-        public void init_player () throws GLib.Error {
-            service.init_player ();
-        }
-
         public void raise () throws GLib.Error {
             //
         }

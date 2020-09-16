@@ -210,12 +210,6 @@ namespace Music2 {
 
             GLib.Timeout.add (Constants.INTERVAL, () => {
                 if (library_manager.loaded) {
-                    try {
-                        dbus_player.init_player ();
-                    } catch (Error e) {
-                        warning (e.message);
-                    }
-
                     init_state ();
 
                     if (library_manager.dirty_library ()) {

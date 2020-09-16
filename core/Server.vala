@@ -55,14 +55,7 @@ namespace Music2 {
             player = new Core.Player (eq.element);
             player.set_volume (settings.get_double ("volume"));
 
-            init_mpris ();
-
-            player.changed_track.connect (on_changed_track);
-            player.removed_from_queue.connect (on_removed_from_queue);
-            player.try_add.connect (on_try_add);
-            player.changed_volume.connect ((volume_value) => {
-                settings.set_double ("volume", volume_value);
-            });
+            init_player ();
 
             on_changed_repeat ();
             on_changed_shuffle ();
@@ -80,6 +73,23 @@ namespace Music2 {
             eq_settings.changed["equalizer-enabled"].connect (on_equalizer_enabled);
 
             queue_for_write = {};
+
+            GLib.Timeout.add (Constants.INTERVAL, () => {
+                if (scanner != null) {
+                    return true;
+                }
+
+                init_mpris ();
+
+                player.changed_track.connect (on_changed_track);
+                player.removed_from_queue.connect (on_removed_from_queue);
+                player.try_add.connect (on_try_add);
+                player.changed_volume.connect ((volume_value) => {
+                    settings.set_double ("volume", volume_value);
+                });
+
+                return false;
+            });
         }
 
         private void on_changed_track (CObjects.Media m) {
