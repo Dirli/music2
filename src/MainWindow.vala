@@ -22,6 +22,7 @@ namespace Music2 {
         public GLib.Settings settings;
 
         private bool queue_reset = false;
+        private bool need_init = true;
         private bool scans_library = false;
 
         private int queue_id;
@@ -387,6 +388,10 @@ namespace Music2 {
 
         private void init_state () {
             status_bar.set_new_volume (dbus_player.volume);
+
+            if (!need_init) {
+                return;
+            }
 
             var metadata = dbus_player.metadata;
             if (metadata != null && "mpris:trackid" in metadata) {
@@ -794,13 +799,7 @@ namespace Music2 {
                 return;
             }
 
-            if (active_source_type != Enums.SourceType.NONE) {
-                queue_reset = false;
-                active_source_type = Enums.SourceType.NONE;
-                settings.set_enum ("source-type", Enums.SourceType.NONE);
-            } else {
-                queue_reset = true;
-            }
+            reset_queue ();
 
             GLib.Timeout.add (Constants.INTERVAL, () => {
                 if (queue_reset) {
@@ -984,6 +983,50 @@ namespace Music2 {
             }
         }
 
+        public void open_files (GLib.File[] files) {
+            need_init = false;
+            reset_queue ();
+
+            string to_save = "";
+            foreach (GLib.File f in files) {
+                try {
+                    var file_info = f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NONE);
+
+                    string mime_type = file_info.get_content_type ();
+                    if (!Tools.FileUtils.is_audio_file (mime_type)) {
+                        continue;
+                    }
+
+                    if (to_save != "") {
+                        to_save += "\n";
+                    }
+                    to_save += f.get_uri ();
+                } catch (Error e) {
+                    warning (e.message);
+                }
+            }
+
+            if (to_save != "") {
+                if (Tools.FileUtils.save_current_playlist (to_save)) {
+                    GLib.Timeout.add (Constants.INTERVAL, () => {
+                        if (queue_reset) {
+                            // I admit that resetting the queue is redundant, but
+                            // we need to test more carefully when the file is
+                            // processed (open with .. )
+                            source_list_view.update_badge (queue_id, 0);
+                            queue_stack.clear_stack ();
+
+                            settings.set_enum ("source-type", Enums.SourceType.FILE);
+
+                            return false;
+                        }
+
+                        return true;
+                    });
+                }
+            }
+        }
+
         private void changed_state (string play_state, int64 p) {
             if (p > 0) {
                 top_display.set_progress (p);
@@ -1151,6 +1194,16 @@ namespace Music2 {
 
             if (m != null) {
                 top_display.set_title_markup (m);
+            }
+        }
+
+        private void reset_queue () {
+            if (active_source_type != Enums.SourceType.NONE) {
+                queue_reset = false;
+                active_source_type = Enums.SourceType.NONE;
+                settings.set_enum ("source-type", Enums.SourceType.NONE);
+            } else {
+                queue_reset = true;
             }
         }
 

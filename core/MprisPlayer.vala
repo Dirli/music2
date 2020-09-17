@@ -90,18 +90,20 @@ namespace Music2 {
 
             _metadata = new GLib.HashTable<string, GLib.Variant> (str_hash, str_equal);
 
+
+            conn = connection;
+
+            this.player.changed_track.connect (on_changed_track);
+            this.player.changed_state.connect (on_changed_state);
+            this.player.changed_duration.connect (on_changed_duration);
+            this.player.changed_volume.connect (on_changed_volume);
+
             if (player.current_index > 0) {
                 var m = player.get_track (player.current_index);
                 if (m != null) {
                     on_changed_track (m);
                 }
             }
-
-            conn = connection;
-            this.player.changed_track.connect (on_changed_track);
-            this.player.changed_state.connect (on_changed_state);
-            this.player.changed_duration.connect (on_changed_duration);
-            this.player.changed_volume.connect (on_changed_volume);
         }
 
         public void next () throws GLib.Error {

@@ -62,6 +62,31 @@ namespace Music2.Tools.FileUtils {
         return false;
     }
 
+    public bool save_current_playlist (string to_save) {
+        string playlist_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
+                                                GLib.Environment.get_user_cache_dir (),
+                                                Constants.APP_NAME,
+                                                "cpl");
+
+        var playlist_file = GLib.File.new_for_path (playlist_path);
+        try {
+            if (playlist_file.query_exists ()) {
+                playlist_file.delete ();
+            }
+
+            var file_stream = playlist_file.create (GLib.FileCreateFlags.PRIVATE);
+
+            var data_stream = new GLib.DataOutputStream (file_stream);
+            data_stream.put_string (to_save);
+
+            return true;
+        } catch (Error e) {
+            warning (e.message);
+        }
+
+        return false;
+    }
+
     public bool save_playlist_m3u (string playlist_path, CObjects.Media[] tracks) {
         string to_save = get_m3u_content (tracks);
         GLib.File dest = GLib.File.new_for_path (playlist_path);
@@ -94,7 +119,7 @@ namespace Music2.Tools.FileUtils {
             var sec = Tools.TimeUtils.mili_to_sec (t.length).to_string ();
 
             to_save += "\n\n#EXTINF:" + sec + ", " + t.get_display_artist () + " - " + t.get_display_title ();
-            to_save += "\n" + File.new_for_uri (t.uri).get_path ();
+            to_save += "\n" + GLib.File.new_for_uri (t.uri).get_path ();
         }
 
         return to_save;

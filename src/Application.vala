@@ -21,12 +21,13 @@ namespace Music2 {
         private MainWindow main_window;
 
         construct {
-            // flags |= ApplicationFlags.HANDLES_OPEN;
+            flags |= ApplicationFlags.HANDLES_OPEN;
             application_id = Constants.APP_NAME;
         }
 
         public override void open (GLib.File[] files, string hint) {
-
+            activate ();
+            main_window.open_files (files);
         }
 
         protected override void activate () {

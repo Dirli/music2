@@ -250,6 +250,7 @@ namespace Music2 {
                     play_from_playlist ();
                     break;
                 case Enums.SourceType.FILE:
+                    load_current_playlist (true);
                     break;
                 case Enums.SourceType.NONE:
                     uint[] zero_arr = {};
@@ -299,6 +300,7 @@ namespace Music2 {
                         play_from_directory ();
                         break;
                     case Enums.SourceType.FILE:
+                        load_current_playlist (false);
                         break;
                     case Enums.SourceType.EXTPLAYLIST:
                         load_from_extplaylist ();
@@ -446,6 +448,45 @@ namespace Music2 {
                     db_manager.update_playlist (queue_id, tracks, true);
                     return null;
                 });
+            }
+        }
+
+        private void load_current_playlist (bool launch_player) {
+            try {
+                string playlist_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
+                                                        GLib.Environment.get_user_cache_dir (),
+                                                        Constants.APP_NAME,
+                                                        "cpl");
+
+                var playlist_file = GLib.File.new_for_path (playlist_path);
+
+                if (!playlist_file.query_exists ()) {
+                    settings.set_enum ("source-type", Enums.SourceType.NONE);
+                    return;
+                }
+
+                GLib.DataInputStream dis = new GLib.DataInputStream (playlist_file.read ());
+                GLib.Array<string> tracks = new GLib.Array<string> ();
+
+                string line;
+                while ((line = dis.read_line ()) != null) {
+                    tracks.append_val (line);
+                }
+
+                player.launch = launch_player;
+
+                if (tracks.length > 0) {
+                    if (scanner != null) {
+                        stop_scanner ();
+                    }
+
+                    scanner = new CObjects.Scanner ();
+                    scanner.init ();
+                    scanner.discovered_new_item.connect (on_new_item);
+                    scanner.scan_tracks (tracks);
+                }
+            } catch (Error e) {
+                warning ("Error: %s\n", e.message);
             }
         }
 
