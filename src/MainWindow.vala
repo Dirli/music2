@@ -98,7 +98,7 @@ namespace Music2 {
         private const GLib.ActionEntry[] ACTION_ENTRIES = {
             { ACTION_EDIT_SONG, action_edit_song, },
             { ACTION_IMPORT, action_import },
-            { ACTION_PLAY, action_play, null, "false" },
+            { ACTION_PLAY, action_play },
             { ACTION_PLAY_NEXT, action_play_next },
             { ACTION_PLAY_PREVIOUS, action_play_previous },
             { ACTION_QUIT, action_quit },
@@ -115,14 +115,19 @@ namespace Music2 {
         public MainWindow (Gtk.Application application) {
             Object (application: application);
 
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_QUIT, {"<Control>q", "<Control>w"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_QUIT, {"<Control>q"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY, {"<Control>space"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY_NEXT, {"<Control>n"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY_PREVIOUS, {"<Control>p"});
             application.set_accels_for_action (ACTION_PREFIX + ACTION_SEARCH, {"<Control>f"});
             application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_ALBUMS, {"<Control>1"});
             application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_COLUMNS, {"<Control>2"});
         }
 
         construct {
-            add_action_entries (ACTION_ENTRIES, this);
+            var actions = new GLib.SimpleActionGroup ();
+            actions.add_action_entries (ACTION_ENTRIES, this);
+            insert_action_group ("win", actions);
 
             settings = new GLib.Settings (Constants.APP_NAME);
             settings_ui = new GLib.Settings (Constants.APP_NAME + ".ui");
@@ -463,6 +468,13 @@ namespace Music2 {
         }
 
         private void action_quit () {
+            try {
+                dbus_player.stop ();
+                dbus_player.quit ();
+            } catch (Error e) {
+                warning (e.message);
+            }
+
             destroy ();
         }
 
