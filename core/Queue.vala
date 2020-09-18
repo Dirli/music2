@@ -21,6 +21,14 @@ namespace Music2 {
         public int repeat_mode = 0;
         public int shuffle_mode = 0;
 
+        public bool can_next {
+            get; set;
+        }
+
+        public bool can_prev {
+            get; set;
+        }
+
         private Gee.ArrayList<uint> tracks_queue;
         private Gee.ArrayList<uint> past_tracks;
 
@@ -31,8 +39,16 @@ namespace Music2 {
 
         public void add_index (uint i, bool past = false) {
             if (!past) {
+                if (!can_next) {
+                    can_next = true;
+                }
+
                 tracks_queue.add (i);
             } else {
+                if (!can_prev) {
+                    can_prev = true;
+                }
+
                 past_tracks.add (i);
             }
         }
@@ -48,39 +64,44 @@ namespace Music2 {
                 }
             }
 
+            update_navigation ();
             return false;
         }
 
         public void set_index (uint i) {
-            if (tracks_queue.size > 0 && i != tracks_queue[0]) {
-                var index = tracks_queue.index_of (i);
-                if (index >= 0) {
-                    if (shuffle_mode == Enums.ShuffleMode.ON) {
-                        var random_val = tracks_queue.remove_at (index);
-                        tracks_queue.insert (0, random_val);
-                    } else {
-                        past_tracks.add_all (tracks_queue.slice (0, index));
-                        tracks_queue = tracks_queue.slice (index, tracks_queue.size) as Gee.ArrayList<uint>;
-                        if (repeat_mode == Enums.RepeatMode.ON) {
-                            tracks_queue.add_all (past_tracks);
-                            past_tracks.clear ();
-                        }
-                    }
+            if (tracks_queue.size == 0 || i == tracks_queue[0]) {
+                return;
+            }
+
+            var index = tracks_queue.index_of (i);
+            if (index >= 0) {
+                if (shuffle_mode == Enums.ShuffleMode.ON) {
+                    var random_val = tracks_queue.remove_at (index);
+                    tracks_queue.insert (0, random_val);
                 } else {
-                    var past_index = past_tracks.index_of (i);
-                    if (past_index >= 0) {
-                        var tmp_past = past_tracks.slice (past_index, past_tracks.size) as Gee.ArrayList<uint>;
-                        for (var arr_i = tmp_past.size - 1 ; arr_i >= 0; arr_i--) {
-                            tracks_queue.insert (0, tmp_past[arr_i]);
-                        }
-                        if (past_index > 0) {
-                            past_tracks = past_tracks.slice (0, past_index) as Gee.ArrayList<uint>;
-                        } else {
-                            past_tracks.clear ();
-                        }
+                    past_tracks.add_all (tracks_queue.slice (0, index));
+                    tracks_queue = tracks_queue.slice (index, tracks_queue.size) as Gee.ArrayList<uint>;
+                    if (repeat_mode == Enums.RepeatMode.ON) {
+                        tracks_queue.add_all (past_tracks);
+                        past_tracks.clear ();
+                    }
+                }
+            } else {
+                var past_index = past_tracks.index_of (i);
+                if (past_index >= 0) {
+                    var tmp_past = past_tracks.slice (past_index, past_tracks.size) as Gee.ArrayList<uint>;
+                    for (var arr_i = tmp_past.size - 1 ; arr_i >= 0; arr_i--) {
+                        tracks_queue.insert (0, tmp_past[arr_i]);
+                    }
+                    if (past_index > 0) {
+                        past_tracks = past_tracks.slice (0, past_index) as Gee.ArrayList<uint>;
+                    } else {
+                        past_tracks.clear ();
                     }
                 }
             }
+
+            update_navigation ();
         }
 
         public int get_size () {
@@ -92,7 +113,7 @@ namespace Music2 {
         }
 
         public uint get_next_index () {
-            if (tracks_queue.size == 0) {
+            if (tracks_queue.size == 0 || !can_next) {
                 return 0;
             }
 
@@ -109,22 +130,31 @@ namespace Music2 {
                 tracks_queue.insert (0, random_val);
             }
 
+            update_navigation ();
+            // Yes, it's redundant, but I'll leave it at that.
             return tracks_queue.size == 0 ? 0 : tracks_queue.@get (0);
         }
 
         public uint get_prev_index () {
-            if (past_tracks.size == 0) {
+            if (past_tracks.size == 0 || !can_prev) {
                 return 0;
             }
 
             var i = past_tracks.remove_at (past_tracks.size - 1);
             tracks_queue.insert (0, i);
 
+            update_navigation ();
+            // Yes, it's redundant, but I'll leave it at that.
             return i;
         }
 
         public void reset_queue (uint[] tracks) {
             clear_queue ();
+
+            if (tracks.length > 0) {
+                can_next = true;
+            }
+
             foreach (var t in tracks) {
                 tracks_queue.add (t);
             }
@@ -133,6 +163,13 @@ namespace Music2 {
         public void clear_queue () {
             past_tracks.clear ();
             tracks_queue.clear ();
+
+            update_navigation ();
+        }
+
+        private void update_navigation () {
+            can_next = (tracks_queue.size > 1);
+            can_prev = (past_tracks.size > 0);
         }
     }
 }

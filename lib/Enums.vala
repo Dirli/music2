@@ -33,6 +33,11 @@ namespace Music2.Enums {
         ON = 1
     }
 
+    public enum NavType {
+        PREV = 0,
+        NEXT
+    }
+
     public enum SourceType {
         NONE = 0,
         DIRECTORY,

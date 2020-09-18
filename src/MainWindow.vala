@@ -648,8 +648,10 @@ namespace Music2 {
                             warning (e.message);
                         }
                         changed_state (v.get_string (), play_position);
-                    } else if (k == "CanGoNext" || k == "CanGoPrevious") {
-                        //
+                    } else if (k == "CanGoNext") {
+                        next_button.sensitive = v.get_boolean ();
+                    } else if (k == "CanGoPrevious") {
+                        previous_button.sensitive = v.get_boolean ();
                     }
                 });
             }

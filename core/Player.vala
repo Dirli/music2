@@ -22,6 +22,7 @@ namespace Music2 {
         public signal void changed_state (string s);
         public signal void changed_volume (double v);
         public signal void changed_duration (int64 d);
+        public signal void changed_navigation (Enums.NavType t, bool can_nav);
         public signal void added_to_queue (CObjects.Media m);
         public signal void removed_from_queue (uint tid);
         public signal void tracklist_replaced (uint[] tracks_id);
@@ -106,6 +107,12 @@ namespace Music2 {
 
             tracks_hash = new Gee.HashMap<uint, CObjects.Media> ();
             tracks_queue = new Core.Queue ();
+            tracks_queue.notify["can-next"].connect (() => {
+                changed_navigation (Enums.NavType.NEXT, tracks_queue.can_next);
+            });
+            tracks_queue.notify["can-prev"].connect (() => {
+                changed_navigation (Enums.NavType.PREV, tracks_queue.can_prev);
+            });
             tracks_list = new GLib.Array<uint> ();
 
             playbin = Gst.ElementFactory.make ("playbin", "play");

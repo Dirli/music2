@@ -97,6 +97,7 @@ namespace Music2 {
             this.player.changed_state.connect (on_changed_state);
             this.player.changed_duration.connect (on_changed_duration);
             this.player.changed_volume.connect (on_changed_volume);
+            this.player.changed_navigation.connect (on_changed_navigation);
 
             if (player.current_index > 0) {
                 var m = player.get_track (player.current_index);
@@ -186,6 +187,14 @@ namespace Music2 {
 
         private void on_changed_volume (double v) {
             send_properties ("Volume", v);
+        }
+
+        private void on_changed_navigation (Enums.NavType t, bool can_nav) {
+            if (t == Enums.NavType.PREV) {
+                send_properties ("CanGoPrevious", can_nav);
+            } else if (t == Enums.NavType.NEXT) {
+                send_properties ("CanGoNext", can_nav);
+            }
         }
 
         private void on_changed_track (CObjects.Media m) {
