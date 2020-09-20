@@ -357,50 +357,25 @@ namespace Music2 {
         }
 
         public void open_files (GLib.File[] files) {
+            if (files.length == 0) {
+                return;
+            }
+
             if (active_source_type != null && active_source_type != Enums.SourceType.NONE) {
                 settings.set_enum ("source-type", Enums.SourceType.NONE);
             }
-            GLib.Array<string> tracks = new GLib.Array<string> ();
-            var check_type = true;
-            foreach (unowned GLib.File f in files) {
-                if (check_type) {
-                    check_type = false;
-                    var file_type = f.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
-                    if (file_type == GLib.FileType.DIRECTORY) {
-                        settings.set_string ("source-media", f.get_uri ());
-                        settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
-                        break;
-                    } else if (file_type == GLib.FileType.REGULAR) {
-                        var file_name = f.get_basename ();
-                        if (file_name != null) {
-                            if (file_name.has_suffix (".m3u")) {
-                                var f_uri = f.get_uri ();
-                                settings.set_string ("source-media", f_uri);
-                                settings.set_enum ("source-type", Enums.SourceType.EXTPLAYLIST);
-                                break;
-                            }
-                        }
-                    }
+
+            var source_type = Tools.FileUtils.get_source_type (files[0]);
+
+            if (source_type != Enums.SourceType.FILE) {
+                settings.set_string ("source-media", files[0].get_uri ());
+                settings.set_enum ("source-type", source_type);
+            } else {
+                string to_save = Tools.FileUtils.files_to_str (files);
+
+                if (to_save != "" && Tools.FileUtils.save_current_playlist (to_save)) {
+                    settings.set_enum ("source-type", Enums.SourceType.FILE);
                 }
-
-                if (f.query_exists ()) {
-                    tracks.append_val (f.get_uri ());
-                }
-            }
-
-            player.launch = true;
-
-            if (tracks.length > 0) {
-                if (scanner != null) {
-                    stop_scanner ();
-                }
-
-                settings.set_enum ("source-type", Enums.SourceType.FILE);
-
-                scanner = new CObjects.Scanner ();
-                scanner.init ();
-                scanner.discovered_new_item.connect (on_new_item);
-                scanner.scan_tracks (tracks);
             }
         }
 

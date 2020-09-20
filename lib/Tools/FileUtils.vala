@@ -159,6 +159,51 @@ namespace Music2.Tools.FileUtils {
         return tracks;
     }
 
+    public string files_to_str (GLib.File[] files) {
+        var uris = "";
+        foreach (GLib.File f in files) {
+            try {
+                if (!f.query_exists ()) {
+                    continue;
+                }
+
+                var file_info = f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NONE);
+
+                string mime_type = file_info.get_content_type ();
+                if (!Tools.FileUtils.is_audio_file (mime_type)) {
+                    continue;
+                }
+
+                if (uris != "") {
+                    uris += "\n";
+                }
+                uris += f.get_uri ();
+            } catch (Error e) {
+                warning (e.message);
+            }
+        }
+
+        return uris;
+    }
+
+    public Enums.SourceType get_source_type (GLib.File f) {
+        if (f.query_exists ()) {
+            var file_type = f.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
+            if (file_type == GLib.FileType.DIRECTORY) {
+                return Enums.SourceType.DIRECTORY;
+            } else if (file_type == GLib.FileType.REGULAR) {
+                var file_name = f.get_basename ();
+                if (file_name != null) {
+                    if (file_name.has_suffix (".m3u")) {
+                        return Enums.SourceType.EXTPLAYLIST;
+                    }
+                }
+            }
+        }
+
+        return Enums.SourceType.FILE;
+    }
+
     public bool is_audio_file (string mime_type) {
         return mime_type.has_prefix ("audio/") && !mime_type.contains ("x-mpegurl") && !mime_type.contains ("x-scpls");
     }

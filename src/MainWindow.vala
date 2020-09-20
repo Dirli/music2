@@ -1001,24 +1001,7 @@ namespace Music2 {
             need_init = false;
             reset_queue ();
 
-            string to_save = "";
-            foreach (GLib.File f in files) {
-                try {
-                    var file_info = f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NONE);
-
-                    string mime_type = file_info.get_content_type ();
-                    if (!Tools.FileUtils.is_audio_file (mime_type)) {
-                        continue;
-                    }
-
-                    if (to_save != "") {
-                        to_save += "\n";
-                    }
-                    to_save += f.get_uri ();
-                } catch (Error e) {
-                    warning (e.message);
-                }
-            }
+            string to_save = Tools.FileUtils.files_to_str (files);
 
             if (to_save != "") {
                 if (Tools.FileUtils.save_current_playlist (to_save)) {

@@ -32,7 +32,7 @@ namespace Music2 {
         private Daemon () {}
 
         construct {
-            // flags |= ApplicationFlags.HANDLES_OPEN;
+            flags |= ApplicationFlags.HANDLES_OPEN;
             application_id = "io.elementary.music2d";
         }
 
@@ -43,10 +43,10 @@ namespace Music2 {
             }
         }
 
-        // public override void open (GLib.File[] files, string hint) {
-        //     activate ();
-        //     player_server.open_files (files);
-        // }
+        public override void open (GLib.File[] files, string hint) {
+            activate ();
+            player_server.open_files (files);
+        }
 
         public static void on_exit (int signum) {
             GLib.Application.get_default ().release ();

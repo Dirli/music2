@@ -1,0 +1,6 @@
+[Contractor Entry]
+Name=Play a song
+Icon=media-playback-start
+Description=Plays tracks directly in the player, ignoring the gui
+MimeType=audio/mp4;audio/aac;audio/mpeg;audio/ogg;audio/vorbis;audio/webm;
+Exec=io.elementary.music2d %U
