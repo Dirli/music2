@@ -21,6 +21,8 @@ namespace Music2 {
         public signal void selected_row (uint row_id, Enums.SourceType source_type);
         public signal void popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget w);
 
+        private bool show_selected = true;
+
         public abstract void clear_stack ();
         protected abstract uint get_selected_tid (Gtk.TreePath iter_path);
 
@@ -111,6 +113,10 @@ namespace Music2 {
             var scrolled_view = new Gtk.ScrolledWindow (null, null);
             scrolled_view.add (list_view);
             scrolled_view.expand = true;
+            scrolled_view.scroll_event.connect ((e) => {
+                show_selected = false;
+                return false;
+            });
 
             list_view.row_activated.connect (on_row_activated);
 
@@ -118,24 +124,30 @@ namespace Music2 {
         }
 
         public void select_run_row (Gtk.TreeIter iter) {
+
             GLib.Idle.add (() => {
-                Gtk.TreePath? sel_path = null;
-                if (list_view.model is Gtk.TreeModelFilter) {
-                    var child_path = list_store.get_path (iter);
-                    if (child_path != null) {
-                        var filter_model = list_view.model as Gtk.TreeModelFilter;
-                        if (filter_model != null) {
-                            sel_path = filter_model.convert_child_path_to_path (child_path);
+                list_store.@set (iter, (int) Enums.ListColumn.ICON, new GLib.ThemedIcon ("audio-volume-high-symbolic"), -1);
+
+                if (show_selected) {
+                    Gtk.TreePath? sel_path = null;
+                    if (list_view.model is Gtk.TreeModelFilter) {
+                        var child_path = list_store.get_path (iter);
+                        if (child_path != null) {
+                            var filter_model = list_view.model as Gtk.TreeModelFilter;
+                            if (filter_model != null) {
+                                sel_path = filter_model.convert_child_path_to_path (child_path);
+                            }
                         }
+
+                    } else {
+                        sel_path = list_store.get_path (iter);
                     }
 
+                    if (sel_path != null) {
+                        list_view.set_cursor (sel_path, null, false);
+                    }
                 } else {
-                    sel_path = list_store.get_path (iter);
-                }
-
-                if (sel_path != null) {
-                    list_store.@set (iter, (int) Enums.ListColumn.ICON, new GLib.ThemedIcon ("audio-volume-high-symbolic"), -1);
-                    list_view.set_cursor (sel_path, null, false);
+                    show_selected = true;
                 }
 
                 return false;
@@ -144,6 +156,10 @@ namespace Music2 {
 
         public void remove_run_icon (Gtk.TreeIter iter) {
             list_store.@set (iter, (int) Enums.ListColumn.ICON, null, -1);
+
+            if (!show_selected) {
+                return;
+            }
 
             unowned Gtk.TreeModel mod;
             var paths_list = tree_sel.get_selected_rows (out mod);
