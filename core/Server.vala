@@ -162,7 +162,7 @@ namespace Music2 {
         }
 
         private void on_changed_shuffle () {
-            player.shuffle_mode = settings.get_enum ("shuffle-mode");
+            player.shuffle_mode = settings.get_boolean ("shuffle-mode");
         }
 
         private void on_changed_sleep () {

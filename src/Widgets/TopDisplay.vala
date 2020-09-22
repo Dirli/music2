@@ -39,13 +39,13 @@ namespace Music2 {
             pause_progress ();
         }
 
-        public TopDisplay (int repeat_mode, int shuffle_mode) {
+        public TopDisplay (int repeat_mode, bool shuffle_mode) {
             seek_bar = new Granite.SeekBar (0.0);
 
             var shuffle_chooser = new Views.OptionChooser ();
             shuffle_chooser.append_item ("media-playlist-consecutive-symbolic", _("Enable Shuffle"));
             shuffle_chooser.append_item ("media-playlist-shuffle-symbolic", _("Disable Shuffle"));
-            shuffle_chooser.set_option (shuffle_mode);
+            shuffle_chooser.set_option (shuffle_mode ? 1 : 0);
 
             var repeat_chooser = new Views.OptionChooser ();
             repeat_chooser.append_item ("media-playlist-no-repeat-symbolic", _("Enable Repeat"));

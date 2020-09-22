@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-    <enum id="io.elementary.music2.shuffle">
-        <value value="0" nick="off"/>
-        <value value="1" nick="on"/>
-    </enum>
     <enum id="io.elementary.music2.repeat">
         <value value="0" nick="off"/>
         <value value="1" nick="media"/>
@@ -24,8 +20,8 @@
             <summary>Path to music folder</summary>
             <description>Where music is copied to, saved, and managed</description>
         </key>
-        <key enum="io.elementary.music2.shuffle" name="shuffle-mode">
-            <default>'off'</default>
+        <key type="b" name="shuffle-mode">
+            <default>false</default>
             <summary>An index representing the shuffle mode</summary>
             <description>An index representing the shuffle mode</description>
         </key>

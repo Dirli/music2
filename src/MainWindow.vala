@@ -307,12 +307,16 @@ namespace Music2 {
             next_button.tooltip_text = _("Next");
 
             top_display = new Widgets.TopDisplay (settings.get_enum ("repeat-mode"),
-                                                  settings.get_enum ("shuffle-mode"));
+                                                  settings.get_boolean ("shuffle-mode"));
             top_display.margin_start = 30;
             top_display.margin_end = 30;
             top_display.seek_position.connect (on_seek_position);
             top_display.mode_option_changed.connect ((key, new_val) => {
-                settings.set_enum (key, new_val);
+                if (key != "shuffle-mode") {
+                    settings.set_enum (key, new_val);
+                } else {
+                    settings.set_boolean (key, new_val == 0 ? false : true);
+                }
             });
             top_display.popup_media_menu.connect ((x_point, y_point) => {
                 uint[] tids = {};

@@ -43,8 +43,8 @@ namespace Music2 {
             }
         }
 
-        private int _shuffle_mode;
-        public int shuffle_mode {
+        private bool _shuffle_mode;
+        public bool shuffle_mode {
             get {
                 return _shuffle_mode;
             }

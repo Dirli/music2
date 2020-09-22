@@ -19,7 +19,7 @@
 namespace Music2 {
     public class Core.Queue : GLib.Object {
         public int repeat_mode = 0;
-        public int shuffle_mode = 0;
+        public bool shuffle_mode = false;
 
         public bool can_next {
             get; set;
@@ -75,7 +75,7 @@ namespace Music2 {
 
             var index = tracks_queue.index_of (i);
             if (index >= 0) {
-                if (shuffle_mode == Enums.ShuffleMode.ON) {
+                if (shuffle_mode) {
                     var random_val = tracks_queue.remove_at (index);
                     tracks_queue.insert (0, random_val);
                 } else {
@@ -125,7 +125,7 @@ namespace Music2 {
                 past_tracks.clear ();
             }
 
-            if (shuffle_mode == Enums.ShuffleMode.ON && tracks_queue.size > 1) {
+            if (shuffle_mode && tracks_queue.size > 1) {
                 var random_val = tracks_queue.remove_at (GLib.Random.int_range (0, tracks_queue.size));
                 tracks_queue.insert (0, random_val);
             }
