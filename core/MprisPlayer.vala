@@ -24,11 +24,13 @@ namespace Music2 {
         private Core.Player player;
         private GLib.DBusConnection conn;
 
+        private bool _can_go_next;
         public bool can_go_next {
-            get {return true;}
+            get {return _can_go_next;}
         }
+        private bool _can_go_previous;
         public bool can_go_previous {
-            get {return true;}
+            get {return _can_go_previous;}
         }
         public bool can_play {
             get {return true;}
@@ -90,6 +92,8 @@ namespace Music2 {
 
             _metadata = new GLib.HashTable<string, GLib.Variant> (str_hash, str_equal);
 
+            _can_go_previous = this.player.get_nav_state (Enums.NavType.PREV);
+            _can_go_next = this.player.get_nav_state (Enums.NavType.NEXT);
 
             conn = connection;
 
@@ -191,10 +195,13 @@ namespace Music2 {
 
         private void on_changed_navigation (Enums.NavType t, bool can_nav) {
             if (t == Enums.NavType.PREV) {
+                _can_go_previous = can_nav;
                 send_properties ("CanGoPrevious", can_nav);
             } else if (t == Enums.NavType.NEXT) {
+                _can_go_next = can_nav;
                 send_properties ("CanGoNext", can_nav);
             }
+
         }
 
         private void on_changed_track (CObjects.Media m) {

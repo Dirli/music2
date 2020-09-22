@@ -402,6 +402,9 @@ namespace Music2 {
                 return;
             }
 
+            previous_button.sensitive = dbus_player.can_go_previous;
+            next_button.sensitive = dbus_player.can_go_next;
+
             var metadata = dbus_player.metadata;
             if (metadata != null && "mpris:trackid" in metadata) {
                 active_track = (uint) metadata["mpris:trackid"].get_int64 ();

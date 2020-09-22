@@ -141,6 +141,10 @@ namespace Music2 {
             bus.enable_sync_message_emission ();
         }
 
+        public bool get_nav_state (Enums.NavType n_type) {
+            return n_type == Enums.NavType.NEXT ? tracks_queue.can_next : tracks_queue.can_prev;
+        }
+
         public void enable_equalizer () {
             if (audiobin != null) {
                 audiosinkqueue.unlink (audiosink);
