@@ -87,6 +87,8 @@ namespace Music2 {
                 title       TEXT        NOT NULL,
                 length      INT         NULL,
                 track       INT         NULL,
+                hits        INT         DEFAULT 0,
+                last_access INTEGER     NOT NULL,
                 CONSTRAINT unique_track UNIQUE (path),
                 FOREIGN KEY (album_id) REFERENCES albums (ID) ON DELETE CASCADE
                 FOREIGN KEY (artist_id) REFERENCES artists (ID) ON DELETE CASCADE
@@ -213,7 +215,7 @@ namespace Music2 {
             Sqlite.Statement stmt;
 
             string sql = """
-                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
+                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
                 FROM playlist_tracks
                 INNER JOIN media
                 ON playlist_tracks.track_id = media.ID
@@ -635,7 +637,7 @@ namespace Music2 {
             Sqlite.Statement stmt;
 
             string sql = """
-                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
+                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
                 FROM media
                 INNER JOIN albums
                 ON media.album_id = albums.id
@@ -683,8 +685,8 @@ namespace Music2 {
         public CObjects.Media insert_track (CObjects.Media m, int album_id, int artist_id) {
             Sqlite.Statement stmt;
             string sql = """
-                INSERT OR IGNORE INTO media (album_id, artist_id, title, track, path, length)
-                VALUES ($ALBUM_ID, $ARTIST_ID, $TITLE, $TRACK, $URI, $LENGTH);
+                INSERT OR IGNORE INTO media (album_id, artist_id, title, track, path, length, last_access)
+                VALUES ($ALBUM_ID, $ARTIST_ID, $TITLE, $TRACK, $URI, $LENGTH, $ACCESS_TIME);
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
@@ -701,6 +703,10 @@ namespace Music2 {
             res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), m.uri);
             assert (res == Sqlite.OK);
             res = stmt.bind_int64 (stmt.bind_parameter_index ("$LENGTH"), (int64) m.length);
+            assert (res == Sqlite.OK);
+
+            var now = new GLib.DateTime.now_local ();
+            res = stmt.bind_int64 (stmt.bind_parameter_index ("$ACCESS_TIME"), now.to_unix ());
             assert (res == Sqlite.OK);
 
             if (stmt.step () != Sqlite.DONE) {
@@ -728,6 +734,35 @@ namespace Music2 {
             return m;
         }
 
+        public void update_playback_info (string uri, bool write_hit) {
+            Sqlite.Statement stmt;
+            string sql = """
+                UPDATE media SET last_access=$ACCESS_TIME
+            """;
+
+            if (write_hit) {
+                sql += """, hits=hits+1 """;
+            }
+
+            sql += """ WHERE path=$URI; """;
+
+            var now = new GLib.DateTime.now_local ();
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            res = stmt.bind_int64 (stmt.bind_parameter_index ("$ACCESS_TIME"), now.to_unix ());
+            assert (res == Sqlite.OK);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), uri);
+            assert (res == Sqlite.OK);
+
+            if (stmt.step () != Sqlite.DONE) {
+                warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+            }
+
+            stmt.reset ();
+        }
+
         private Gee.ArrayQueue<CObjects.Media> fill_model (Sqlite.Statement stmt) {
             var tracks_queue = new Gee.ArrayQueue<CObjects.Media> ();
 
@@ -741,6 +776,7 @@ namespace Music2 {
                 m.album = stmt.column_text (6);
                 m.year = (uint) stmt.column_int (7);
                 m.artist = stmt.column_text (8);
+                m.hits = (uint) stmt.column_int (9);
 
                 tracks_queue.offer (m);
             }

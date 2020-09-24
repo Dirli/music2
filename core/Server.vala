@@ -97,6 +97,16 @@ namespace Music2 {
             notification_body += "\n";
             notification_body += m.get_display_album ();
 
+            if (active_source_type == Enums.SourceType.PLAYLIST || active_source_type == Enums.SourceType.LIBRARY) {
+                if (init_db ()) {
+                    var uri = m.uri;
+                    new Thread<void*> ("update_playback_info", () => {
+                        db_manager.update_playback_info (uri, !settings.get_boolean ("shuffle-mode"));
+                        return null;
+                    });
+                }
+            }
+
             if (scrsaver_iface != null) {
                 inhibit ();
             }
