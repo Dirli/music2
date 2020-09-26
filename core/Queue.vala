@@ -31,17 +31,25 @@ namespace Music2 {
 
         private Gee.ArrayList<uint> tracks_queue;
         private Gee.ArrayList<uint> past_tracks;
+        private Gee.ArrayList<uint> hits_map;
+        private Gee.HashMap<uint, uint> hits_hash;
 
         public Queue () {
             tracks_queue = new Gee.ArrayList<uint> ();
             past_tracks = new Gee.ArrayList<uint> ();
+            hits_map = new Gee.ArrayList<uint> ();
+            hits_hash = new Gee.HashMap<uint, uint> ();
         }
 
-        public void add_index (uint i, bool past = false) {
+        public void add_index (uint i, uint h, bool past = false) {
+            hits_hash[i] = h == 0 ? 1 : h > 10 ? 10 : h;
+
             if (!past) {
                 if (!can_next) {
                     can_next = true;
                 }
+
+                fill_map (i);
 
                 tracks_queue.add (i);
             } else {
@@ -53,13 +61,48 @@ namespace Music2 {
             }
         }
 
+        private bool fill_map (uint i) {
+            if (!shuffle_mode) {
+                return false;
+            }
+
+            hits_map.add (i);
+
+            // if (!hits_hash.has_key (i)) {
+            //     return true;
+            // }
+
+            var hits_value = hits_hash[i];
+
+            var hits_count = 1;
+            while (hits_count < hits_value) {
+                hits_map.add (i);
+
+                ++hits_count;
+            }
+
+            return true;
+        }
+
+        private void remove_i_map (uint i) {
+            if (shuffle_mode) {
+                int secure_counter = 0;
+                while (hits_map.remove (i) && secure_counter < 10) {
+                    ++secure_counter;
+                }
+            }
+        }
+
         public bool remove_index (uint i) {
             if (tracks_queue.index_of (i) >= 0) {
                 if (tracks_queue.remove (i)) {
+                    remove_i_map (i);
+                    hits_hash.unset (i);
                     return true;
                 }
             } else if (past_tracks.index_of (i) >= 0) {
                 if (past_tracks.remove (i)) {
+                    hits_hash.unset (i);
                     return true;
                 }
             }
@@ -92,6 +135,7 @@ namespace Music2 {
                     var tmp_past = past_tracks.slice (past_index, past_tracks.size) as Gee.ArrayList<uint>;
                     for (var arr_i = tmp_past.size - 1 ; arr_i >= 0; arr_i--) {
                         tracks_queue.insert (0, tmp_past[arr_i]);
+                        fill_map (arr_i);
                     }
                     if (past_index > 0) {
                         past_tracks = past_tracks.slice (0, past_index) as Gee.ArrayList<uint>;
@@ -119,6 +163,7 @@ namespace Music2 {
 
             var i = tracks_queue.remove_at (0);
             past_tracks.add (i);
+            remove_i_map (i);
 
             if (tracks_queue.size == 0 && repeat_mode == Enums.RepeatMode.ON) {
                 tracks_queue.add_all (past_tracks);
@@ -126,8 +171,10 @@ namespace Music2 {
             }
 
             if (shuffle_mode && tracks_queue.size > 1) {
-                var random_val = tracks_queue.remove_at (GLib.Random.int_range (0, tracks_queue.size));
-                tracks_queue.insert (0, random_val);
+                var random_val = get_random_tid ();
+                if (random_val > 0) {
+                    tracks_queue.insert (0, random_val);
+                }
             }
 
             update_navigation ();
@@ -142,14 +189,22 @@ namespace Music2 {
 
             var i = past_tracks.remove_at (past_tracks.size - 1);
             tracks_queue.insert (0, i);
+            fill_map (i);
 
             update_navigation ();
             // Yes, it's redundant, but I'll leave it at that.
             return i;
         }
 
+        private uint get_random_tid () {
+            uint random_val = hits_map.@get (GLib.Random.int_range (0, hits_map.size));
+            var tracks_index = tracks_queue.index_of (random_val);
+
+            return tracks_index > 0 ? tracks_queue.remove_at (tracks_index) : 0;
+        }
+
         public void reset_queue (uint[] tracks) {
-            clear_queue ();
+            clear_queue (false);
 
             if (tracks.length > 0) {
                 can_next = true;
@@ -158,11 +213,18 @@ namespace Music2 {
             foreach (var t in tracks) {
                 tracks_queue.add (t);
             }
+
+            hits_hash.keys.foreach (fill_map);
         }
 
-        public void clear_queue () {
+        public void clear_queue (bool full) {
             past_tracks.clear ();
             tracks_queue.clear ();
+            hits_map.clear ();
+
+            if (full) {
+                hits_hash.clear ();
+            }
 
             update_navigation ();
         }

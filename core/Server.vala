@@ -55,11 +55,11 @@ namespace Music2 {
             player = new Core.Player (eq.element);
             player.set_volume (settings.get_double ("volume"));
 
-            init_player ();
-
             on_changed_repeat ();
             on_changed_shuffle ();
             on_changed_sleep ();
+
+            init_player ();
 
             on_selected_preset ();
             on_equalizer_enabled ();

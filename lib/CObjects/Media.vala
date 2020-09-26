@@ -23,7 +23,7 @@ namespace Music2 {
         public string album;
         public string artist;
         public string genre;
-        public uint tid;
+        public uint tid = 0;
         public uint hits;
         public uint track;
         // milliseconds

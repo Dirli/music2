@@ -279,7 +279,7 @@ namespace Music2 {
             }
 
             tracks_hash[tid] = m;
-            tracks_queue.add_index (tid);
+            tracks_queue.add_index (tid, m.hits);
             tracks_list.append_val (tid);
 
             return true;
@@ -311,7 +311,7 @@ namespace Music2 {
                         add_to_queue (track);
                     } else {
                         past_tracks += tid;
-                        tracks_queue.add_index (tid, true);
+                        tracks_queue.add_index (tid, track.hits, true);
                         tracks_hash[tid] = track;
                     }
 
@@ -376,8 +376,8 @@ namespace Music2 {
         public void clear_queue () {
             state_changed (Gst.State.NULL);
             tracks_hash.clear ();
-            tracks_queue.clear_queue ();
-            tracks_list = new GLib.Array<uint> ();;
+            tracks_queue.clear_queue (true);
+            tracks_list = new GLib.Array<uint> ();
         }
 
         private bool bus_callback (Gst.Bus bus, Gst.Message message) {
