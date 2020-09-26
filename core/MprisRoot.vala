@@ -39,6 +39,9 @@ namespace Music2 {
         public string[] supported_uri_schemes {
             owned get {return {"http", "file", "https", "ftp"};}
         }
+        public string desktop_entry {
+            get {return Constants.APP_NAME;}
+        }
 
         public MprisRoot (Core.Server service) {
             this.service = service;
