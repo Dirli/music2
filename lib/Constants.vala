@@ -30,6 +30,13 @@ namespace Music2.Constants {
     public const int DIALOG_MIN_WIDTH = 420;
     public const int DIALOG_MIN_HEIGHT = 300;
 
+    public const string NEVER_PLAYED = _("Never played");
+    public const int NEVER_PLAYED_ID = -2;
+    public const string FAVORITE_SONGS = _("Favorite songs");
+    public const int FAVORITE_SONGS_ID = -3;
+    public const string RECENTLY_PLAYED = _("Recently played");
+    public const int RECENTLY_PLAYED_ID = -4;
+
     public const int ANIMATION_TIMEOUT = 20;
     public const uint INTERVAL = 250;
     public const int64 SEC_INV = 1;

@@ -202,6 +202,7 @@ namespace Music2 {
             playlist_manager.added_playlist.connect ((pid, name, hint, icon) =>  {
                 source_list_view.add_item (pid, name, hint, icon);
             });
+            playlist_manager.init_default_playlists ();
             playlist_manager.load_playlists ();
             library_manager.init_stores ();
 
@@ -437,9 +438,10 @@ namespace Music2 {
                                 warning (e.message);
                             }
                             break;
+                        case Enums.SourceType.SMARTPLAYLIST:
                         case Enums.SourceType.PLAYLIST:
                         case Enums.SourceType.LIBRARY:
-                                fill_queue (tracks_id);
+                            fill_queue (tracks_id);
                             break;
                     }
                 }
@@ -675,7 +677,7 @@ namespace Music2 {
             source_list_view.update_badge (queue_id, 0);
             queue_stack.clear_stack ();
 
-            if (active_source_type == Enums.SourceType.LIBRARY || active_source_type == Enums.SourceType.PLAYLIST) {
+            if (active_source_type == Enums.SourceType.LIBRARY || active_source_type == Enums.SourceType.PLAYLIST || active_source_type == Enums.SourceType.SMARTPLAYLIST) {
                 fill_queue (tracks);
             } else if (active_source_type == Enums.SourceType.NONE) {
                 top_display.stop_progress ();
@@ -718,7 +720,10 @@ namespace Music2 {
             main_menu.append_item (edit_item);
 
             if (hint == Enums.Hint.MUSIC || hint == Enums.Hint.PLAYLIST) {
-                if ((active_source_type == Enums.SourceType.LIBRARY || active_source_type == Enums.SourceType.PLAYLIST) && !queue_stack.exist_iter (tids[0])) {
+                if ((active_source_type == Enums.SourceType.LIBRARY ||
+                     active_source_type == Enums.SourceType.PLAYLIST ||
+                     active_source_type == Enums.SourceType.SMARTPLAYLIST) &&
+                     !queue_stack.exist_iter (tids[0])) {
                     var queue_item = new GLib.MenuItem (_("Add to Queue"), "win.action_to_queue(%d)".printf ((int) tids[0]));
                     main_menu.append_item (queue_item);
                 }
@@ -804,9 +809,10 @@ namespace Music2 {
                 case Enums.Hint.QUEUE:
                     view_stack.set_visible_child_name (Constants.QUEUE);
                     break;
+                case Enums.Hint.SMART_PLAYLIST:
                 case Enums.Hint.PLAYLIST:
-                    playlist_manager.select_playlist (pid, hint);
                     view_stack.set_visible_child_name ("playlist");
+                    playlist_manager.select_playlist (pid, hint);
                     break;
                 case Enums.Hint.MUSIC:
                     view_stack.set_visible_child_name ("music");
@@ -855,7 +861,10 @@ namespace Music2 {
                         }
 
                         settings.set_string ("source-media", playlist_stack.pid.to_string ());
+                    } else if (activated_type == Enums.SourceType.SMARTPLAYLIST) {
+                        settings.set_string ("source-media", playlist_stack.pid.to_string ());
                     }
+
                     active_source_type = activated_type;
                     settings.set_enum ("source-type", activated_type);
 
@@ -1149,7 +1158,7 @@ namespace Music2 {
                     } catch (Error e) {
                         warning (e.message);
                     }
-                } else if (hint == Enums.Hint.PLAYLIST) {
+                } else if (hint == Enums.Hint.PLAYLIST || hint == Enums.Hint.SMART_PLAYLIST) {
                     var tids = playlist_manager.get_playlist (pid);
                     if (tids != null) {
                         tids.foreach ((tid) => {

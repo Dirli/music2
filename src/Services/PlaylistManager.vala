@@ -56,11 +56,19 @@ namespace Music2 {
         }
 
         public Gee.ArrayList<uint>? get_playlist (int pid) {
-            if (playlists_hash.has_key (pid)) {
+            if (pid < 0) {
+                return db_manager.get_automatic_playlist (pid);
+            } else if (playlists_hash.has_key (pid)) {
                 return playlists_hash[pid].tracks;
             }
 
             return null;
+        }
+
+        public void init_default_playlists () {
+            added_playlist (Constants.NEVER_PLAYED_ID, Constants.NEVER_PLAYED, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
+            added_playlist (Constants.FAVORITE_SONGS_ID, Constants.FAVORITE_SONGS, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
+            added_playlist (Constants.RECENTLY_PLAYED_ID, Constants.RECENTLY_PLAYED, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
         }
 
         public void load_playlists () {
@@ -192,7 +200,7 @@ namespace Music2 {
             if (playlists_hash.has_key (pid) && playlists_hash[pid].tracks.contains (tid)) {
                 playlists_hash[pid].tracks.remove (tid);
 
-                new Thread<void*> ("remove_from _playlist", () => {
+                new Thread<void*> ("remove_from_playlist", () => {
                     db_manager.remove_from_playlist (pid, tid);
                     return null;
                 });
@@ -204,7 +212,21 @@ namespace Music2 {
         }
 
         public void select_playlist (int pid, Enums.Hint hint) {
-            if (playlists_hash.has_key (pid)) {
+            if (hint == Enums.Hint.SMART_PLAYLIST) {
+                var playlist_id = pid;
+                if (selected_playlist (playlist_id, hint, Enums.SourceType.SMARTPLAYLIST)) {
+                    new Thread<void*> ("select_auto_playlist", () => {
+                        var tracks_id = db_manager.get_automatic_playlist (playlist_id);
+                        uint total = 0;
+                        tracks_id.foreach ((tid) => {
+                            add_view (tid, ++total);
+                            return true;
+                        });
+
+                        return null;
+                    });
+                }
+            } else if (playlists_hash.has_key (pid)) {
                 var type = playlists_hash[pid].type;
 
                 if (selected_playlist (pid, hint, type)) {

@@ -48,6 +48,10 @@ namespace Music2 {
             get {return welcome_screen != null;}
         }
 
+        construct {
+            transition_type = Gtk.StackTransitionType.OVER_RIGHT;
+        }
+
         protected void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
             Gtk.TreeIter? iter;
             list_view.model.get_iter (out iter, path);

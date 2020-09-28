@@ -211,6 +211,83 @@ namespace Music2 {
             return playlists_hash;
         }
 
+        public Gee.ArrayList<uint> get_automatic_playlist (int pid) {
+            Sqlite.Statement stmt;
+
+            var tracks_id = new Gee.ArrayList<uint> ();
+
+            var query_str = "";
+            switch (pid) {
+                case Constants.NEVER_PLAYED_ID:
+                    query_str = """ WHERE hits=0 """;
+                    break;
+                case Constants.FAVORITE_SONGS_ID:
+                    query_str = """ WHERE hits>1 ORDER BY hits DESC """;
+                    break;
+                case Constants.RECENTLY_PLAYED_ID:
+                    query_str = """ WHERE hits>0 ORDER BY last_access DESC """;
+                    break;
+                default:
+                    return tracks_id;
+            }
+
+            string sql = """
+                SELECT id
+                FROM media
+            """;
+
+            sql += query_str;
+            sql += """LIMIT 100;""";
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            while (stmt.step () == Sqlite.ROW) {
+                uint tid = (uint) stmt.column_int64 (0);
+
+                tracks_id.add (tid);
+            }
+
+            stmt.reset ();
+            return tracks_id;
+        }
+
+        public Gee.ArrayQueue<CObjects.Media> get_automatic_tracks (int pid) {
+            Sqlite.Statement stmt;
+
+            var query_str = "";
+            switch (pid) {
+                case Constants.NEVER_PLAYED_ID:
+                    query_str = """ WHERE hits=0 """;
+                    break;
+                case Constants.FAVORITE_SONGS_ID:
+                    query_str = """ WHERE hits>1 ORDER BY hits DESC """;
+                    break;
+                case Constants.RECENTLY_PLAYED_ID:
+                    query_str = """ WHERE hits>0 ORDER BY last_access DESC """;
+                    break;
+                default:
+                    return new Gee.ArrayQueue<CObjects.Media> ();
+            }
+
+            string sql = """
+                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
+                FROM media
+                INNER JOIN albums
+                ON media.album_id = albums.id
+                INNER JOIN artists
+                ON media.artist_id = artists.id
+            """;
+
+            sql += query_str;
+            sql += """LIMIT 100;""";
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            return fill_model (stmt);
+        }
+
         public Gee.ArrayQueue<CObjects.Media> get_playlist_tracks (int playlist_id) {
             Sqlite.Statement stmt;
 

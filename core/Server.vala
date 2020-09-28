@@ -256,6 +256,7 @@ namespace Music2 {
                 case Enums.SourceType.EXTPLAYLIST:
                     load_from_extplaylist ();
                     break;
+                case Enums.SourceType.SMARTPLAYLIST:
                 case Enums.SourceType.PLAYLIST:
                     play_from_playlist ();
                     break;
@@ -315,6 +316,7 @@ namespace Music2 {
                     case Enums.SourceType.EXTPLAYLIST:
                         load_from_extplaylist ();
                         break;
+                    case Enums.SourceType.SMARTPLAYLIST:
                     case Enums.SourceType.PLAYLIST:
                     case Enums.SourceType.LIBRARY:
                         if (init_db ()) {
@@ -501,19 +503,28 @@ namespace Music2 {
                 return;
             }
 
+            Gee.ArrayQueue<CObjects.Media>? tracks_queue = null;
+
             var playlist_str = settings.get_string ("source-media");
             int pid = int.parse (playlist_str);
             if (pid > 0) {
-                var tracks_queue = db_manager.get_playlist_tracks (pid);
+                tracks_queue = db_manager.get_playlist_tracks (pid);
+            } else {
+                tracks_queue = db_manager.get_automatic_tracks (pid);
+            }
 
-                settings.set_string ("source-media", "");
-                uint[] tracks = player.adds_to_queue (tracks_queue);
-                if (tracks.length > 0) {
-                    new Thread<void*> ("update_playlist", () => {
-                        db_manager.update_playlist (queue_id, tracks, true);
-                        return null;
-                    });
-                }
+            settings.set_string ("source-media", "");
+
+            if (tracks_queue == null) {
+                return;
+            }
+
+            uint[] tracks = player.adds_to_queue (tracks_queue);
+            if (tracks.length > 0) {
+                new Thread<void*> ("update_playlist", () => {
+                    db_manager.update_playlist (queue_id, tracks, true);
+                    return null;
+                });
             }
         }
 

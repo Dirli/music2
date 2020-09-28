@@ -93,6 +93,7 @@ namespace Music2 {
                     playlists_category.add (sourcelist_item);
                     break;
                 case Enums.Hint.QUEUE:
+                case Enums.Hint.SMART_PLAYLIST:
                 case Enums.Hint.READ_ONLY_PLAYLIST:
                     sourcelist_item.editable = false;
                     playlists_category.add (sourcelist_item);
