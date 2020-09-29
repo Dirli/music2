@@ -30,11 +30,11 @@ namespace Music2 {
         private DataBaseManager db_manager;
 
         private Gee.HashMap<int, Structs.Playlist?> playlists_hash;
-        private Gee.ArrayList<string> names_list;
+        private Gee.HashMap<int, string> names_hash;
 
         public PlaylistManager () {
             db_manager = new DataBaseManager ();
-            names_list = new Gee.ArrayList<string> ();
+            names_hash = new Gee.HashMap<int, string> ();
             playlists_hash = db_manager.get_playlists ();
         }
 
@@ -46,7 +46,7 @@ namespace Music2 {
             var available_hash = new Gee.HashMap<int, string> ();
             playlists_hash.values.foreach ((pl) => {
                 if (!pl.tracks.contains (tid)) {
-                    available_hash[pl.id] = pl.name;
+                    available_hash[pl.id] = names_hash[pl.id];
                 }
 
                 return true;
@@ -75,7 +75,7 @@ namespace Music2 {
             playlists_hash.foreach ((entry) => {
                 var pl_name = entry.value.name;
                 added_playlist (entry.key, pl_name, Enums.Hint.PLAYLIST, new ThemedIcon ("playlist"));
-                names_list.add (pl_name);
+                names_hash[entry.key] = pl_name;
                 return true;
             });
         }
@@ -104,7 +104,8 @@ namespace Music2 {
             int i = 1;
             string new_name = name;
 
-            while (names_list.contains (new_name)) {
+            var names = names_hash.values;
+            while (names.contains (new_name)) {
                 new_name = "%s %d".printf (name, i++);
             }
 
@@ -119,9 +120,7 @@ namespace Music2 {
 
                 playlists_hash[pid] = pl;
                 added_playlist (pid, new_name, Enums.Hint.PLAYLIST, new ThemedIcon ("playlist"));
-                if (!names_list.contains (new_name)) {
-                    names_list.add (new_name);
-                }
+                names_hash[pid] = new_name;
 
                 return pid;
             }
@@ -147,7 +146,7 @@ namespace Music2 {
 
         public bool remove_playlist (int pid) {
             if (playlists_hash.has_key (pid) && db_manager.remove_playlist (pid)) {
-                names_list.remove (playlists_hash[pid].name);
+                names_hash.unset (pid);
                 playlists_hash.unset (pid);
                 return true;
             }
@@ -167,6 +166,7 @@ namespace Music2 {
 
                 modified_pid = pid;
                 playlists_hash[pid].tracks.add (tid);
+
                 if (active_pid == pid) {
                     var total = playlists_hash[pid].tracks.size;
                     add_view (tid, total);
@@ -180,13 +180,13 @@ namespace Music2 {
                 if (old_name != name) {
                     var new_name = name;
                     var i = 1;
-                    while (names_list.contains (new_name)) {
+                    var names = names_hash.values;
+                    while (names.contains (new_name)) {
                         new_name = "%s %d".printf (name, i++);
                     }
 
                     if (db_manager.edit_playlist_name (pid, new_name)) {
-                        names_list.remove (old_name);
-                        names_list.add (new_name);
+                        names_hash[pid] = new_name;
                         playlists_hash[pid].name = new_name;
                         return new_name == name ? "" : new_name;
                     }

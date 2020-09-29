@@ -194,20 +194,23 @@ namespace Music2 {
 
             while (stmt.step () == Sqlite.ROW) {
                 var pid = stmt.column_int (0);
-                if (playlists_hash.has_key (pid)) {
-                    playlists_hash[pid].tracks.add ((uint) stmt.column_int64 (2));
-                } else {
+                var tid = (uint) stmt.column_int64 (2);
+                if (!playlists_hash.has_key (pid)) {
                     Structs.Playlist new_pl = {};
                     new_pl.id = pid;
                     new_pl.name = stmt.column_text (1);
                     new_pl.type = Enums.SourceType.PLAYLIST;
                     new_pl.tracks = new Gee.ArrayList<uint> ();
-                    new_pl.tracks.add ((uint) stmt.column_int64 (2));
 
                     playlists_hash[pid] = new_pl;
                 }
+
+                if (tid > 0) {
+                    playlists_hash[pid].tracks.add (tid);
+                }
             }
 
+            stmt.reset ();
             return playlists_hash;
         }
 
@@ -707,6 +710,7 @@ namespace Music2 {
                 m.artist = stmt.column_text (8);
             }
 
+            stmt.reset ();
             return m;
         }
 
