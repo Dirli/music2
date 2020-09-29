@@ -19,7 +19,6 @@
 namespace Music2 {
     public class Widgets.StatusBar : Gtk.ActionBar {
         public signal int create_new_pl (string name);
-        public signal void show_pl_editor ();
         public signal void changed_volume (double volume_value);
 
         private Gtk.MenuButton playlist_menubutton;
@@ -29,12 +28,9 @@ namespace Music2 {
         public StatusBar () {
             var pl_button = new Gtk.ModelButton ();
             pl_button.text = _("Add Playlist");
-            var spl_button = new Gtk.ModelButton ();
-            spl_button.text = _("Add Smart Playlist");
 
             var pl_menu_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
             pl_menu_box.add (pl_button);
-            pl_menu_box.add (spl_button);
             pl_menu_box.show_all ();
 
             var pl_popover = new Gtk.Popover (null);
@@ -68,9 +64,6 @@ namespace Music2 {
                 create_new_pl (_("New playlist"));
             });
 
-            spl_button.clicked.connect (() => {
-                show_pl_editor ();
-            });
         }
 
         private void on_value_changed (double new_vol) {

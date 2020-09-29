@@ -364,7 +364,6 @@ namespace Music2 {
 
             status_bar = new Widgets.StatusBar ();
             status_bar.create_new_pl.connect (playlist_manager.create_playlist);
-            status_bar.show_pl_editor.connect (() => {});
             status_bar.changed_volume.connect ((new_volume) => {
                 dbus_player.volume = new_volume;
             });
