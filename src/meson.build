@@ -6,6 +6,7 @@ executable(
     'Dialogs/ImportFolder.vala',
     'Dialogs/MusicFolderConfirmation.vala',
     'Dialogs/PreferencesWindow.vala',
+    'Dialogs/SmartPlaylistEditor.vala',
     'Objects/CategoryStore.vala',
     'Objects/LibraryTagger.vala',
     'Services/ImportManager.vala',

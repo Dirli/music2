@@ -71,5 +71,15 @@
             <summary>Whether to close the player's window instead of hiding/minimizing it when a song is still playing. The window can be brought back by activating its desktop file.</summary>
             <description>When enabled, the window will be closed even if a song is still being played (i.e. close = quit). Otherwise, if a song is being played, the application will not be closed, but minimized/hidden. The player is minimized or hidden depending on the values of the minimize-while-playing-shells key.</description>
         </key>
+        <key type="i" name="auto-length">
+            <default>200</default>
+            <summary>Number of automatically generated rows</summary>
+            <description>Number of automatically generated rows</description>
+        </key>
+        <key type="i" name="smart-playlists">
+            <default>15</default>
+            <summary>Status of pre-installed smart playlists</summary>
+            <description>Status of pre-installed smart playlists</description>
+        </key>
     </schema>
 </schemalist>

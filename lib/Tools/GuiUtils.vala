@@ -51,6 +51,15 @@ namespace Music2.Tools.GuiUtils {
         return null;
     }
 
+    public Gtk.Label get_settings_label (string text) {
+        var settings_label = new Gtk.Label (text);
+        settings_label.halign = Gtk.Align.END;
+        settings_label.hexpand = true;
+        settings_label.margin_start = 12;
+
+        return settings_label;
+    }
+
     public string get_playlist_path (string playlist_name, string library_path) {
         if (playlist_name == "") {
             return "";

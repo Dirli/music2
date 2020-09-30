@@ -65,12 +65,6 @@ namespace Music2 {
             return null;
         }
 
-        public void init_default_playlists () {
-            added_playlist (Constants.NEVER_PLAYED_ID, Constants.NEVER_PLAYED, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
-            added_playlist (Constants.FAVORITE_SONGS_ID, Constants.FAVORITE_SONGS, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
-            added_playlist (Constants.RECENTLY_PLAYED_ID, Constants.RECENTLY_PLAYED, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
-        }
-
         public void load_playlists () {
             playlists_hash.foreach ((entry) => {
                 var pl_name = entry.value.name;

@@ -202,11 +202,12 @@ namespace Music2 {
             playlist_manager.added_playlist.connect ((pid, name, hint, icon) =>  {
                 source_list_view.add_item (pid, name, hint, icon);
             });
-            playlist_manager.init_default_playlists ();
             playlist_manager.load_playlists ();
             library_manager.init_stores ();
+            changed_smart_playlists ();
 
             settings.changed["source-type"].connect (on_changed_source);
+            settings.changed["smart-playlists"].connect (changed_smart_playlists);
             // sometimes this event is triggered at startup, which is not the desired behavior
             // settings.changed["music-folder"].connect (on_changed_folder);
 
@@ -697,6 +698,33 @@ namespace Music2 {
             active_source_type = (Enums.SourceType) settings.get_enum ("source-type");
         }
 
+        private void changed_smart_playlists () {
+            int8 playlists_status = (int8) settings.get_int ("smart-playlists");
+            bool smart_playlists_enabled = (playlists_status & 1) > 0;
+
+            if (!smart_playlists_enabled) {
+                source_list_view.remove_item (Constants.NEVER_PLAYED_ID);
+                source_list_view.remove_item (Constants.FAVORITE_SONGS_ID);
+                source_list_view.remove_item (Constants.RECENTLY_PLAYED_ID);
+            } else {
+                if ((playlists_status & 2) > 0) {
+                    source_list_view.add_item (Constants.NEVER_PLAYED_ID, Constants.NEVER_PLAYED, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
+                } else {
+                    source_list_view.remove_item (Constants.NEVER_PLAYED_ID);
+                }
+                if ((playlists_status & 4) > 0) {
+                    source_list_view.add_item (Constants.FAVORITE_SONGS_ID, Constants.FAVORITE_SONGS, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
+                } else {
+                    source_list_view.remove_item (Constants.FAVORITE_SONGS_ID);
+                }
+                if ((playlists_status & 8) > 0) {
+                    source_list_view.add_item (Constants.RECENTLY_PLAYED_ID, Constants.RECENTLY_PLAYED, Enums.Hint.SMART_PLAYLIST, new ThemedIcon ("playlist-automatic"));
+                } else {
+                    source_list_view.remove_item (Constants.RECENTLY_PLAYED_ID);
+                }
+            }
+        }
+
         private void on_seek_position (int64 new_position) {
             try {
                 dbus_player.seek (new_position);
@@ -919,6 +947,11 @@ namespace Music2 {
                 case Enums.ActionType.EXPORT:
                     export_playlist (item);
                     break;
+                case Enums.ActionType.EDIT:
+                    if (item.hint == Enums.Hint.SMART_PLAYLIST) {
+                        edit_smart_playlists ();
+                    }
+                    break;
 
             }
         }
@@ -1126,6 +1159,13 @@ namespace Music2 {
 
                 return false;
             });
+        }
+
+        private void edit_smart_playlists () {
+            var smart_preferences = new Dialogs.SmartPlaylistEditor (this);
+
+            smart_preferences.show_all ();
+            smart_preferences.run ();
         }
 
         private void export_playlist (Views.SourceListItem item) {

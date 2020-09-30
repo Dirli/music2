@@ -57,6 +57,14 @@ namespace Music2 {
                 return 0;
             }
 
+            if (item_a.hint == Enums.Hint.QUEUE) {
+                return -1;
+            }
+
+            if (item_b.hint == Enums.Hint.QUEUE) {
+                return 1;
+            }
+
             if (item_a.hint == Enums.Hint.READ_ONLY_PLAYLIST) {
                 if (item_b.hint == Enums.Hint.READ_ONLY_PLAYLIST) {
                     return strcmp (item_a.name.collate_key (), item_b.name.collate_key ());

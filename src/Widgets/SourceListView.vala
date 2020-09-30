@@ -77,9 +77,7 @@ namespace Music2 {
 
             sourcelist_item.menu_item_activated.connect ((item, action) => {
                 menu_activated (item, action);
-                if (action == Enums.ActionType.EDIT) {
-                    start_editing_item (item);
-                } else if (action == Enums.ActionType.RENAME) {
+                if (action == Enums.ActionType.RENAME) {
                     start_editing_item (item);
                 }
             });
@@ -123,6 +121,7 @@ namespace Music2 {
             if (items_hash.has_key (pid)) {
                 var removed_item = items_hash[pid];
                 switch (removed_item.hint) {
+                    case Enums.Hint.SMART_PLAYLIST:
                     case Enums.Hint.PLAYLIST:
                         playlists_category.remove (removed_item);
                         break;
@@ -130,6 +129,8 @@ namespace Music2 {
                         library_category.remove (removed_item);
                         break;
                 }
+
+                items_hash.unset (pid);
             }
         }
     }

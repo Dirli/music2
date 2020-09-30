@@ -37,6 +37,8 @@ namespace Music2 {
         public MusicStack (Gtk.Window win, GLib.Settings settings_ui, Gtk.ListStore music_store, Gtk.ListStore albums_store) {
             source_type = Enums.SourceType.LIBRARY;
 
+            transition_type = Gtk.StackTransitionType.OVER_DOWN;
+
             categories_hash = new Gee.HashMap<int, Interfaces.ColumnBox> ();
 
             welcome_screen = new Granite.Widgets.Welcome (_("Get Some Tunes"), _("Add music to your library."));
