@@ -206,6 +206,7 @@ namespace Music2 {
             library_manager.init_stores ();
             changed_smart_playlists ();
 
+            settings.bind ("auto-length", playlist_manager, "auto-length", GLib.SettingsBindFlags.GET);
             settings.changed["source-type"].connect (on_changed_source);
             settings.changed["smart-playlists"].connect (changed_smart_playlists);
             // sometimes this event is triggered at startup, which is not the desired behavior

@@ -32,6 +32,10 @@ namespace Music2 {
         private Gee.HashMap<int, Structs.Playlist?> playlists_hash;
         private Gee.HashMap<int, string> names_hash;
 
+        public int auto_length {
+            get; set;
+        }
+
         public PlaylistManager () {
             db_manager = new DataBaseManager ();
             names_hash = new Gee.HashMap<int, string> ();
@@ -57,7 +61,7 @@ namespace Music2 {
 
         public Gee.ArrayList<uint>? get_playlist (int pid) {
             if (pid < 0) {
-                return db_manager.get_automatic_playlist (pid);
+                return db_manager.get_automatic_playlist (pid, auto_length);
             } else if (playlists_hash.has_key (pid)) {
                 return playlists_hash[pid].tracks;
             }
@@ -210,7 +214,7 @@ namespace Music2 {
                 var playlist_id = pid;
                 if (selected_playlist (playlist_id, hint, Enums.SourceType.SMARTPLAYLIST)) {
                     new Thread<void*> ("select_auto_playlist", () => {
-                        var tracks_id = db_manager.get_automatic_playlist (playlist_id);
+                        var tracks_id = db_manager.get_automatic_playlist (playlist_id, auto_length);
                         uint total = 0;
                         tracks_id.foreach ((tid) => {
                             add_view (tid, ++total);

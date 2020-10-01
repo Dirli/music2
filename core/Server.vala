@@ -510,7 +510,7 @@ namespace Music2 {
             if (pid > 0) {
                 tracks_queue = db_manager.get_playlist_tracks (pid);
             } else {
-                tracks_queue = db_manager.get_automatic_tracks (pid);
+                tracks_queue = db_manager.get_automatic_tracks (pid, settings.get_int ("auto-length"));
             }
 
             settings.set_string ("source-media", "");

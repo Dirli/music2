@@ -214,7 +214,7 @@ namespace Music2 {
             return playlists_hash;
         }
 
-        public Gee.ArrayList<uint> get_automatic_playlist (int pid) {
+        public Gee.ArrayList<uint> get_automatic_playlist (int pid, int length) {
             Sqlite.Statement stmt;
 
             var tracks_id = new Gee.ArrayList<uint> ();
@@ -240,9 +240,11 @@ namespace Music2 {
             """;
 
             sql += query_str;
-            sql += """LIMIT 100;""";
+            sql += """LIMIT $LENGTH;""";
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$LENGTH"), length);
             assert (res == Sqlite.OK);
 
             while (stmt.step () == Sqlite.ROW) {
@@ -255,7 +257,7 @@ namespace Music2 {
             return tracks_id;
         }
 
-        public Gee.ArrayQueue<CObjects.Media> get_automatic_tracks (int pid) {
+        public Gee.ArrayQueue<CObjects.Media> get_automatic_tracks (int pid, int length) {
             Sqlite.Statement stmt;
 
             var query_str = "";
@@ -283,9 +285,11 @@ namespace Music2 {
             """;
 
             sql += query_str;
-            sql += """LIMIT 100;""";
+            sql += """LIMIT $LENGTH;""";
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$LENGTH"), length);
             assert (res == Sqlite.OK);
 
             return fill_model (stmt);
