@@ -18,8 +18,6 @@
 
 namespace Music2 {
     public class Dialogs.PreferencesWindow : Gtk.Dialog {
-        public signal void changed_music_folder (string filename);
-
         public PreferencesWindow (Music2.MainWindow main_win) {
             Object (
                 border_width: 6,
@@ -33,15 +31,15 @@ namespace Music2 {
                 window_position: Gtk.WindowPosition.CENTER_ON_PARENT
             );
 
+            set_default_response (Gtk.ResponseType.CLOSE);
+
             var library_filechooser = new Gtk.FileChooserButton (_("Select Music Folder…"), Gtk.FileChooserAction.SELECT_FOLDER);
             library_filechooser.hexpand = true;
             var music_folder = main_win.settings.get_string ("music-folder");
-            string new_filename = "";
             if (music_folder == "") {
                 var default_filename = GLib.Environment.get_user_special_dir (GLib.UserDirectory.MUSIC);
                 if (default_filename != null) {
                     music_folder = default_filename;
-                    new_filename = default_filename;
                 }
             }
 
@@ -49,8 +47,7 @@ namespace Music2 {
             library_filechooser.file_set.connect (() => {
                 string? filename = library_filechooser.get_filename ();
                 if (filename != null) {
-                    new_filename = filename;
-                    // changed_music_folder (filename);
+                    main_win.settings.set_string ("music-folder", filename);
                 }
             });
 
@@ -96,14 +93,8 @@ namespace Music2 {
             var content = get_content_area () as Gtk.Box;
             content.add (layout);
 
-            var close_button = add_button (_("Close"), Gtk.ResponseType.CLOSE);
-            ((Gtk.Button) close_button).clicked.connect (() => {
-                if (new_filename != "") {
-                    changed_music_folder (new_filename);
-                }
-
-                destroy ();
-            });
+            add_button (_("Close"), Gtk.ResponseType.CLOSE);
+            response.connect (() => {destroy ();});
         }
 
         private class SettingsLabel : Gtk.Label {

@@ -209,8 +209,7 @@ namespace Music2 {
             settings.bind ("auto-length", playlist_manager, "auto-length", GLib.SettingsBindFlags.GET);
             settings.changed["source-type"].connect (on_changed_source);
             settings.changed["smart-playlists"].connect (changed_smart_playlists);
-            // sometimes this event is triggered at startup, which is not the desired behavior
-            // settings.changed["music-folder"].connect (on_changed_folder);
+            settings.changed["music-folder"].connect (on_changed_folder);
 
             new Thread<void*> ("init_library", () => {
                 library_manager.init_library ();
@@ -228,6 +227,10 @@ namespace Music2 {
                         music_stack.init_selections (iter);
 
                         status_bar.sensitive_btns (true);
+                    } else {
+                        if (has_music_folder) {
+                            action_stack.init_library_folder (_("Library folder found"));
+                        }
                     }
 
                     return false;
@@ -363,6 +366,7 @@ namespace Music2 {
             action_stack.margin_end = 5;
             action_stack.cancelled_scan.connect (library_manager.stop_scanner);
             action_stack.dnd_button_clicked.connect (on_dnd_button_clicked);
+            action_stack.scan_library.connect (start_scanning_library);
 
             status_bar = new Widgets.StatusBar ();
             status_bar.create_new_pl.connect (playlist_manager.create_playlist);
@@ -575,9 +579,7 @@ namespace Music2 {
             }
         }
 
-        private void action_edit_song () {
-
-        }
+        private void action_edit_song () {}
 
         private void action_to_queue (GLib.SimpleAction action, GLib.Variant? pars) {
             int tid;
@@ -788,14 +790,7 @@ namespace Music2 {
         }
 
         private void on_preferences_click () {
-            var filename = "";
             var preferences = new Dialogs.PreferencesWindow (this);
-            preferences.changed_music_folder.connect ((f) => {
-                filename = f;
-            });
-            preferences.destroy.connect (() => {
-                set_music_folder (filename);
-            });
 
             preferences.show_all ();
             preferences.run ();
@@ -907,7 +902,7 @@ namespace Music2 {
             switch (action_type) {
                 case Enums.ActionType.SCAN:
                     if (item.hint == Enums.Hint.MUSIC) {
-                        on_changed_folder ();
+                        start_scanning_library ();
                     }
                     break;
                 case Enums.ActionType.CLEAR:
@@ -975,34 +970,8 @@ namespace Music2 {
         }
 
         private void on_changed_folder () {
-            var music_folder = settings.get_string ("music-folder");
-            if (scans_library) {
-                return;
-            }
-
-            if (library_manager.dirty_library ()) {
-                library_manager.clear_library ();
-                view_selector.sensitive = false;
-                status_bar.sensitive_btns (false);
-            }
-
-            if (active_source_type == Enums.SourceType.LIBRARY) {
-                settings.set_enum ("source-type", Enums.SourceType.NONE);
-            }
-
-            if (has_music_folder) {
-                source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
-
-                var music_dir = GLib.File.new_for_path (music_folder);
-                new Thread<void*> ("scan_directory", () => {
-                    library_manager.scan_library (music_dir.get_uri ());
-                    return null;
-                });
-
-                source_list_view.select_active_item (-1);
-            } else {
-                source_list_view.select_active_item (1);
-                source_list_view.remove_item (-1);
+            if (settings.get_string ("music-folder") != "") {
+                action_stack.init_library_folder (_("A new library folder is set"));
             }
         }
 
@@ -1135,31 +1104,35 @@ namespace Music2 {
             }
         }
 
-        public void set_music_folder (string new_folder) {
-            if (new_folder == "" || new_folder == settings.get_string ("music-folder")) {
+        private void start_scanning_library () {
+            if (scans_library) {
                 return;
             }
 
-            var context_text = "";
             if (library_manager.dirty_library ()) {
-                context_text = _("Are you sure you want to set the music folder to %s? This will reset your library, remove your playlists and run the scanner.").printf ("<b>" + Markup.escape_text (new_folder) + "</b>");
-            } else {
-                context_text = _("You have a music folder %s. Scan this folder?").printf ("<b>" + Markup.escape_text (new_folder) + "</b>");
+                library_manager.clear_library ();
+                view_selector.sensitive = false;
+                status_bar.sensitive_btns (false);
             }
 
-            GLib.Idle.add (() => {
-                var confirm_dialog = new Dialogs.MusicFolderConfirmation (this, context_text);
-                confirm_dialog.response.connect ((response_id) => {
-                    if (response_id == Gtk.ResponseType.APPLY) {
-                        settings.set_string ("music-folder", new_folder);
-                        on_changed_folder ();
-                    }
+            if (active_source_type == Enums.SourceType.LIBRARY) {
+                settings.set_enum ("source-type", Enums.SourceType.NONE);
+            }
 
-                    confirm_dialog.destroy ();
+            if (has_music_folder) {
+                source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
+
+                var music_dir = GLib.File.new_for_path (settings.get_string ("music-folder"));
+                new Thread<void*> ("scan_directory", () => {
+                    library_manager.scan_library (music_dir.get_uri ());
+                    return null;
                 });
 
-                return false;
-            });
+                source_list_view.select_active_item (-1);
+            } else {
+                source_list_view.select_active_item (1);
+                source_list_view.remove_item (-1);
+            }
         }
 
         private void edit_smart_playlists () {
