@@ -41,7 +41,6 @@ namespace Music2 {
             playlist_menubutton.popover = pl_popover;
             playlist_menubutton.tooltip_text = _("Add Playlist");
             playlist_menubutton.add (new Gtk.Image.from_icon_name ("list-add-symbolic", Gtk.IconSize.MENU));
-            playlist_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
             playlist_menubutton.sensitive = false;
 
             volume_button = new Gtk.VolumeButton ();
@@ -52,9 +51,10 @@ namespace Music2 {
             eq_menubutton = new Gtk.MenuButton ();
             eq_menubutton.popover = eq_popover;
             eq_menubutton.add (new Gtk.Image.from_icon_name ("media-eq-symbolic", Gtk.IconSize.MENU));
-            eq_menubutton.get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
 
             eq_popover.init ();
+
+            get_style_context ().add_class (Gtk.STYLE_CLASS_FLAT);
 
             pack_start (playlist_menubutton);
             pack_end (eq_menubutton);

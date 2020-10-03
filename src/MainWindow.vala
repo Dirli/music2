@@ -376,6 +376,7 @@ namespace Music2 {
 
             var left_grid = new Gtk.Grid ();
             left_grid.orientation = Gtk.Orientation.VERTICAL;
+            left_grid.get_style_context ().add_class (Gtk.STYLE_CLASS_SIDEBAR);
             left_grid.add (source_list_view);
             left_grid.add (action_stack);
             left_grid.add (status_bar);
