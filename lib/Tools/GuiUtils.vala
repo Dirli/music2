@@ -17,6 +17,27 @@
  */
 
 namespace Music2.Tools.GuiUtils {
+    public CObjects.Media? metadata_to_media (GLib.HashTable<string, GLib.Variant> metadata) {
+        if ("xesam:url" in metadata) {
+            CObjects.Media m = new CObjects.Media (metadata["xesam:url"].get_string ());
+
+            m.tid = (uint) metadata["mpris:trackid"].get_int64 ();
+            m.length = (uint) metadata["mpris:length"].get_int64 ();
+            m.title = metadata["xesam:title"].get_string ();
+            m.album = metadata["xesam:album"].get_string ();
+            var artists = metadata["xesam:artist"].get_strv ();
+            m.artist = artists[0];
+            var genre = metadata["xesam:genre"].get_strv ();
+            m.genre = genre[0];
+            m.track = (uint) metadata["xesam:trackNumber"].get_int32 ();
+            m.year = metadata["music2:year"].get_uint16 (); // missing from the specification
+
+            return m;
+        }
+
+        return null;
+    }
+
     public GLib.Icon? get_cover_icon (uint a_year, string a_title) {
         string cov_path = Tools.FileUtils.get_cover_path (a_year, a_title);
         if (cov_path != "") {

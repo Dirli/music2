@@ -561,7 +561,7 @@ namespace Music2 {
                     uint[] tids = {(uint) tid};
                     var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
                     if (tracks_meta.length > 0) {
-                        media = metadata_to_media (tracks_meta[0]);
+                        media = Tools.GuiUtils.metadata_to_media (tracks_meta[0]);
                     }
                 } catch (Error e) {
                     warning (e.message);
@@ -573,7 +573,7 @@ namespace Music2 {
             if (media != null) {
                 try {
                     var m_file = GLib.File.new_for_uri (media.uri);
-                    Gtk.show_uri (null, m_file.get_parent ().get_uri (), Gdk.CURRENT_TIME);
+                    Gtk.show_uri_on_window (this, m_file.get_parent ().get_uri (), Gdk.CURRENT_TIME);
                 } catch (Error err) {
                     warning ("Could not browse media %s: %s\n", media.uri, err.message);
                 }
@@ -671,7 +671,7 @@ namespace Music2 {
         }
 
         private void on_track_added (GLib.HashTable<string, GLib.Variant> metadata, uint after_tid = 0) {
-            var m = metadata_to_media (metadata);
+            var m = Tools.GuiUtils.metadata_to_media (metadata);
             if (m != null) {
                 add_to_queue (m);
             }
@@ -800,12 +800,12 @@ namespace Music2 {
         private void on_import_folder (GLib.File folder) {
             GLib.Timeout.add (400, () => {
                 if (folder.query_exists ()) {
-                    var music_folder = settings.get_string ("music-folder");
+                    // var music_folder = settings.get_string ("music-folder");
                     var import_dialog = new Dialogs.ImportFolder (this, folder.get_path ());
                     import_dialog.response.connect ((response_id) => {
                         if (response_id == Gtk.ResponseType.APPLY) {
                             new Thread<void*> ("import_folder", () => {
-                                library_manager.import_folder (folder.get_uri (), music_folder);
+                                library_manager.import_folder (folder.get_uri (), settings.get_string ("music-folder"));
                                 return null;
                             });
                         }
@@ -1123,8 +1123,8 @@ namespace Music2 {
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
 
-                var music_dir = GLib.File.new_for_path (settings.get_string ("music-folder"));
                 new Thread<void*> ("scan_directory", () => {
+                    var music_dir = GLib.File.new_for_path (settings.get_string ("music-folder"));
                     library_manager.scan_library (music_dir.get_uri ());
                     return null;
                 });
@@ -1144,11 +1144,10 @@ namespace Music2 {
         }
 
         private void export_playlist (Views.SourceListItem item) {
-            var path = Tools.GuiUtils.get_playlist_path (item.name, settings.get_string ("music-folder"));
-            var hint = item.hint;
-            var pid = item.pid;
-
             new Thread<void*> ("export_playlist", () => {
+                var path = Tools.GuiUtils.get_playlist_path (item.name, settings.get_string ("music-folder"));
+                var hint = item.hint;
+                var pid = item.pid;
                 CObjects.Media[] tracks = {};
                 if (hint == Enums.Hint.QUEUE) {
                     try {
@@ -1156,7 +1155,7 @@ namespace Music2 {
                         if (active_source_type == Enums.SourceType.DIRECTORY || active_source_type == Enums.SourceType.EXTPLAYLIST || active_source_type == Enums.SourceType.FILE) {
                             var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
                             foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
-                                var m = metadata_to_media (meta);
+                                var m = Tools.GuiUtils.metadata_to_media (meta);
                                 if (m != null) {
                                     tracks += m;
                                 }
@@ -1204,20 +1203,13 @@ namespace Music2 {
             }
         }
 
-        private CObjects.Media? get_active_media () {
-            var metadata = dbus_player.metadata;
-
-            CObjects.Media? m = metadata_to_media (metadata);
-
-            return m;
-        }
-
         private void update_title () {
             if (top_display.get_visible_child_name () != "time") {
                 top_display.set_visible_child_name ("time");
             }
 
-            var m = get_active_media ();
+            var metadata = dbus_player.metadata;
+            CObjects.Media? m = Tools.GuiUtils.metadata_to_media (metadata);
 
             if (m != null) {
                 top_display.set_title_markup (m);
@@ -1232,27 +1224,6 @@ namespace Music2 {
             } else {
                 queue_reset = true;
             }
-        }
-
-        private CObjects.Media? metadata_to_media (GLib.HashTable<string, GLib.Variant> metadata) {
-            if ("xesam:url" in metadata) {
-                CObjects.Media m = new CObjects.Media (metadata["xesam:url"].get_string ());
-
-                m.tid = (uint) metadata["mpris:trackid"].get_int64 ();
-                m.length = (uint) metadata["mpris:length"].get_int64 ();
-                m.title = metadata["xesam:title"].get_string ();
-                m.album = metadata["xesam:album"].get_string ();
-                var artists = metadata["xesam:artist"].get_strv ();
-                m.artist = artists[0];
-                var genre = metadata["xesam:genre"].get_strv ();
-                m.genre = genre[0];
-                m.track = (uint) metadata["xesam:trackNumber"].get_int32 ();
-                m.year = metadata["music2:year"].get_uint16 (); // missing from the specification
-
-                return m;
-            }
-
-            return null;
         }
 
         public override bool delete_event (Gdk.EventAny event) {
