@@ -59,14 +59,9 @@ namespace Music2 {
             items_hash[pid].badge = val.to_string ();
         }
 
-        public Granite.Widgets.SourceList.Item add_item (int pid,
-                                                         string name,
-                                                         Enums.Hint hint,
-                                                         GLib.Icon icon,
-                                                         GLib.Icon? activatable_icon = null) {
-
+        public void add_item (int pid, string name, Enums.Hint hint, GLib.Icon icon, GLib.Icon? activatable_icon = null) {
             if (items_hash.has_key (pid)) {
-                return items_hash[pid];
+                return;
             }
 
             var sourcelist_item = new Views.SourceListItem (pid, name, hint, icon, activatable_icon);
@@ -101,7 +96,7 @@ namespace Music2 {
             }
 
             items_hash[pid] = sourcelist_item;
-            return sourcelist_item;
+            return;
         }
 
         public override void item_selected (Granite.Widgets.SourceList.Item? item) {

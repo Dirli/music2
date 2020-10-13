@@ -22,7 +22,7 @@ namespace Music2 {
         public signal void cleared_playlist ();
         public signal void add_view (uint tid, uint count);
         public signal int remove_view (uint tid);
-        public signal void added_playlist (int pid, string name, Enums.Hint hint, GLib.Icon icon);
+        public signal void added_playlist (int pid, string name, Enums.Hint hint, GLib.Icon icon, GLib.Icon? activatable_icon = null);
 
         private int active_pid = -1;
         public int modified_pid = 0;

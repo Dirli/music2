@@ -185,7 +185,7 @@ namespace Music2 {
 
         private void on_row_inserted (Gtk.TreePath path, Gtk.TreeIter iter) {
             list_store.row_inserted.disconnect (on_row_inserted);
-            if (get_child_by_name ("listview") != null) {
+            if (get_child_by_name ("listview") != null && (get_visible_child_name () == "alert" || get_visible_child_name () == "welcome")) {
                 set_visible_child_name ("listview");
             }
         }

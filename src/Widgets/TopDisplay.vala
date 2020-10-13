@@ -40,6 +40,9 @@ namespace Music2 {
         }
 
         public TopDisplay (int repeat_mode, bool shuffle_mode) {
+            Object (margin_start: 30,
+                    margin_end: 30);
+
             seek_bar = new Granite.SeekBar (0.0);
 
             var shuffle_chooser = new Views.OptionChooser ();
@@ -146,6 +149,10 @@ namespace Music2 {
         }
 
         public void set_title_markup (CObjects.Media m) {
+            if (get_visible_child_name () != "time") {
+                set_visible_child_name ("time");
+            }
+
             bool is_valid_artist = !Tools.String.is_empty (m.artist);
             bool is_valid_album = !Tools.String.is_empty (m.album);
 

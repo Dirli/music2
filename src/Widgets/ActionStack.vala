@@ -23,6 +23,9 @@ namespace Music2 {
         public signal void dnd_button_clicked (Enums.ActionType action_type, string uri);
 
         public ActionStack () {
+            Object (margin_start: 5,
+                    margin_end: 5);
+
             var empty_grid = new Gtk.Grid ();
             transition_type = Gtk.StackTransitionType.CROSSFADE;
 
