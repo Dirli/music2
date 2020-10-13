@@ -92,8 +92,7 @@ namespace Music2 {
         public const string ACTION_SEARCH = "action_search";
         public const string ACTION_SHOW_BROWSER = "action_show_browser";
         public const string ACTION_SHOW_CURRENT = "action_show_current";
-        public const string ACTION_VIEW_ALBUMS = "action_view_albums";
-        public const string ACTION_VIEW_COLUMNS = "action_view_columns";
+        public const string ACTION_VIEW = "action_view";
 
         private const GLib.ActionEntry[] ACTION_ENTRIES = {
             { ACTION_EDIT_SONG, action_edit_song, },
@@ -108,8 +107,7 @@ namespace Music2 {
             { ACTION_SEARCH, action_search },
             { ACTION_SHOW_BROWSER, action_show_browser, "(ii)" },
             { ACTION_SHOW_CURRENT, action_show_current },
-            { ACTION_VIEW_ALBUMS, action_view_albums },
-            { ACTION_VIEW_COLUMNS, action_view_columns },
+            { ACTION_VIEW, action_view, "i" },
         };
 
         public MainWindow (Gtk.Application application) {
@@ -124,8 +122,8 @@ namespace Music2 {
             application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY_NEXT, {"<Control>n"});
             application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY_PREVIOUS, {"<Control>p"});
             application.set_accels_for_action (ACTION_PREFIX + ACTION_SEARCH, {"<Control>f"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_ALBUMS, {"<Control>1"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW_COLUMNS, {"<Control>2"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW + "(0)", {"<Control>1"});
+            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW + "(1)", {"<Control>2"});
         }
 
         construct {
@@ -286,7 +284,7 @@ namespace Music2 {
             menu_popover.add (menu_box);
 
             var menu_button = new Gtk.MenuButton ();
-            menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.LARGE_TOOLBAR);
+            menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.SMALL_TOOLBAR);
             menu_button.popover = menu_popover;
             menu_button.valign = Gtk.Align.CENTER;
 
@@ -505,12 +503,11 @@ namespace Music2 {
             }
         }
 
-        private void action_view_albums () {
-            view_selector.mode_button.selected = Enums.ViewMode.GRID;
-        }
+        private void action_view (GLib.SimpleAction action, GLib.Variant? pars) {
+            int tid;
+            pars.get ("i", out tid);
 
-        private void action_view_columns () {
-            view_selector.mode_button.selected = Enums.ViewMode.COLUMN;
+            view_selector.mode_button.selected = tid;
         }
 
         private void action_show_current () {
