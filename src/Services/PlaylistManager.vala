@@ -211,10 +211,9 @@ namespace Music2 {
 
         public void select_playlist (int pid, Enums.Hint hint) {
             if (hint == Enums.Hint.SMART_PLAYLIST) {
-                var playlist_id = pid;
-                if (selected_playlist (playlist_id, hint, Enums.SourceType.SMARTPLAYLIST)) {
+                if (selected_playlist (pid, hint, Enums.SourceType.SMARTPLAYLIST)) {
                     new Thread<void*> ("select_auto_playlist", () => {
-                        var tracks_id = db_manager.get_automatic_playlist (playlist_id, auto_length);
+                        var tracks_id = db_manager.get_automatic_playlist (pid, auto_length);
                         uint total = 0;
                         tracks_id.foreach ((tid) => {
                             add_view (tid, ++total);

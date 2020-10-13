@@ -173,20 +173,7 @@ namespace Music2 {
             library_manager.started_scan.connect (() => {
                 scans_library = true;
             });
-            library_manager.finished_scan.connect ((msg) => {
-                scans_library = false;
-
-                action_stack.hide_widget ("progress");
-
-                if (library_manager.dirty_library ()) {
-                    view_selector.sensitive = true;
-
-                    var iter = library_manager.get_media_iter (active_track);
-                    music_stack.init_selections (iter);
-
-                    status_bar.sensitive_btns (true);
-                }
-            });
+            library_manager.finished_scan.connect (on_finished_scan);
 
             playlist_manager.add_view.connect (on_add_view);
             playlist_manager.remove_view.connect (playlist_stack.remove_iter);
@@ -211,19 +198,7 @@ namespace Music2 {
                 if (library_manager.loaded) {
                     init_state ();
 
-                    if (library_manager.dirty_library ()) {
-                        view_selector.sensitive = true;
-                        on_mode_changed ();
-
-                        var iter = library_manager.get_media_iter (active_track);
-                        music_stack.init_selections (iter);
-
-                        status_bar.sensitive_btns (true);
-                    } else {
-                        if (has_music_folder) {
-                            action_stack.init_library_folder (_("Library folder found"));
-                        }
-                    }
+                    after_init (true);
 
                     return false;
                 }
@@ -902,6 +877,10 @@ namespace Music2 {
                 return playlist_stack.init_store (pid, playlist_hint, playlist_type);
             }
 
+            if (playlist_hint == Enums.Hint.SMART_PLAYLIST) {
+                playlist_stack.clear_stack ();
+            }
+
             return true;
         }
 
@@ -914,6 +893,14 @@ namespace Music2 {
                     playlist_stack.select_run_row (active_track);
                 }
             }
+        }
+
+        private void on_finished_scan (string msg) {
+            scans_library = false;
+
+            action_stack.hide_widget ("progress");
+
+            after_init (false);
         }
 
         private void on_edited_playlist (int pid, string playlist_name) {
@@ -1083,6 +1070,22 @@ namespace Music2 {
 
             if (active_track >= 0 && m.tid == active_track) {
                 queue_stack.select_run_row (active_track);
+            }
+        }
+
+        private void after_init (bool check_exist) {
+            if (library_manager.dirty_library ()) {
+                view_selector.sensitive = true;
+                on_mode_changed ();
+
+                var iter = library_manager.get_media_iter (active_track);
+                music_stack.init_selections (iter);
+
+                status_bar.sensitive_btns (true);
+            } else if (check_exist) {
+                if (has_music_folder) {
+                    action_stack.init_library_folder (_("Library folder found"));
+                }
             }
         }
 
