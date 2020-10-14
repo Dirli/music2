@@ -10,9 +10,9 @@ The player is not fully stable yet, and the functionality is not fully implement
 
 ----
 
-<img src="data/screenshot1.png" title="List" width="420"> </img>
+<img src="data/screenshot1.png" title="List"> </img>
 
-<img src="data/screenshot2.png" title="Grid" width="420"> </img>
+<img src="data/screenshot2.png" title="Grid"> </img>
 
 ## Building, Testing, and Installation
 
