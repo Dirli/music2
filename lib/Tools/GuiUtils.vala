@@ -17,6 +17,19 @@
  */
 
 namespace Music2.Tools.GuiUtils {
+    public Structs.Album get_album_struct (CObjects.Media m, int album_id, int artist_id) {
+        Structs.Album album_struct = {};
+
+        album_struct.album_id = album_id;
+        album_struct.title = m.album;
+        album_struct.artists_id = artist_id.to_string ();
+        album_struct.artists = "...";
+        album_struct.year = m.year;
+        album_struct.genre = m.genre;
+
+        return album_struct;
+    }
+
     public CObjects.Media? metadata_to_media (GLib.HashTable<string, GLib.Variant> metadata) {
         if ("xesam:url" in metadata) {
             CObjects.Media m = new CObjects.Media (metadata["xesam:url"].get_string ());

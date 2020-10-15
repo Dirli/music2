@@ -90,30 +90,26 @@ namespace Music2 {
         }
 
         public void add_track (CObjects.Media m) {
-            lock (media_store) {
-                Gtk.TreeIter iter;
-                media_store.insert_with_values (out iter, -1,
-                    (int) Enums.ListColumn.TRACKID, m.tid,
-                    (int) Enums.ListColumn.TRACK, m.track,
-                    (int) Enums.ListColumn.ALBUM, m.get_display_album (),
-                    (int) Enums.ListColumn.LENGTH, m.length,
-                    (int) Enums.ListColumn.GENRE, m.get_display_genre (),
-                    (int) Enums.ListColumn.TITLE, m.get_display_title (),
-                    (int) Enums.ListColumn.ARTIST, GLib.Markup.escape_text (m.get_display_artist ()), -1);
+            Gtk.TreeIter iter;
+            media_store.insert_with_values (out iter, -1,
+                Enums.ListColumn.TRACKID, m.tid,
+                Enums.ListColumn.TRACK, m.track,
+                Enums.ListColumn.ALBUM, m.get_display_album (),
+                Enums.ListColumn.LENGTH, m.length,
+                Enums.ListColumn.GENRE, m.get_display_genre (),
+                Enums.ListColumn.TITLE, m.get_display_title (),
+                Enums.ListColumn.ARTIST, GLib.Markup.escape_text (m.get_display_artist ()), -1);
 
-                media_hash[m.tid] = m;
-                media_iter_hash[m.tid] = iter;
-            }
+            media_hash[m.tid] = m;
+            media_iter_hash[m.tid] = iter;
         }
 
         public void add_artist (string artist_name, int artist_id) {
             if (!artists_hash.has_key (artist_id)) {
-                lock (artists_store) {
-                    Gtk.TreeIter iter;
-                    string simple_artist = Tools.String.get_simple_display_text (artist_name);
-                    artists_store.insert_with_values (out iter, -1, 0, simple_artist, 1, artist_id, -1);
-                    artists_hash[artist_id] = iter;
-                }
+                Gtk.TreeIter iter;
+                string simple_artist = Tools.String.get_simple_display_text (artist_name);
+                artists_store.insert_with_values (out iter, -1, 0, simple_artist, 1, artist_id, -1);
+                artists_hash[artist_id] = iter;
             }
         }
 
@@ -136,34 +132,29 @@ namespace Music2 {
         public void add_album (Structs.Album a_struct) {
             if (!albums_hash.has_key (a_struct.album_id)) {
                 if (!genre_array.contains (a_struct.genre)) {
-                    lock (genre_store) {
-                        genre_array.add (a_struct.genre);
-                        Gtk.TreeIter genre_iter;
-                        genre_store.insert_with_values (out genre_iter, -1,
-                                                        0, Tools.String.get_simple_display_text (a_struct.genre),
-                                                        1, genre_array.size, -1);
-                    }
+                    genre_array.add (a_struct.genre);
+                    Gtk.TreeIter genre_iter;
+                    genre_store.insert_with_values (out genre_iter, -1,
+                                                    0, Tools.String.get_simple_display_text (a_struct.genre),
+                                                    1, genre_array.size, -1);
                 }
 
                 var genre_id = genre_array.index_of (a_struct.genre) + 1;
-                lock (albums_store) {
-                    Gtk.TreeIter album_iter;
-                    albums_store.insert_with_values (out album_iter, -1,
-                                                     0, a_struct.title,
-                                                     1, a_struct.album_id,
-                                                     2, genre_id,
-                                                     3, a_struct.artists_id, -1);
+                Gtk.TreeIter album_iter;
+                albums_store.insert_with_values (out album_iter, -1,
+                                                 0, a_struct.title,
+                                                 1, a_struct.album_id,
+                                                 2, genre_id,
+                                                 3, a_struct.artists_id, -1);
 
-                     albums_hash[a_struct.album_id] = album_iter;
-                }
+                albums_hash[a_struct.album_id] = album_iter;
 
                 string custom_tooltip = a_struct.artists + "\n<span size=\"large\">%u, %s</span>".printf (a_struct.year, Markup.escape_text (a_struct.genre));
-                lock (albums_grid_store) {
-                    Gtk.TreeIter grid_iter;
-                    albums_grid_store.insert_with_values (out grid_iter, -1,
-                                                          0, a_struct,
-                                                          1, custom_tooltip, -1);
-                }
+
+                Gtk.TreeIter grid_iter;
+                albums_grid_store.insert_with_values (out grid_iter, -1,
+                                                      0, a_struct,
+                                                      1, custom_tooltip, -1);
             }
         }
 
@@ -175,7 +166,6 @@ namespace Music2 {
             }
 
             clear_stores ();
-
 
             var artists_map = db_manager.get_artists ();
             artists_map.keys.foreach ((k) => {
@@ -202,13 +192,11 @@ namespace Music2 {
                         artists_id += art_id.to_string ();
 
                         if (artists_hash.has_key (art_id)) {
-                            lock (artists_store) {
-                                string s;
+                            string s;
 
-                                artists_store.@get (artists_hash[art_id], 0, out s, -1);
-                                if (s != null) {
-                                    artists_string += "<span size=\"large\"><b>%s</b></span>".printf (Markup.escape_text (s));
-                                }
+                            artists_store.@get (artists_hash[art_id], 0, out s, -1);
+                            if (s != null) {
+                                artists_string += "<span size=\"large\"><b>%s</b></span>".printf (Markup.escape_text (s));
                             }
                         }
 
@@ -284,7 +272,7 @@ namespace Music2 {
 
             add_artist (m.artist, artist_id);
 
-            Structs.Album album_struct = get_album_struct (m, album_id, artist_id);
+            Structs.Album album_struct = Tools.GuiUtils.get_album_struct (m, album_id, artist_id);
             add_album (album_struct);
 
             add_track (m);
@@ -324,19 +312,6 @@ namespace Music2 {
             scan_m = 0;
 
             scanner = null;
-        }
-
-        private Structs.Album get_album_struct (CObjects.Media m, int album_id, int artist_id) {
-            Structs.Album album_struct = {};
-
-            album_struct.album_id = album_id;
-            album_struct.title = m.album;
-            album_struct.artists_id = artist_id.to_string ();
-            album_struct.artists = "...";
-            album_struct.year = m.year;
-            album_struct.genre = m.genre;
-
-            return album_struct;
         }
 
         public void stop_scanner () {
