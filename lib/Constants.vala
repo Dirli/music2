@@ -27,6 +27,22 @@ namespace Music2.Constants {
     public const string TYPE_DATA_KEY = "setup-list-column-type";
     public const string SEPARATOR_NAME = "<separator_item_unique_name>";
 
+    public const string ACTION_PREFIX = "win.";
+    public const string ACTION_EDIT_SONG = "action_edit_song";
+    public const string ACTION_IMPORT = "action_import";
+    public const string ACTION_PLAY = "action_play";
+    public const string ACTION_PLAY_NEXT = "action_play_next";
+    public const string ACTION_PLAY_PREVIOUS = "action_play_previous";
+    public const string ACTION_PREFERENCES = "action_preferences";
+    public const string ACTION_QUIT = "action_quit";
+    public const string ACTION_REMOVE_TRACK = "action_remove_track";
+    public const string ACTION_TO_PLAYLIST = "action_to_playlist";
+    public const string ACTION_TO_QUEUE = "action_to_queue";
+    public const string ACTION_SEARCH = "action_search";
+    public const string ACTION_SHOW_BROWSER = "action_show_browser";
+    public const string ACTION_SHOW_CURRENT = "action_show_current";
+    public const string ACTION_VIEW = "action_view";
+
     public const int DIALOG_MIN_WIDTH = 420;
     public const int DIALOG_MIN_HEIGHT = 300;
 

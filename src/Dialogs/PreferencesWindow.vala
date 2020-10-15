@@ -95,6 +95,8 @@ namespace Music2 {
 
             add_button (_("Close"), Gtk.ResponseType.CLOSE);
             response.connect (() => {destroy ();});
+
+            show_all ();
         }
 
         private class SettingsLabel : Gtk.Label {

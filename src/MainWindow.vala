@@ -45,6 +45,8 @@ namespace Music2 {
         private Gtk.Button previous_button;
         private Gtk.Button next_button;
 
+        private Gtk.MenuButton menu_button;
+
         private Views.ViewSelector view_selector;
 
         private Services.LibraryManager library_manager;
@@ -79,35 +81,21 @@ namespace Music2 {
             }
         }
 
-        public const string ACTION_PREFIX = "win.";
-        public const string ACTION_EDIT_SONG = "action_edit_song";
-        public const string ACTION_IMPORT = "action_import";
-        public const string ACTION_PLAY = "action_play";
-        public const string ACTION_PLAY_NEXT = "action_play_next";
-        public const string ACTION_PLAY_PREVIOUS = "action_play_previous";
-        public const string ACTION_QUIT = "action_quit";
-        public const string ACTION_REMOVE_TRACK = "action_remove_track";
-        public const string ACTION_TO_PLAYLIST = "action_to_playlist";
-        public const string ACTION_TO_QUEUE = "action_to_queue";
-        public const string ACTION_SEARCH = "action_search";
-        public const string ACTION_SHOW_BROWSER = "action_show_browser";
-        public const string ACTION_SHOW_CURRENT = "action_show_current";
-        public const string ACTION_VIEW = "action_view";
-
         private const GLib.ActionEntry[] ACTION_ENTRIES = {
-            { ACTION_EDIT_SONG, action_edit_song, },
-            { ACTION_IMPORT, action_import },
-            { ACTION_PLAY, action_play },
-            { ACTION_PLAY_NEXT, action_play_next },
-            { ACTION_PLAY_PREVIOUS, action_play_previous },
-            { ACTION_QUIT, action_quit },
-            { ACTION_REMOVE_TRACK, action_remove_track, "i" },
-            { ACTION_TO_PLAYLIST, action_to_playlist, "(ii)" },
-            { ACTION_TO_QUEUE, action_to_queue, "i" },
-            { ACTION_SEARCH, action_search },
-            { ACTION_SHOW_BROWSER, action_show_browser, "(ii)" },
-            { ACTION_SHOW_CURRENT, action_show_current },
-            { ACTION_VIEW, action_view, "i" },
+            { Constants.ACTION_EDIT_SONG, action_edit_song, },
+            { Constants.ACTION_IMPORT, action_import },
+            { Constants.ACTION_PLAY, action_play },
+            { Constants.ACTION_PLAY_NEXT, action_play_next },
+            { Constants.ACTION_PLAY_PREVIOUS, action_play_previous },
+            { Constants.ACTION_PREFERENCES, action_preferences },
+            { Constants.ACTION_QUIT, action_quit },
+            { Constants.ACTION_REMOVE_TRACK, action_remove_track, "i" },
+            { Constants.ACTION_TO_PLAYLIST, action_to_playlist, "(ii)" },
+            { Constants.ACTION_TO_QUEUE, action_to_queue, "i" },
+            { Constants.ACTION_SEARCH, action_search },
+            { Constants.ACTION_SHOW_BROWSER, action_show_browser, "(ii)" },
+            { Constants.ACTION_SHOW_CURRENT, action_show_current },
+            { Constants.ACTION_VIEW, action_view, "i" },
         };
 
         public MainWindow (Gtk.Application application) {
@@ -117,13 +105,22 @@ namespace Music2 {
                     icon_name: "multimedia-audio-player",
                     title: _("Music"));
 
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_QUIT, {"<Control>q"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY, {"<Control>space"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY_NEXT, {"<Control>n"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_PLAY_PREVIOUS, {"<Control>p"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_SEARCH, {"<Control>f"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW + "(0)", {"<Control>1"});
-            application.set_accels_for_action (ACTION_PREFIX + ACTION_VIEW + "(1)", {"<Control>2"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_QUIT, {"<Control>q"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_PLAY, {"<Control>space"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_PLAY_NEXT, {"<Control>n"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_PLAY_PREVIOUS, {"<Control>p"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_PREFERENCES, {"<Control>s"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_IMPORT, {"<Control>i"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_SEARCH, {"<Control>f"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_VIEW + "(0)", {"<Control>1"});
+            application.set_accels_for_action (Constants.ACTION_PREFIX + Constants.ACTION_VIEW + "(1)", {"<Control>2"});
+
+            var menu_popover = new Widgets.MenuPopover ();
+            menu_button.popover = menu_popover;
+
+            var provider = new Gtk.CssProvider ();
+            provider.load_from_resource ("io/elementary/music2/application.css");
+            Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
 
         construct {
@@ -146,10 +143,6 @@ namespace Music2 {
             } catch (Error e) {
                 warning (e.message);
             }
-
-            var provider = new Gtk.CssProvider ();
-            provider.load_from_resource ("io/elementary/music2/application.css");
-            Gtk.StyleContext.add_provider_for_screen (Gdk.Screen.get_default (), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 
             library_manager = new Services.LibraryManager ();
             playlist_manager = new Services.PlaylistManager ();
@@ -233,44 +226,19 @@ namespace Music2 {
             playlist_stack.selected_row.connect (on_selected_row);
             playlist_stack.popup_media_menu.connect (on_popup_media_menu);
 
-            var import_menuitem = new Gtk.ModelButton ();
-            import_menuitem.text = _("Import to library");
-            import_menuitem.clicked.connect (action_import);
-
-            var preferences_menuitem = new Gtk.ModelButton ();
-            preferences_menuitem.text = _("Preferences");
-            preferences_menuitem.clicked.connect (on_preferences_click);
-
-            var about_menuitem = new Gtk.ModelButton ();
-            about_menuitem.text = _("About");
-            about_menuitem.clicked.connect (() => {
-                var about = new Dialogs.About ();
-                about.run ();
-            });
-
-            var menu_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
-            menu_box.add (import_menuitem);
-            menu_box.add (preferences_menuitem);
-            menu_box.add (about_menuitem);
-            menu_box.show_all ();
-
-            var menu_popover = new Gtk.Popover (null);
-            menu_popover.add (menu_box);
-
-            var menu_button = new Gtk.MenuButton ();
+            menu_button = new Gtk.MenuButton ();
             menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.SMALL_TOOLBAR);
-            menu_button.popover = menu_popover;
             menu_button.valign = Gtk.Align.CENTER;
 
             previous_button = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
-            previous_button.action_name = ACTION_PREFIX + ACTION_PLAY_PREVIOUS;
+            previous_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY_PREVIOUS;
             previous_button.tooltip_text = _("Previous");
 
             play_button = new Gtk.Button ();
-            play_button.action_name = ACTION_PREFIX + ACTION_PLAY;
+            play_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY;
 
             next_button = new Gtk.Button.from_icon_name ("media-skip-forward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
-            next_button.action_name = ACTION_PREFIX + ACTION_PLAY_NEXT;
+            next_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY_NEXT;
             next_button.tooltip_text = _("Next");
 
             top_display = new Widgets.TopDisplay (settings.get_enum ("repeat-mode"), settings.get_boolean ("shuffle-mode"));
@@ -449,6 +417,13 @@ namespace Music2 {
         }
 
         private void action_search () {}
+
+        private void action_preferences () {
+            var preferences = new Dialogs.PreferencesWindow (this);
+
+            // preferences.show_all ();
+            preferences.run ();
+        }
 
         private void action_import () {
             if (scans_library) {
@@ -661,13 +636,13 @@ namespace Music2 {
             var main_menu = new GLib.Menu ();
 
             if (active_track > 0 && hint == Enums.Hint.QUEUE) {
-                var scroll_item = new GLib.MenuItem (_("Scroll to Current Song"), ACTION_PREFIX + ACTION_SHOW_CURRENT);
+                var scroll_item = new GLib.MenuItem (_("Scroll to Current Song"), Constants.ACTION_PREFIX + Constants.ACTION_SHOW_CURRENT);
                 main_menu.append_item (scroll_item);
             }
 
             var browser_item = new GLib.MenuItem (_("Show in File Browser"), "win.action_show_browser((%d,%d))".printf (hint, (int) tids[0]));
             main_menu.append_item (browser_item);
-            var edit_item = new GLib.MenuItem (_("Edit Song Info…"), ACTION_PREFIX + ACTION_EDIT_SONG);
+            var edit_item = new GLib.MenuItem (_("Edit Song Info…"), Constants.ACTION_PREFIX + Constants.ACTION_EDIT_SONG);
             main_menu.append_item (edit_item);
 
             if (hint == Enums.Hint.MUSIC || hint == Enums.Hint.PLAYLIST) {
@@ -708,13 +683,6 @@ namespace Music2 {
             media_menu.set_pointing_to (rect);
 
             media_menu.show_all ();
-        }
-
-        private void on_preferences_click () {
-            var preferences = new Dialogs.PreferencesWindow (this);
-
-            preferences.show_all ();
-            preferences.run ();
         }
 
         private void on_import_folder (GLib.File folder) {
