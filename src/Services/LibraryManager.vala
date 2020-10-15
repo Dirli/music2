@@ -23,7 +23,6 @@ namespace Music2 {
         public signal void finished_scan (string msg);
         public signal void prepare_scan ();
         public signal void progress_scan (double progress_val);
-        public signal void cleared_library ();
 
         private uint source_id = 0;
         private uint scan_m = 0;
@@ -421,11 +420,8 @@ namespace Music2 {
             albums_grid_store.clear ();
         }
 
-        public void clear_library () {
-            bool clear_ui = false;
-            if (dirty_library ()) {
-                clear_ui = true;
-            }
+        public bool clear_library () {
+            bool clear_ui = dirty_library ();
 
             media_hash.clear ();
             media_iter_hash.clear ();
@@ -435,9 +431,7 @@ namespace Music2 {
 
             clear_stores ();
 
-            if (clear_ui) {
-                cleared_library ();
-            }
+            return clear_ui;
         }
     }
 }

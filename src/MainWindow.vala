@@ -167,7 +167,6 @@ namespace Music2 {
             source_list_view.select_active_item (has_music_folder ? -1 : queue_id);
 
             library_manager.added_category.connect (music_stack.add_column_item);
-            library_manager.cleared_library.connect (music_stack.clear_stack);
             library_manager.progress_scan.connect (action_stack.update_progress);
             library_manager.prepare_scan.connect (action_stack.init_progress);
             library_manager.started_scan.connect (() => {
@@ -1095,7 +1094,10 @@ namespace Music2 {
             }
 
             if (library_manager.dirty_library ()) {
-                library_manager.clear_library ();
+                if (library_manager.clear_library ()) {
+                    music_stack.clear_stack ();
+                }
+
                 view_selector.sensitive = false;
                 status_bar.sensitive_btns (false);
             }
