@@ -172,8 +172,8 @@ namespace Music2 {
             playlist_manager.selected_playlist.connect (on_selected_playlist);
             playlist_manager.cleared_playlist.connect (playlist_stack.clear_stack);
             playlist_manager.added_playlist.connect (source_list_view.add_item);
+
             playlist_manager.load_playlists ();
-            library_manager.init_stores ();
             changed_smart_playlists ();
 
             settings.bind ("auto-length", playlist_manager, "auto-length", GLib.SettingsBindFlags.GET);

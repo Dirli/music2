@@ -27,8 +27,6 @@ namespace Music2 {
         private int active_pid = -1;
         public int modified_pid = 0;
 
-        private DataBaseManager db_manager;
-
         private Gee.HashMap<int, Structs.Playlist?> playlists_hash;
         private Gee.HashMap<int, string> names_hash;
 
@@ -37,13 +35,18 @@ namespace Music2 {
         }
 
         public PlaylistManager () {
-            db_manager = new DataBaseManager ();
             names_hash = new Gee.HashMap<int, string> ();
-            playlists_hash = db_manager.get_playlists ();
+            var db_manager = DataBaseManager.to_read ();
+            if (db_manager != null) {
+                playlists_hash = db_manager.get_playlists ();
+            } else {
+                playlists_hash = new Gee.HashMap<int, Structs.Playlist?> ();
+            }
         }
 
         public int get_playlist_id (string name) {
-            return db_manager.get_playlist_id (name);
+            var db_manager = DataBaseManager.to_read ();
+            return db_manager != null ? db_manager.get_playlist_id (name) : -1;
         }
 
         public Gee.HashMap<int, string> get_available_playlists (uint tid) {
@@ -61,7 +64,10 @@ namespace Music2 {
 
         public Gee.ArrayList<uint>? get_playlist (int pid) {
             if (pid < 0) {
-                return db_manager.get_automatic_playlist (pid, auto_length);
+                var db_manager = DataBaseManager.to_read ();
+                if (db_manager != null) {
+                    return db_manager.get_automatic_playlist (pid, auto_length);
+                }
             } else if (playlists_hash.has_key (pid)) {
                 return playlists_hash[pid].tracks;
             }
@@ -81,7 +87,10 @@ namespace Music2 {
         public void update_playlist_sync () {
             if (modified_pid > 0 && playlists_hash.has_key (modified_pid)) {
                 uint[] arr_to_write = playlists_hash[modified_pid].tracks.to_array ();
-                db_manager.update_playlist (modified_pid, arr_to_write, true);
+                var db_manager = DataBaseManager.to_write ();
+                if (db_manager != null) {
+                    db_manager.update_playlist (modified_pid, arr_to_write, true);
+                }
             }
         }
 
@@ -89,7 +98,10 @@ namespace Music2 {
             if (playlists_hash.has_key (pid)) {
                 new Thread<void*> ("update_playlist", () => {
                     uint[] arr_to_write = playlists_hash[pid].tracks.to_array ();
-                    db_manager.update_playlist (pid, arr_to_write, true);
+                    var db_manager = DataBaseManager.to_write ();
+                    if (db_manager != null) {
+                        db_manager.update_playlist (pid, arr_to_write, true);
+                    }
                     if (clear) {
                         modified_pid = 0;
                     }
@@ -107,8 +119,12 @@ namespace Music2 {
                 new_name = "%s %d".printf (name, i++);
             }
 
-            var pid = db_manager.add_playlist (new_name);
+            var db_manager = DataBaseManager.to_write ();
+            if (db_manager == null) {
+                return -1;
+            }
 
+            var pid = db_manager.add_playlist (new_name);
             if (pid > 0 && !playlists_hash.has_key (pid)) {
                 Structs.Playlist pl = {};
                 pl.type = Enums.SourceType.PLAYLIST;
@@ -128,6 +144,11 @@ namespace Music2 {
 
         public void clear_playlist (int pid) {
             new Thread<void*> ("clear_pl", () => {
+                var db_manager = DataBaseManager.to_write ();
+                if (db_manager != null) {
+                    return null;
+                }
+
                 if (db_manager.clear_playlist (pid)) {
                     if (playlists_hash.has_key (pid)) {
                         playlists_hash[pid].tracks.clear ();
@@ -143,6 +164,11 @@ namespace Music2 {
         }
 
         public bool remove_playlist (int pid) {
+            var db_manager = DataBaseManager.to_write ();
+            if (db_manager != null) {
+                return false;
+            }
+
             if (playlists_hash.has_key (pid) && db_manager.remove_playlist (pid)) {
                 names_hash.unset (pid);
                 playlists_hash.unset (pid);
@@ -174,6 +200,11 @@ namespace Music2 {
 
         public string edit_playlist (int pid, string name) {
             if (playlists_hash.has_key (pid)) {
+                var db_manager = DataBaseManager.to_read ();
+                if (db_manager == null) {
+                    return "";
+                }
+
                 var old_name = playlists_hash[pid].name;
                 if (old_name != name) {
                     var new_name = name;
@@ -199,7 +230,10 @@ namespace Music2 {
                 playlists_hash[pid].tracks.remove (tid);
 
                 new Thread<void*> ("remove_from_playlist", () => {
-                    db_manager.remove_from_playlist (pid, tid);
+                    var db_manager = DataBaseManager.to_write ();
+                    if (db_manager != null) {
+                        db_manager.remove_from_playlist (pid, tid);
+                    }
                     return null;
                 });
 
@@ -211,17 +245,27 @@ namespace Music2 {
 
         public void select_playlist (int pid, Enums.Hint hint) {
             if (hint == Enums.Hint.SMART_PLAYLIST) {
+                active_pid = pid;
                 if (selected_playlist (pid, hint, Enums.SourceType.SMARTPLAYLIST)) {
-                    new Thread<void*> ("select_auto_playlist", () => {
-                        var tracks_id = db_manager.get_automatic_playlist (pid, auto_length);
-                        uint total = 0;
-                        tracks_id.foreach ((tid) => {
-                            add_view (tid, ++total);
-                            return true;
-                        });
+                    var t = new Thread<void*> ("select_auto_playlist", () => {
+                        var db_manager = DataBaseManager.to_read ();
+                        if (db_manager == null) {
+                            return null;
+                        }
+
+                        var tids = db_manager.get_automatic_playlist (active_pid, auto_length);
+                        if (tids != null) {
+                            uint total = 0;
+                            tids.foreach ((tid) => {
+                                add_view (tid, ++total);
+                                return true;
+                            });
+                        }
 
                         return null;
                     });
+
+                    t.join ();
                 }
             } else if (playlists_hash.has_key (pid)) {
                 var type = playlists_hash[pid].type;

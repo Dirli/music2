@@ -65,14 +65,11 @@ namespace Music2 {
             artists_hash = new Gee.HashMap<int, Gtk.TreeIter?> ();
             albums_hash = new Gee.HashMap<int, Gtk.TreeIter?> ();
             genre_array = new Gee.ArrayList<string> ();
-        }
 
-        public void init_stores () {
             artists_store = new Objects.CategoryStore (Enums.Category.ARTIST, new Type[] {
                 typeof (string),
                 typeof (int),
             });
-            added_category (Enums.Category.ARTIST, artists_store);
 
             albums_store = new Objects.CategoryStore (Enums.Category.ALBUM, new Type[] {
                 typeof (string),
@@ -80,13 +77,11 @@ namespace Music2 {
                 typeof (int),
                 typeof (string),
             });
-            added_category (Enums.Category.ALBUM, albums_store);
 
             genre_store = new Objects.CategoryStore (Enums.Category.GENRE, new Type[] {
                 typeof (string),
                 typeof (int),
             });
-            added_category (Enums.Category.GENRE, genre_store);
         }
 
         public void add_track (CObjects.Media m) {
@@ -159,9 +154,8 @@ namespace Music2 {
         }
 
         public void init_library () {
-            var db_manager = new DataBaseManager ();
-
-            if (!db_manager.check_db) {
+            var db_manager = DataBaseManager.to_read ();
+            if (db_manager == null) {
                 return;
             }
 
@@ -172,6 +166,7 @@ namespace Music2 {
                 add_artist (artists_map[k], k);
                 return true;
             });
+            added_category (Enums.Category.ARTIST, artists_store);
 
             var apa_cache = db_manager.get_artists_per_albums ();
             var albums = db_manager.get_albums ();
@@ -211,6 +206,8 @@ namespace Music2 {
 
                 return true;
             });
+            added_category (Enums.Category.ALBUM, albums_store);
+            added_category (Enums.Category.GENRE, genre_store);
 
             var tracks_queue = db_manager.get_tracks (null);
             tracks_queue.foreach ((m) => {
@@ -218,7 +215,10 @@ namespace Music2 {
                 return true;
             });
 
-            loaded = true;
+            GLib.Idle.add (() => {
+                loaded = true;
+                return false;
+            });
         }
 
         public void scan_library (string uri) {

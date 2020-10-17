@@ -43,8 +43,14 @@ namespace Music2 {
             scan_import_folder (import_uri);
 
             if (import_files.length > 0) {
+                db_manager = DataBaseManager.to_write ();
+                if (db_manager == null) {
+                    var finish_time = new GLib.DateTime.now ();
+                    finished_scan (finish_time.to_unix () - start_time.to_unix ());
+                    return;
+                }
+
                 total_found (import_files.length);
-                db_manager = new DataBaseManager ();
 
                 artists_cache = db_manager.get_artists_hash ();
                 albums_cache = db_manager.get_albums_hash ();

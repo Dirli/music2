@@ -50,14 +50,15 @@ namespace Music2 {
         }
 
         public override int add_iter (CObjects.Media m) {
+
             Gtk.TreeIter iter;
             list_store.insert_with_values (out iter, -1,
-                (int) Enums.ListColumn.TRACKID, m.tid,
-                (int) Enums.ListColumn.TRACK, m.track,
-                (int) Enums.ListColumn.ALBUM, m.get_display_album (),
-                (int) Enums.ListColumn.LENGTH, m.length,
-                (int) Enums.ListColumn.TITLE, m.get_display_title (),
-                (int) Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
+                Enums.ListColumn.TRACKID, m.tid,
+                Enums.ListColumn.TRACK, m.track,
+                Enums.ListColumn.ALBUM, m.get_display_album (),
+                Enums.ListColumn.LENGTH, m.length,
+                Enums.ListColumn.TITLE, m.get_display_title (),
+                Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
 
             iter_hash[m.tid] = iter;
 
@@ -93,10 +94,6 @@ namespace Music2 {
         }
 
         private void update_visible () {
-            if (visible_child_name != "alert") {
-                current_view = visible_child_name;
-            }
-
             string message_head = "";
             string message_body = "";
 

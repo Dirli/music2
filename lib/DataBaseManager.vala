@@ -21,25 +21,46 @@ namespace Music2 {
         private Sqlite.Database? db;
         private string errormsg;
 
-        public bool check_db {
-            get {return db != null;}
+        public static DataBaseManager? to_read () {
+            var db_manager = new DataBaseManager ();
+            if (!GLib.FileUtils.test (db_manager.get_db_path (), GLib.FileTest.IS_REGULAR)) {
+                return null;
+            }
+
+            if (!db_manager.open_database (Sqlite.OPEN_READONLY)) {
+                return null;
+            }
+
+            return db_manager;
         }
 
-        public DataBaseManager () {
+        public static DataBaseManager? to_write () {
+            var db_manager = new DataBaseManager ();
+
+            if (!db_manager.open_database (Sqlite.OPEN_READWRITE)) {
+                return null;
+            }
+
+            return db_manager;
+        }
+
+        private DataBaseManager () {
             errormsg = "";
 
-            if (!open_database ()) {
-                db = null;
-            }
+            Tools.FileUtils.get_cache_directory ();
         }
 
-        private bool open_database () {
-            Tools.FileUtils.get_cache_directory ();
-
-            int res = Sqlite.Database.open (get_db_path (), out db);
+        private bool open_database (int flag) {
+            int res = Sqlite.Database.open_v2 (get_db_path (), out db, flag);
             if (res != Sqlite.OK) {
             	warning ("can't open db");
                 return false;;
+            }
+
+            db.busy_timeout (1000);
+
+            if (flag == Sqlite.OPEN_READONLY) {
+                return true;
             }
 
             string q;
@@ -133,14 +154,14 @@ namespace Music2 {
             return true;
         }
 
-        public static string get_db_path () {
+        public string get_db_path () {
             return GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
                                          GLib.Environment.get_user_cache_dir (),
                                          Constants.APP_NAME,
                                          Constants.DB_VERSION + "-database.db");
         }
 
-        public bool reset_database () {
+        public void reset_database () {
             GLib.File db_file = GLib.File.new_for_path (get_db_path ());
             if (db_file.query_exists ()) {
                 try {
@@ -149,8 +170,6 @@ namespace Music2 {
                     warning (err.message);
                 }
             }
-
-            return open_database ();
         }
 
         public int get_playlist_id (string playlist_name) {
@@ -214,11 +233,7 @@ namespace Music2 {
             return playlists_hash;
         }
 
-        public Gee.ArrayList<uint> get_automatic_playlist (int pid, int length) {
-            Sqlite.Statement stmt;
-
-            var tracks_id = new Gee.ArrayList<uint> ();
-
+        public Gee.ArrayList<uint>? get_automatic_playlist (int pid, int length) {
             var query_str = "";
             switch (pid) {
                 case Constants.NEVER_PLAYED_ID:
@@ -231,7 +246,7 @@ namespace Music2 {
                     query_str = """ WHERE hits>0 ORDER BY last_access DESC """;
                     break;
                 default:
-                    return tracks_id;
+                    return null;
             }
 
             string sql = """
@@ -242,11 +257,13 @@ namespace Music2 {
             sql += query_str;
             sql += """LIMIT $LENGTH;""";
 
+            Sqlite.Statement stmt;
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
             res = stmt.bind_int (stmt.bind_parameter_index ("$LENGTH"), length);
             assert (res == Sqlite.OK);
 
+            var tracks_id = new Gee.ArrayList<uint> ();
             while (stmt.step () == Sqlite.ROW) {
                 uint tid = (uint) stmt.column_int64 (0);
 
@@ -852,15 +869,19 @@ namespace Music2 {
             var tracks_queue = new Gee.ArrayQueue<CObjects.Media> ();
 
             while (stmt.step () == Sqlite.ROW) {
-                var m = new CObjects.Media (stmt.column_text (4));
+                var uri = stmt.column_text (4);
+                if (uri == null) {
+                    continue;
+                }
+                var m = new CObjects.Media (uri);
                 m.tid = (uint) stmt.column_int64 (0);
-                m.title = stmt.column_text (1);
-                m.genre = stmt.column_text (2);
+                m.title = stmt.column_text (1) ?? "";
+                m.genre = stmt.column_text (2) ?? "";
                 m.track = (uint) stmt.column_int64 (3);
                 m.length = (uint) stmt.column_int64 (5);
-                m.album = stmt.column_text (6);
+                m.album = stmt.column_text (6) ?? "";
                 m.year = (uint) stmt.column_int (7);
-                m.artist = stmt.column_text (8);
+                m.artist = stmt.column_text (8) ?? "";
                 m.hits = (uint) stmt.column_int (9);
 
                 tracks_queue.offer (m);

@@ -41,7 +41,6 @@ namespace Music2 {
         private Enums.SourceType? active_source_type = null;
 
         private CObjects.Scanner? scanner = null;
-        private DataBaseManager? db_manager = null;
         private ScreenSaverIface? scrsaver_iface = null;
 
         private uint32? inhibit_cookie = null;
@@ -98,13 +97,15 @@ namespace Music2 {
             notification_body += m.get_display_album ();
 
             if (active_source_type == Enums.SourceType.PLAYLIST || active_source_type == Enums.SourceType.LIBRARY) {
-                if (init_db ()) {
-                    var uri = m.uri;
-                    new Thread<void*> ("update_playback_info", () => {
+                var uri = m.uri;
+                new Thread<void*> ("update_playback_info", () => {
+                    var db_manager = DataBaseManager.to_write ();
+                    if (db_manager != null) {
                         db_manager.update_playback_info (uri, !settings.get_boolean ("shuffle-mode"));
-                        return null;
-                    });
-                }
+                    }
+
+                    return null;
+                });
             }
 
             if (scrsaver_iface != null) {
@@ -123,7 +124,8 @@ namespace Music2 {
 
         private void on_try_add (string uri) {
             if (active_source_type == Enums.SourceType.LIBRARY || active_source_type == Enums.SourceType.PLAYLIST) {
-                if (!init_db ()) {
+                var db_manager = DataBaseManager.to_read ();
+                if (db_manager == null) {
                     return;
                 }
 
@@ -154,14 +156,13 @@ namespace Music2 {
         }
 
         private void on_removed_from_queue (uint tid) {
-            var t = tid;
-            if (t > 0) {
-                if (!init_db ()) {
-                    return;
-                }
-
+            if (tid > 0) {
                 new Thread<void*> ("remove_from _queue", () => {
-                    db_manager.remove_from_playlist (queue_id, t);
+                    var db_manager = DataBaseManager.to_write ();
+                    if (db_manager != null) {
+                        db_manager.remove_from_playlist (queue_id, tid);
+                    }
+
                     return null;
                 });
             }
@@ -269,10 +270,6 @@ namespace Music2 {
                     player.current_index = 0;
                     player.tracklist_replaced (zero_arr);
 
-                    if (db_manager != null) {
-                        db_manager = null;
-                    }
-
                     break;
             }
         }
@@ -319,27 +316,19 @@ namespace Music2 {
                     case Enums.SourceType.SMARTPLAYLIST:
                     case Enums.SourceType.PLAYLIST:
                     case Enums.SourceType.LIBRARY:
-                        if (init_db ()) {
+                        var db_manager = DataBaseManager.to_read ();
+                        if (db_manager != null) {
+                            queue_id = db_manager.get_playlist_id (Constants.QUEUE);
+
                             var tracks_queue = db_manager.get_playlist_tracks (queue_id);
                             player.adds_to_queue (tracks_queue);
+                        } else {
+                            settings.set_enum ("source-type", Enums.SourceType.NONE);
                         }
 
                         break;
                 }
             }
-        }
-
-        private bool init_db () {
-            if (db_manager == null) {
-                db_manager = new DataBaseManager ();
-                if (!db_manager.check_db) {
-                    settings.set_enum ("source-type", Enums.SourceType.NONE);
-                    return false;
-                }
-                queue_id = db_manager.get_playlist_id (Constants.QUEUE);
-            }
-
-            return true;
         }
 
         public void run_gui () {
@@ -393,6 +382,11 @@ namespace Music2 {
 
         private bool write_to_db () {
             new Thread<void*> ("write_to_database", () => {
+                var db_manager = DataBaseManager.to_write ();
+                if (db_manager == null) {
+                    return null;
+                }
+
                 lock (queue_for_write) {
                     db_manager.update_playlist (queue_id, queue_for_write, false);
                     queue_for_write = {};
@@ -412,7 +406,8 @@ namespace Music2 {
         }
 
         private void play_from_library () {
-            if (!init_db ()) {
+            var db_manager = DataBaseManager.to_read ();
+            if (db_manager == null) {
                 return;
             }
 
@@ -430,8 +425,19 @@ namespace Music2 {
 
             settings.set_string ("source-media", "");
             uint[] tracks = player.adds_to_queue (tracks_queue);
+
+            db_manager = null;
+            update_current_playlist (tracks);
+        }
+
+        private void update_current_playlist (uint[] tracks) {
             if (tracks.length > 0) {
                 new Thread<void*> ("fill_queue", () => {
+                    var db_manager = DataBaseManager.to_write ();
+                    if (db_manager == null) {
+                        return null;
+                    }
+
                     db_manager.update_playlist (queue_id, tracks, true);
                     return null;
                 });
@@ -499,7 +505,8 @@ namespace Music2 {
         }
 
         private void play_from_playlist () {
-            if (!init_db ()) {
+            var db_manager = DataBaseManager.to_read ();
+            if (db_manager == null) {
                 return;
             }
 
@@ -520,12 +527,8 @@ namespace Music2 {
             }
 
             uint[] tracks = player.adds_to_queue (tracks_queue);
-            if (tracks.length > 0) {
-                new Thread<void*> ("update_playlist", () => {
-                    db_manager.update_playlist (queue_id, tracks, true);
-                    return null;
-                });
-            }
+            db_manager = null;
+            update_current_playlist (tracks);
         }
 
         private void play_from_directory () {
