@@ -18,7 +18,7 @@
 
 namespace Music2 {
     public class Core.Player : GLib.Object {
-        public signal void changed_track (CObjects.Media m);
+        public signal void changed_track (CObjects.Media m, bool run_track);
         public signal void changed_state (string s);
         public signal void changed_volume (double v);
         public signal void changed_duration (int64 d);
@@ -221,14 +221,18 @@ namespace Music2 {
 
             load_track (track_index);
             play ();
-            changed_track (tracks_hash[track_index]);
+            changed_track (tracks_hash[track_index], true);
             return true;
         }
 
-        private void load_track (uint i) {
+        private void load_track (uint i, bool skip_reset = false) {
             var last_state = get_state ();
 
-            stop ();
+            if (!skip_reset) {
+                state_changed (Gst.State.NULL);
+                stop ();
+            }
+
             playbin.uri = tracks_hash[i].uri;
             playbin.set_state (Gst.State.PLAYING);
 
@@ -366,11 +370,13 @@ namespace Music2 {
 
             _current_index = tracks_queue.get_first ();
 
-            if (tracks_hash.has_key (_current_index)) {
-                playbin.uri = tracks_hash[_current_index].uri;
-            }
-
             stop ();
+
+            if (tracks_hash.has_key (current_index)) {
+                // playbin.uri = tracks_hash[current_index].uri;
+                load_track (current_index, true);
+                changed_track (tracks_hash[current_index], false);
+            }
         }
 
         public void clear_queue () {
@@ -397,7 +403,6 @@ namespace Music2 {
                             stop ();
                             play ();
                         } else {
-                            state_changed (Gst.State.NULL);
                             next ();
                         }
                     } else {

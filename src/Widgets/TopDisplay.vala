@@ -113,6 +113,7 @@ namespace Music2 {
         public void stop_progress () {
             pause_progress ();
             progress = 0;
+            seek_bar.playback_progress = 0;
             track_label.set_markup ("");
         }
 

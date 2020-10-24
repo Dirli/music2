@@ -91,7 +91,11 @@ namespace Music2 {
             });
         }
 
-        private void on_changed_track (CObjects.Media m) {
+        private void on_changed_track (CObjects.Media m, bool run_track) {
+            if (!run_track) {
+                return;
+            }
+
             string notification_body = m.get_display_artist ();
             notification_body += "\n";
             notification_body += m.get_display_album ();

@@ -106,7 +106,7 @@ namespace Music2 {
             if (player.current_index > 0) {
                 var m = player.get_track (player.current_index);
                 if (m != null) {
-                    on_changed_track (m);
+                    on_changed_track (m, true);
                 }
             }
         }
@@ -204,7 +204,7 @@ namespace Music2 {
 
         }
 
-        private void on_changed_track (CObjects.Media m) {
+        private void on_changed_track (CObjects.Media m, bool run_track) {
             _metadata = new HashTable<string, Variant> (null, null);
 
             _metadata.insert ("mpris:trackid",(int64) m.tid);
