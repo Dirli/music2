@@ -99,7 +99,10 @@ namespace Music2 {
                         }
                     }
 
-                    added_track (db_manager.insert_track (m, alb_id, art_id), art_id, alb_id);
+                    if (db_manager.insert_track (m, alb_id, art_id)) {
+                        added_track (m, art_id, alb_id);
+                    }
+
 
                     if (stop_flag) {
                         break;

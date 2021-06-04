@@ -289,54 +289,19 @@ namespace Music2 {
             return true;
         }
 
-        public uint[] adds_to_queue (Gee.ArrayQueue<CObjects.Media> new_queue) {
-            uint[] ordered_list = {};
-            if (new_queue.size > 0) {
-                uint[] tracks_id = {};
-                uint[] past_tracks = {};
-
-                bool pass = _current_index > 0 ? true : false;
-
-                if (!pass) {
-                    _current_index = new_queue.peek ().tid;
-                }
-
-                while (!new_queue.is_empty) {
-                    var track = new_queue.poll ();
-                    var tid = track.tid;
-                    if (pass && _current_index == tid) {
-                        pass = false;
-                    }
-
-                    ordered_list += tid;
-
-                    if (!pass) {
-                        tracks_id += tid;
-                        add_to_queue (track);
-                    } else {
-                        past_tracks += tid;
-                        tracks_queue.add_index (tid, track.hits, true);
-                        tracks_hash[tid] = track;
-                    }
-
-                    if (_current_index == tid) {
-                        current_index = tid;
-                    }
-                }
-
-                foreach (var t in past_tracks) {
-                    tracks_id += t;
-                    tracks_list.append_val (t);
-                }
-
-                tracklist_replaced (tracks_id);
-            }
-
-            return ordered_list;
-        }
-
         public uint[] get_queue () {
             return tracks_list.data;
+        }
+
+        public GLib.File[] get_uris_queue () {
+            GLib.File[] files_arr = {};
+            foreach (uint tid in tracks_list.data) {
+                if (tracks_hash.has_key (tid)) {
+                    files_arr += GLib.File.new_for_uri (tracks_hash[tid].uri);
+                }
+            }
+
+            return files_arr;
         }
 
         public void remove_track (uint tid) {
@@ -380,7 +345,12 @@ namespace Music2 {
         }
 
         public void clear_queue () {
+            uint[] zero_arr = {};
+            tracklist_replaced (zero_arr);
+            current_index = 0;
+
             state_changed (Gst.State.NULL);
+
             tracks_hash.clear ();
             tracks_queue.clear_queue (true);
             tracks_list = new GLib.Array<uint> ();

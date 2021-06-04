@@ -36,6 +36,36 @@ namespace Music2.Tools.FileUtils {
         return cache_dir;
     }
 
+    public string[] get_audio_files (string uri) {
+        var directory = GLib.File.new_for_uri (uri.replace ("#", "%23"));
+        string[] total_files = {};
+
+        try {
+            var children = directory.enumerate_children ("standard::*", FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
+
+            GLib.FileInfo? file_info = null;
+            while ((file_info = children.next_file ()) != null) {
+                if (file_info.get_is_hidden () || file_info.get_is_symlink () || file_info.get_file_type () == FileType.DIRECTORY) {
+                    continue;
+                }
+
+                string mime_type = file_info.get_content_type ();
+                if (is_audio_file (mime_type)) {
+                    total_files += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
+                }
+            }
+
+            children.close ();
+            children.dispose ();
+        } catch (Error err) {
+            warning ("%s\n%s", err.message, uri);
+        }
+
+        directory.dispose ();
+
+        return total_files;
+    }
+
     public string get_cover_path (uint year, string album_name) {
         string cov_name = year.to_string () + album_name;
         string cov_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
@@ -125,8 +155,8 @@ namespace Music2.Tools.FileUtils {
         return to_save;
     }
 
-    public GLib.Array? get_playlist_m3u (string playlist_uri) {
-        GLib.Array<string> tracks = new GLib.Array<string> ();
+    public string? get_playlist_m3u (string playlist_uri) {
+        string tracks = "";
 
         var pl_file = GLib.File.new_for_uri (playlist_uri);
         if (!pl_file.query_exists ()) {
@@ -137,7 +167,7 @@ namespace Music2.Tools.FileUtils {
         try {
             string line;
             bool correct = false;
-            var dis = new DataInputStream (pl_file.read ());
+            var dis = new GLib.DataInputStream (pl_file.read ());
             while ((line = dis.read_line ()) != null) {
                 if (!correct) {
                     if (line != "#EXTM3U") {
@@ -147,9 +177,15 @@ namespace Music2.Tools.FileUtils {
                     }
                 }
 
-                if (line[0] != '#' && line.replace (" ", "").length > 0) {
-                    tracks.append_val ("file://" + line.replace ("#", "%23").replace ("%", "%25"));
+                if (!line.has_prefix ("http")) {
+                    if (line[0] != '#' && line.replace (" ", "").length > 0) {
+                        var f = GLib.File.new_for_path (line);
+                        if (f.query_exists ()) {
+                            tracks += @"$(f.get_uri ())\n";
+                        }
+                    }
                 }
+
             }
         } catch (Error e) {
             warning ("Could not load m3u file at %s: %s\n", pl_file.get_path (), e.message);

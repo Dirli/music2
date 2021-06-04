@@ -1,17 +1,17 @@
-project(
+project (
     'io.elementary.music2',
     'vala', 'c',
     version: '0.1.0'
 )
 
-add_global_arguments(
+add_global_arguments (
     '-DGETTEXT_PACKAGE="@0@"'.format(meson.project_name()),
     language:'c'
 )
 
 vala_args = []
 
-dep_glib = dependency('glib-2.0')
+dep_glib = dependency ('glib-2.0')
 dep_gio_unix = dependency ('gio-unix-2.0')
 dep_gio = dependency ('gio-2.0')
 dep_gst = dependency ('gstreamer-1.0')
@@ -28,11 +28,6 @@ core_deps = [
     dep_pbutils,
 ]
 
-if get_option ('sqlite')
-    dep_sqlite = dependency ('sqlite3')
-    core_deps += dep_sqlite
-endif
-
 cli_deps = [
     dep_glib,
     dep_gio,
@@ -47,9 +42,9 @@ subdir ('core')
 if get_option ('gtk')
     gnome = import ('gnome')
 
-    cssresources = gnome.compile_resources(
+    cssresources = gnome.compile_resources (
         'css-resources',
-        join_paths('data', meson.project_name() + '.gresource.xml'),
+        join_paths ('data', meson.project_name () + '.gresource.xml'),
         source_dir: 'data'
     )
 
@@ -63,10 +58,10 @@ if get_option ('gtk')
     ]
 
     if get_option ('sqlite')
-        app_deps += dep_sqlite
+        app_deps += dependency ('sqlite3')
     endif
 
     subdir ('src')
 endif
 
-meson.add_install_script('meson/meson_post_install.py')
+meson.add_install_script ('meson/meson_post_install.py')

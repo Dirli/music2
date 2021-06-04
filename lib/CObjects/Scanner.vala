@@ -32,18 +32,24 @@ namespace Music2 {
             return finished;
         }
 
-        public void scan_tracks (GLib.Array<string> tracks_path) {
+        private void scan_uri (string uri) {
+            var t = add_discover_uri (uri);
+            if (t != null) {
+                discovered_new_item (t);
+            }
+        }
+
+        public void scan_tracks (Gee.ArrayList<string> tracks_uri) {
             new Thread<void*> ("scan_tracks", () => {
-                for (int i = 0; i < tracks_path.length ; i++) {
-                    var t = add_discover_uri (tracks_path.index (i));
-                    if (t != null) {
-                        discovered_new_item (t);
-                    }
+                tracks_uri.foreach ((uri) => {
+                    scan_uri (uri);
 
                     if (stop_flag) {
-                        break;
+                        return false;
                     }
-            	}
+
+                    return true;
+                });
 
                 lock (finished) {
                     finished = true;
@@ -56,38 +62,8 @@ namespace Music2 {
 
         private void scan_directory (string uri) {
             new Thread<void*> ("scan_directory", () => {
-                var directory = GLib.File.new_for_uri (uri.replace ("#", "%23"));
-                string[] total_files = {};
-                try {
-                    var children = directory.enumerate_children (
-                        "standard::*",
-                        FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
-
-                    GLib.FileInfo? file_info = null;
-                    while ((file_info = children.next_file ()) != null) {
-                        if (file_info.get_is_hidden () || file_info.get_is_symlink () || file_info.get_file_type () == FileType.DIRECTORY) {
-                            continue;
-                        }
-
-                        string mime_type = file_info.get_content_type ();
-                        if (Tools.FileUtils.is_audio_file (mime_type)) {
-                            total_files += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
-                        }
-                    }
-
-                    children.close ();
-                    children.dispose ();
-                } catch (Error err) {
-                    warning ("%s\n%s", err.message, uri);
-                }
-
-                directory.dispose ();
-
-                foreach (var s in total_files) {
-                    var t = add_discover_uri (s);
-                    if (t != null) {
-                        discovered_new_item (t);
-                    }
+                foreach (var s in Tools.FileUtils.get_audio_files (uri)) {
+                    scan_uri (s);
 
                     if (stop_flag) {
                         break;

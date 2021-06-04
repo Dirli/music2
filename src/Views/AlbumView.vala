@@ -18,7 +18,10 @@
 
 namespace Music2 {
     public class Views.AlbumView : Gtk.Grid {
+        public signal void refilter (Structs.Filter? filter);
         public signal void selected_row (uint row_id);
+
+        private Gee.ArrayList<uint> filter_tracks;
 
         private Gtk.Window parent_window;
 
@@ -47,6 +50,8 @@ namespace Music2 {
             album_cover.width_request = 184;
             album_cover.margin = 28;
             album_cover.margin_bottom = 12;
+
+            filter_tracks = new Gee.ArrayList<uint> ();
 
             var cover_event_box = new Gtk.EventBox ();
             cover_event_box.add (album_cover);
@@ -109,21 +114,25 @@ namespace Music2 {
             return true;
         }
 
-        public void set_model (Gtk.TreeModel? tree_model) {
-            if (tree_model == null) {
-                tracks_view.set_model (null);
-                return;
+        public Gee.ArrayList<uint> get_tracks () {
+            return filter_tracks;
+        }
+
+        public void add_track (uint tid) {
+            if (!filter_tracks.contains (tid)) {
+                filter_tracks.add (tid);
             }
+        }
 
-            var tracks_filter = new Gtk.TreeModelFilter (tree_model, null);
-            tracks_filter.set_visible_func (row_visible);
-
-            tracks_view.set_model (tracks_filter);
+        public void set_model (Gtk.TreeModel? tree_model) {
+            tracks_view.set_model (tree_model);
         }
 
         private void reset () {
             current_album = null;
             album_label.set_label ("");
+
+            filter_tracks.clear ();
         }
 
         public void set_album (Structs.Album album_struct) {
@@ -134,13 +143,13 @@ namespace Music2 {
 
             album_cover.image.gicon = Tools.GuiUtils.get_cover_icon (album_struct.year, album_struct.title);
 
-            var tree_model = tracks_view.get_model ();
-            if (tree_model != null) {
-                var filter_model = tree_model as Gtk.TreeModelFilter;
-                if (filter_model != null) {
-                    filter_model.refilter ();
-                }
-            }
+            Structs.Filter f = {};
+
+            f.category = Enums.ListColumn.ALBUM;
+            f.str = current_album.title;
+            f.id = current_album.album_id;
+
+            refilter (f);
         }
 
         private void set_new_cover () {
@@ -190,17 +199,6 @@ namespace Music2 {
 
                 return false;
             });
-        }
-
-        public bool row_visible (Gtk.TreeModel m, Gtk.TreeIter iter) {
-            if (current_album == null) {
-                return false;
-            }
-
-            string iter_value;
-            m.@get (iter, (int) Enums.ListColumn.ALBUM, out iter_value, -1);
-
-            return current_album.title == iter_value;
         }
     }
 }

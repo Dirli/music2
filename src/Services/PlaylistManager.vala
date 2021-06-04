@@ -69,6 +69,10 @@ namespace Music2 {
                     return db_manager.get_automatic_playlist (pid, auto_length);
                 }
             } else if (playlists_hash.has_key (pid)) {
+                if (pid == modified_pid) {
+                    update_playlist (modified_pid, true);
+                }
+
                 return playlists_hash[pid].tracks;
             }
 
@@ -94,7 +98,7 @@ namespace Music2 {
             }
         }
 
-        public void update_playlist (int pid, bool clear = false) {
+        private void update_playlist (int pid, bool clear = false) {
             if (playlists_hash.has_key (pid)) {
                 new Thread<void*> ("update_playlist", () => {
                     uint[] arr_to_write = playlists_hash[pid].tracks.to_array ();

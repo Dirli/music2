@@ -209,7 +209,7 @@ namespace Music2 {
             added_category (Enums.Category.ALBUM, albums_store);
             added_category (Enums.Category.GENRE, genre_store);
 
-            var tracks_queue = db_manager.get_tracks (null);
+            var tracks_queue = db_manager.get_tracks ();
             tracks_queue.foreach ((m) => {
                 add_track (m);
                 return true;

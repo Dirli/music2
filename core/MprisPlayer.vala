@@ -26,20 +26,20 @@ namespace Music2 {
 
         private bool _can_go_next;
         public bool can_go_next {
-            get {return _can_go_next;}
+            get {return can_control && _can_go_next;}
         }
         private bool _can_go_previous;
         public bool can_go_previous {
-            get {return _can_go_previous;}
+            get {return can_control && _can_go_previous;}
         }
         public bool can_play {
-            get {return true;}
+            get {return can_control && true;}
         }
         public bool can_pause {
-            get {return true;}
+            get {return can_control && true;}
         }
         public bool can_seek {
-            get {return true;}
+            get {return can_control && true;}
         }
         public bool can_control {
             get {return true;}

@@ -33,6 +33,7 @@
 
     [DBus (name="org.mpris.MediaPlayer2.Player")]
     public interface PlayerIface : MprisIface {
+        public abstract bool can_control { get; }
         public abstract bool can_go_next { get; }
         public abstract bool can_go_previous { get; }
         public abstract bool can_play { get; }

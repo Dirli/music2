@@ -18,13 +18,17 @@
 
 namespace Music2 {
     public class Widgets.ColumnsView : Gtk.Grid {
-        public signal void filter_list (Enums.Category type, string val, int val_id);
+        public signal void refilter (Structs.Filter filter);
+
+        private Gee.ArrayList<uint> filter_tracks;
+
+        private Structs.Filter? current_filter;
 
         private Enums.Category filter_category;
-        private int filter_id;
-        private string filter_str;
 
-        public ColumnsView () {}
+        public ColumnsView () {
+            filter_tracks = new Gee.ArrayList<uint> ();
+        }
 
         public void clear_columns (Enums.Category? filter_category) {
             foreach (unowned Enums.Category category in Enums.Category.get_all ()) {
@@ -46,8 +50,7 @@ namespace Music2 {
             column.set_size_request (60, 100);
             column.select_row.connect ((val_str, val_id) => {
                 filter_category = column.category;
-                filter_id = val_id;
-                filter_str = val_str;
+
                 if (column.category != Enums.Category.ALBUM) {
                     var child_column1 = get_child_at (Enums.Category.ALBUM, 0);
                     if (child_column1 != null) {
@@ -68,7 +71,27 @@ namespace Music2 {
                     }
                 }
 
-                filter_list (column.category, val_id > 0 ? val_str : "", val_id);
+                filter_tracks.clear ();
+
+                Structs.Filter f = {};
+
+                f.str = val_str;
+                f.id = val_id;
+                switch (filter_category) {
+                    case Enums.Category.GENRE:
+                        f.category = Enums.ListColumn.GENRE;
+                        break;
+                    case Enums.Category.ARTIST:
+                        f.category = Enums.ListColumn.ARTIST;
+                        break;
+                    case Enums.Category.ALBUM:
+                        f.category = Enums.ListColumn.ALBUM;
+                        break;
+
+                }
+
+                current_filter = f;
+                refilter (f);
             });
 
             column.activated_row.connect (() => {
@@ -79,13 +102,18 @@ namespace Music2 {
             attach (column, (int) column.category, 0, 1, 1);
         }
 
-        public Structs.Filter get_filter () {
-            Structs.Filter f = {};
-            f.category = filter_category;
-            f.id = filter_id;
-            f.str = filter_str;
+        public void add_track (uint tid) {
+            if (!filter_tracks.contains (tid)) {
+                filter_tracks.add (tid);
+            }
+        }
 
-            return f;
+        public Structs.Filter? get_filter () {
+            return current_filter;
+        }
+
+        public Gee.ArrayList<uint> get_tracks () {
+            return filter_tracks;
         }
     }
 }

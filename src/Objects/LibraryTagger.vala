@@ -27,9 +27,11 @@ namespace Music2 {
         protected override CObjects.Media? create_media (Gst.PbUtils.DiscovererInfo info) {
             var tags = info.get_tags ();
             if (tags != null) {
-                var track= new CObjects.Media (info.get_uri ());
-                string o;
+                var t_uri = info.get_uri ();
+                var track = new CObjects.Media (t_uri);
+                track.tid = t_uri.hash ();
 
+                string o;
 
                 if (tags.get_string (Gst.Tags.TITLE, out o)) {
                     track.title = o;

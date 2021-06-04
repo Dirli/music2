@@ -51,10 +51,14 @@ namespace Music2 {
         }
 
         private bool open_database (int flag) {
-            int res = Sqlite.Database.open_v2 (get_db_path (), out db, flag);
+            var db_path = get_db_path ();
+            // warning (db_path);
+            int res = Sqlite.Database.open (db_path, out db);
+            // int res = Sqlite.Database.open_v2 (get_db_path (), out db, flag);
             if (res != Sqlite.OK) {
             	warning ("can't open db");
-                return false;;
+                warning ("Can't open database: %d: %s\n", db.errcode (), db.errmsg ());
+                return false;
             }
 
             db.busy_timeout (1000);
@@ -105,6 +109,7 @@ namespace Music2 {
                 album_id    INT         NOT NULL,
                 artist_id   INT         NOT NULL,
                 path        TEXT        NOT NULL,
+                tid         INTEGER     NOT NULL,
                 title       TEXT        NOT NULL,
                 length      INT         NULL,
                 track       INT         NULL,
@@ -141,7 +146,7 @@ namespace Music2 {
                 track_id    INT         NOT NULL,
                 number      INT         NOT NULL,
                 CONSTRAINT unique_track UNIQUE (playlist_id, track_id),
-                FOREIGN KEY (track_id) REFERENCES media (ID)
+                FOREIGN KEY (track_id) REFERENCES media (tid)
                     ON DELETE CASCADE,
                 FOREIGN KEY (playlist_id) REFERENCES playlists (ID)
                     ON DELETE CASCADE
@@ -274,67 +279,67 @@ namespace Music2 {
             return tracks_id;
         }
 
-        public Gee.ArrayQueue<CObjects.Media> get_automatic_tracks (int pid, int length) {
-            Sqlite.Statement stmt;
+        // public Gee.ArrayQueue<CObjects.Media> get_automatic_tracks (int pid, int length) {
+        //     Sqlite.Statement stmt;
+        //
+        //     var query_str = "";
+        //     switch (pid) {
+        //         case Constants.NEVER_PLAYED_ID:
+        //             query_str = """ WHERE hits=0 """;
+        //             break;
+        //         case Constants.FAVORITE_SONGS_ID:
+        //             query_str = """ WHERE hits>1 ORDER BY hits DESC """;
+        //             break;
+        //         case Constants.RECENTLY_PLAYED_ID:
+        //             query_str = """ WHERE hits>0 ORDER BY last_access DESC """;
+        //             break;
+        //         default:
+        //             return new Gee.ArrayQueue<CObjects.Media> ();
+        //     }
+        //
+        //     string sql = """
+        //         SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
+        //         FROM media
+        //         INNER JOIN albums
+        //         ON media.album_id = albums.id
+        //         INNER JOIN artists
+        //         ON media.artist_id = artists.id
+        //     """;
+        //
+        //     sql += query_str;
+        //     sql += """LIMIT $LENGTH;""";
+        //
+        //     int res = db.prepare_v2 (sql, sql.length, out stmt);
+        //     assert (res == Sqlite.OK);
+        //     res = stmt.bind_int (stmt.bind_parameter_index ("$LENGTH"), length);
+        //     assert (res == Sqlite.OK);
+        //
+        //     return fill_model (stmt);
+        // }
 
-            var query_str = "";
-            switch (pid) {
-                case Constants.NEVER_PLAYED_ID:
-                    query_str = """ WHERE hits=0 """;
-                    break;
-                case Constants.FAVORITE_SONGS_ID:
-                    query_str = """ WHERE hits>1 ORDER BY hits DESC """;
-                    break;
-                case Constants.RECENTLY_PLAYED_ID:
-                    query_str = """ WHERE hits>0 ORDER BY last_access DESC """;
-                    break;
-                default:
-                    return new Gee.ArrayQueue<CObjects.Media> ();
-            }
-
-            string sql = """
-                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
-                FROM media
-                INNER JOIN albums
-                ON media.album_id = albums.id
-                INNER JOIN artists
-                ON media.artist_id = artists.id
-            """;
-
-            sql += query_str;
-            sql += """LIMIT $LENGTH;""";
-
-            int res = db.prepare_v2 (sql, sql.length, out stmt);
-            assert (res == Sqlite.OK);
-            res = stmt.bind_int (stmt.bind_parameter_index ("$LENGTH"), length);
-            assert (res == Sqlite.OK);
-
-            return fill_model (stmt);
-        }
-
-        public Gee.ArrayQueue<CObjects.Media> get_playlist_tracks (int playlist_id) {
-            Sqlite.Statement stmt;
-
-            string sql = """
-                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
-                FROM playlist_tracks
-                INNER JOIN media
-                ON playlist_tracks.track_id = media.ID
-                INNER JOIN albums
-                ON media.album_id = albums.id
-                INNER JOIN artists
-                ON media.artist_id = artists.id
-                WHERE playlist_tracks.playlist_id=$ID
-                ORDER BY playlist_tracks.number;
-            """;
-
-            int res = db.prepare_v2 (sql, sql.length, out stmt);
-            assert (res == Sqlite.OK);
-            res = stmt.bind_int (stmt.bind_parameter_index ("$ID"), playlist_id);
-            assert (res == Sqlite.OK);
-
-            return fill_model (stmt);
-        }
+        // public Gee.ArrayQueue<CObjects.Media> get_playlist_tracks (int playlist_id) {
+        //     Sqlite.Statement stmt;
+        //
+        //     string sql = """
+        //         SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
+        //         FROM playlist_tracks
+        //         INNER JOIN media
+        //         ON playlist_tracks.track_id = media.ID
+        //         INNER JOIN albums
+        //         ON media.album_id = albums.id
+        //         INNER JOIN artists
+        //         ON media.artist_id = artists.id
+        //         WHERE playlist_tracks.playlist_id=$ID
+        //         ORDER BY playlist_tracks.number;
+        //     """;
+        //
+        //     int res = db.prepare_v2 (sql, sql.length, out stmt);
+        //     assert (res == Sqlite.OK);
+        //     res = stmt.bind_int (stmt.bind_parameter_index ("$ID"), playlist_id);
+        //     assert (res == Sqlite.OK);
+        //
+        //     return fill_model (stmt);
+        // }
 
         public int add_playlist (string playlist_name) {
             Sqlite.Statement stmt;
@@ -392,6 +397,7 @@ namespace Music2 {
                 INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, number) VALUES ($PLAYLIST, $TRACK, $NUM);
             """;
 
+            int t_count = 0;
             foreach (var t in tracks_arr) {
                 int res = db.prepare_v2 (sql, sql.length, out stmt);
                 assert (res == Sqlite.OK);
@@ -406,6 +412,8 @@ namespace Music2 {
                     warning ("Error: %d: %s", db.errcode (), db.errmsg ());
                 } else {
                     nums++;
+                    warning (@"write next num $(nums)");
+                    t_count++;
                 }
 
                 stmt.reset ();
@@ -699,101 +707,102 @@ namespace Music2 {
             return album_id;
         }
 
-        public CObjects.Media? get_track (string uri) {
+        // public CObjects.Media? get_track (string uri) {
+        //     Sqlite.Statement stmt;
+        //
+        //     string sql = """
+        //         SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
+        //         FROM media
+        //         INNER JOIN albums
+        //         ON media.album_id = albums.id
+        //         INNER JOIN artists
+        //         ON media.artist_id = artists.id
+        //         WHERE media.path=$URI
+        //     """;
+        //
+        //     int res = db.prepare_v2 (sql, sql.length, out stmt);
+        //     assert (res == Sqlite.OK);
+        //
+        //     res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), uri);
+        //     assert (res == Sqlite.OK);
+        //
+        //     CObjects.Media? m = null;
+        //     if (stmt.step () == Sqlite.ROW) {
+        //         m = new CObjects.Media (stmt.column_text (4));
+        //         m.tid = (uint) stmt.column_int64 (0);
+        //         m.title = stmt.column_text (1);
+        //         m.genre = stmt.column_text (2);
+        //         m.track = (uint) stmt.column_int64 (3);
+        //         m.length = (uint) stmt.column_int64 (5);
+        //         m.album = stmt.column_text (6);
+        //         m.year = (uint) stmt.column_int (7);
+        //         m.artist = stmt.column_text (8);
+        //     }
+        //
+        //     stmt.reset ();
+        //     return m;
+        // }
+
+        public Gee.ArrayQueue<CObjects.Media> get_tracks () {
             Sqlite.Statement stmt;
 
             string sql = """
-                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
+                SELECT media.tid, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
                 FROM media
                 INNER JOIN albums
                 ON media.album_id = albums.id
                 INNER JOIN artists
                 ON media.artist_id = artists.id
-                WHERE media.path=$URI
+                ORDER BY artists.name, albums.year, albums.title, media.track;
             """;
+
+            // string param_name = "";
+            // if (category != null) {
+            //     switch (category) {
+            //         case Enums.Category.GENRE:
+            //             sql += """WHERE albums.genre=$GENRE """;
+            //             param_name = "$GENRE";
+            //             break;
+            //         case Enums.Category.ALBUM:
+            //             sql += """WHERE media.album_id=$ALBUM """;
+            //             param_name = "$ALBUM";
+            //             break;
+            //         case Enums.Category.ARTIST:
+            //             sql += """WHERE media.artist_id=$ARTIST """;
+            //             param_name = "$ARTIST";
+            //             break;
+            //     }
+            // }
+
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
 
-            res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), uri);
-            assert (res == Sqlite.OK);
+            // if (param_name != "" && filter != "") {
+            //     if (category == Enums.Category.GENRE) {
+            //         res = stmt.bind_text (stmt.bind_parameter_index (param_name), filter);
+            //         assert (res == Sqlite.OK);
+            //     } else {
+            //         res = stmt.bind_int (stmt.bind_parameter_index (param_name), int.parse (filter));
+            //         assert (res == Sqlite.OK);
+            //     }
+            // }
 
-            CObjects.Media? m = null;
-            if (stmt.step () == Sqlite.ROW) {
-                m = new CObjects.Media (stmt.column_text (4));
-                m.tid = (uint) stmt.column_int64 (0);
-                m.title = stmt.column_text (1);
-                m.genre = stmt.column_text (2);
-                m.track = (uint) stmt.column_int64 (3);
-                m.length = (uint) stmt.column_int64 (5);
-                m.album = stmt.column_text (6);
-                m.year = (uint) stmt.column_int (7);
-                m.artist = stmt.column_text (8);
-            }
-
-            stmt.reset ();
-            return m;
+            return fill_model (stmt);
         }
 
-        public Gee.ArrayQueue<CObjects.Media> get_tracks (Enums.Category? category, string filter = "") {
-            Sqlite.Statement stmt;
-
-            string sql = """
-                SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
-                FROM media
-                INNER JOIN albums
-                ON media.album_id = albums.id
-                INNER JOIN artists
-                ON media.artist_id = artists.id
-            """;
-
-            string param_name = "";
-            if (category != null) {
-                switch (category) {
-                    case Enums.Category.GENRE:
-                        sql += """WHERE albums.genre=$GENRE """;
-                        param_name = "$GENRE";
-                        break;
-                    case Enums.Category.ALBUM:
-                        sql += """WHERE media.album_id=$ALBUM """;
-                        param_name = "$ALBUM";
-                        break;
-                    case Enums.Category.ARTIST:
-                        sql += """WHERE media.artist_id=$ARTIST """;
-                        param_name = "$ARTIST";
-                        break;
-                }
-            }
-
-            sql += """ORDER BY artists.name, albums.year, albums.title, media.track;""";
-
-            int res = db.prepare_v2 (sql, sql.length, out stmt);
-            assert (res == Sqlite.OK);
-
-            if (param_name != "" && filter != "") {
-                if (category == Enums.Category.GENRE) {
-                    res = stmt.bind_text (stmt.bind_parameter_index (param_name), filter);
-                    assert (res == Sqlite.OK);
-                } else {
-                    res = stmt.bind_int (stmt.bind_parameter_index (param_name), int.parse (filter));
-                    assert (res == Sqlite.OK);
-                }
-            }
-
-            var tracks = fill_model (stmt);
-            return tracks;
-        }
-
-        public CObjects.Media insert_track (CObjects.Media m, int album_id, int artist_id) {
+        public bool insert_track (CObjects.Media m, int album_id, int artist_id) {
             Sqlite.Statement stmt;
             string sql = """
-                INSERT OR IGNORE INTO media (album_id, artist_id, title, track, path, length, last_access)
-                VALUES ($ALBUM_ID, $ARTIST_ID, $TITLE, $TRACK, $URI, $LENGTH, $ACCESS_TIME);
+                INSERT OR IGNORE INTO media (tid, album_id, artist_id, title, track, path, length, last_access)
+                VALUES ($TID, $ALBUM_ID, $ARTIST_ID, $TITLE, $TRACK, $URI, $LENGTH, $ACCESS_TIME);
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
 
+            res = stmt.bind_int64 (stmt.bind_parameter_index ("$TID"), (int64) m.tid);
+            assert (res == Sqlite.OK);
             res = stmt.bind_int (stmt.bind_parameter_index ("$ALBUM_ID"), album_id);
             assert (res == Sqlite.OK);
             res = stmt.bind_int (stmt.bind_parameter_index ("$ARTIST_ID"), artist_id);
@@ -813,27 +822,14 @@ namespace Music2 {
 
             if (stmt.step () != Sqlite.DONE) {
                 warning ("Error: %d: %s", db.errcode (), db.errmsg ());
-            }
-            stmt.reset ();
+                stmt.reset ();
 
-            sql = """
-                SELECT id FROM media WHERE path=$URI;
-            """;
-
-            res = db.prepare_v2 (sql, sql.length, out stmt);
-            assert (res == Sqlite.OK);
-
-            res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), m.uri);
-            assert (res == Sqlite.OK);
-
-            if (stmt.step () == Sqlite.ROW) {
-                m.tid = (uint) stmt.column_int64 (0);
-            } else {
-                warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                return false;
             }
 
             stmt.reset ();
-            return m;
+
+            return true;
         }
 
         public void update_playback_info (string uri, bool write_hit) {

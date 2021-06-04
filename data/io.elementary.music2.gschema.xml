@@ -41,10 +41,15 @@
             <summary>Block sleep mode</summary>
             <description>Allows you to block sleep mode</description>
         </key>
-        <key type="s" name="source-media">
-            <default>''</default>
-            <summary>The name of the original media that was used</summary>
-            <description>The name of the original media that was used</description>
+        <key type="t" name="current-media">
+            <default>0</default>
+            <summary>Contains the track id of the current track</summary>
+            <description>Contains the track id of the current track</description>
+        </key>
+        <key type="x" name="source-media">
+            <default>0</default>
+            <summary>Contains the initialization timestamp of the current playlist</summary>
+            <description>Contains the initialization timestamp of the current playlist</description>
         </key>
         <key type="d" name="volume">
             <default>0.75</default>

@@ -20,11 +20,11 @@ core_files += files (
     'Structs.vala',
     'CObjects/Scanner.vala',
 )
-if get_option ('sqlite')
-    core_files += files (
-        'DataBaseManager.vala',
-    )
-endif
+#if get_option ('sqlite')
+#    core_files += files (
+#        'DataBaseManager.vala',
+#    )
+#endif
 
 client_files = common_files
 client_files += files (

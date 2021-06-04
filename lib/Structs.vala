@@ -36,7 +36,7 @@ namespace Music2.Structs {
     public struct Filter {
         public int id;
         public string str;
-        public Enums.Category category;
+        public Enums.ListColumn category;
     }
 
     public struct Iter {

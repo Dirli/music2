@@ -35,6 +35,10 @@ namespace Music2 {
         }
 
         public override void start_scan (string uri) {
+            if (db_manager == null) {
+                return;
+            }
+
             recorded_tracks = 0;
             stop_flag = false;
             apa_cache = new Gee.HashMap<int, Gee.ArrayList<int>> ();
@@ -48,7 +52,7 @@ namespace Music2 {
             total_found (tracks_path.length);
 
             if (tracks_path.length > 0) {
-                db_manager.reset_database ();
+                // db_manager.reset_database ();
 
                 lib_tagger = new Objects.LibraryTagger ();
                 lib_tagger.init ();
@@ -145,7 +149,10 @@ namespace Music2 {
 
             // m.tid = ++recorded_tracks;
             // added_track (m, art_id, alb_id);
-            added_track (db_manager.insert_track (m, alb_id, art_id), art_id, alb_id);
+            if (db_manager.insert_track (m, alb_id, art_id)) {
+                added_track (m, art_id, alb_id);
+            }
+
         }
     }
 }
