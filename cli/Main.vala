@@ -21,6 +21,8 @@ namespace Music2 {
         private const GLib.OptionEntry[] options = {
     		// --path=directory
             { "path", 0, 0, OptionArg.FILENAME, ref path, "Play music from this directory", "DIRECTORY" },
+            // --run
+            { "start", 0, 0, OptionArg.NONE, ref start, "Run current playlist", null },
             // --play
             { "play", 0, 0, OptionArg.NONE, ref play, "Toggle (play/pause) playing", null },
             // --prev
@@ -36,6 +38,7 @@ namespace Music2 {
     	};
 
         private static string? path = null;
+        private static bool start = false;
         private static bool play = false;
         private static bool stop = false;
         private static bool next = false;
@@ -73,32 +76,55 @@ namespace Music2 {
                 var settings = new GLib.Settings (Constants.APP_NAME);
 
                 try {
-                    dbus_player = GLib.Bus.get_proxy_sync (GLib.BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
+                    dbus_player = GLib.Bus.get_proxy_sync (GLib.BusType.SESSION,
+                                                           Constants.MPRIS_NAME,
+                                                           Constants.MPRIS_PATH);
 
-                    if (path != null) {
-                        settings.set_enum ("source-type", Enums.SourceType.NONE);
-                        settings.set_string ("source-media", "file://" + path);
-                        settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
-                    } else if (play) {
-                        dbus_player.play_pause ();
-                    } else if (stop) {
-                        dbus_player.stop ();
-                    } else if (next) {
-                        dbus_player.next ();
-                    } else if (prev) {
-                        dbus_player.previous ();
-                    } else if (close) {
-                        dbus_player.quit ();
+                    if (start) {
+                        var _timer = 0;
+                        GLib.Timeout.add_seconds (1, () => {
+                            if (dbus_player.playback_status == "Stopped") {
+                                if (_timer++ >= 5) {
+                                    Cli.Daemon.on_exit (0);
+                                    return false;
+                                }
+
+                                return true;
+                            }
+
+                            dbus_player.play ();
+                            Cli.Daemon.on_exit (0);
+                            return false;
+                        });
+                    } else {
+                        if (path != null) {
+                            settings.set_enum ("source-type", Enums.SourceType.NONE);
+                            settings.set_string ("source-media", "file://" + path);
+                            settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
+                        } else if (play) {
+                            dbus_player.play_pause ();
+                        } else if (stop) {
+                            dbus_player.stop ();
+                        } else if (next) {
+                            dbus_player.next ();
+                        } else if (prev) {
+                            dbus_player.previous ();
+                        } else if (close) {
+                            dbus_player.quit ();
+                        }
+
+                        GLib.Idle.add (() => {
+                            Cli.Daemon.on_exit (0);
+                            return false;
+                        });
                     }
                 } catch (Error e) {
                     warning (e.message);
+                    Cli.Daemon.on_exit (0);
                 }
-            }
-
-            GLib.Idle.add (() => {
+            } else {
                 Cli.Daemon.on_exit (0);
-                return false;
-            });
+            }
         }
 
         public override void activate () {
