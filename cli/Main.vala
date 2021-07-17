@@ -31,13 +31,19 @@ namespace Music2 {
             { "next", 0, 0, OptionArg.NONE, ref next, "Play next track", null },
             // --stop
             { "stop", 0, 0, OptionArg.NONE, ref stop, "Stop playing", null },
-            // --state
+            // --volume 50
+            { "volume", 0, 0, OptionArg.INT, ref vol, "Set a new volume (-1 shows the current)", "0...100" },
+            // --can_sleep=state
+            { "can_sleep", 0, 0, OptionArg.STRING, ref sleep, "Set (show) the sleep mode status", "(true|false|state)" },
+            //
             { "quit", 0, 0, OptionArg.NONE, ref close, "Quit the player", null },
     		// list terminator
     		{ null }
     	};
 
         private static string? path = null;
+        private static string? sleep = null;
+        private static int vol = -2;
         private static bool start = false;
         private static bool play = false;
         private static bool stop = false;
@@ -70,6 +76,11 @@ namespace Music2 {
     			print ("error: %s\n", e.message);
     			print ("Run '%s --help' to see a full list of available command line options.\n", args[0]);
                 opt_error = true;
+
+                GLib.Idle.add (() => {
+                    Cli.Daemon.on_exit (0);
+                    return false;
+                });
             }
 
             if (!opt_error) {
@@ -92,7 +103,12 @@ namespace Music2 {
                                 return true;
                             }
 
-                            dbus_player.play ();
+                            try {
+                                dbus_player.play ();
+                            } catch (Error e) {
+                                warning (e.message);
+                            }
+
                             Cli.Daemon.on_exit (0);
                             return false;
                         });
@@ -101,6 +117,16 @@ namespace Music2 {
                             settings.set_enum ("source-type", Enums.SourceType.NONE);
                             settings.set_string ("source-media", "file://" + path);
                             settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
+                        } else if (sleep != null) {
+                            if (sleep == "true") {
+                                settings.set_boolean ("block-sleep-mode", false);
+                            } else if (sleep == "false") {
+                                settings.set_boolean ("block-sleep-mode", true);
+                            } else {
+                                print (settings.get_boolean ("block-sleep-mode")
+                                       ? _("Blocks the sleep mode") + "\n"
+                                       : _("Sleep mode does not block") + "\n");
+                            }
                         } else if (play) {
                             dbus_player.play_pause ();
                         } else if (stop) {
@@ -109,6 +135,12 @@ namespace Music2 {
                             dbus_player.next ();
                         } else if (prev) {
                             dbus_player.previous ();
+                        } else if (vol >= -1) {
+                            if (vol >= 0 && vol <= 100) {
+                                dbus_player.volume = vol / 100.0;
+                            } else {
+                                print (@"Current volume $((int) (dbus_player.volume * 100))\n");
+                            }
                         } else if (close) {
                             dbus_player.quit ();
                         }
@@ -122,8 +154,6 @@ namespace Music2 {
                     warning (e.message);
                     Cli.Daemon.on_exit (0);
                 }
-            } else {
-                Cli.Daemon.on_exit (0);
             }
         }
 
