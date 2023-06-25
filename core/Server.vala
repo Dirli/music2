@@ -30,10 +30,15 @@ namespace Music2 {
         private uint owner_id;
         private uint write_id = 0;
 
+        private string playlist_path;
+        private string tmp_path;
+
         private GLib.Settings settings;
         private GLib.Settings eq_settings;
         private Core.Player player;
         private Core.Equalizer eq;
+
+        private GLib.FileMonitor tmp_monitor;
 
         private CObjects.Scanner? scanner = null;
         private ScreenSaverIface? scrsaver_iface = null;
@@ -47,7 +52,10 @@ namespace Music2 {
 
             Tools.FileUtils.get_cache_directory ();
 
-            eq =  new Core.Equalizer ();
+            playlist_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S, GLib.Environment.get_user_cache_dir (), Constants.APP_NAME, "cpl");
+            tmp_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S, GLib.Environment.get_tmp_dir (), Constants.APP_NAME, "cpl");
+
+            eq = new Core.Equalizer ();
             player = new Core.Player (eq.element);
             player.set_volume (settings.get_double ("volume"));
 
@@ -60,7 +68,6 @@ namespace Music2 {
 
             settings.changed["repeat-mode"].connect (on_changed_repeat);
             settings.changed["shuffle-mode"].connect (on_changed_shuffle);
-            settings.changed["source-media"].connect (on_changed_media);
             settings.changed["block-sleep-mode"].connect (on_changed_sleep);
 
             eq_settings.changed["selected-preset"].connect (on_selected_preset);
@@ -223,31 +230,6 @@ namespace Music2 {
             }
         }
 
-        private void on_changed_media () {
-            var media_ts = settings.get_int64 ("source-media");
-            player.clear_queue ();
-
-            if (media_ts == 0) {
-                string pl_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
-                                                       GLib.Environment.get_user_cache_dir (),
-                                                       Constants.APP_NAME,
-                                                       "cpl");
-
-                var playlist_file = GLib.File.new_for_path (pl_path);
-                try {
-                    if (playlist_file.query_exists ()) {
-                        playlist_file.delete ();
-                    }
-                } catch (Error e) {
-                    warning (e.message);
-                }
-
-                return;
-            }
-
-            load_current_playlist (true);
-        }
-
         private void on_bus_acquired (DBusConnection connection, string name) {
             try {
                 connection.register_object (Constants.MPRIS_PATH, new Core.MprisRoot (this));
@@ -274,12 +256,30 @@ namespace Music2 {
         }
 
         public void init_player () {
-            var media_ts = settings.get_int64 ("source-media");
-            if (media_ts == 0) {
-                return;
+            var playlist_file = GLib.File.new_for_path (playlist_path);
+            if (playlist_file.query_exists ()) {
+                start_scanner (read_playlist (playlist_file, false), false);
             }
 
-            load_current_playlist (false);
+            try {
+                var tmp_playlist = GLib.File.new_for_path (tmp_path);
+                tmp_monitor = tmp_playlist.monitor (GLib.FileMonitorFlags.NONE, null);
+                tmp_monitor.changed.connect ((f1, f2, e) => {
+                    switch (e) {
+                        case GLib.FileMonitorEvent.CHANGES_DONE_HINT:
+                            load_new_playlist ();
+                            break;
+                        case GLib.FileMonitorEvent.DELETED:
+                            //
+                            break;
+                        default:
+                            //
+                            break;
+                    }
+                });
+            } catch (Error e) {
+                warning (e.message);
+            }
         }
 
         public void run_gui () {
@@ -304,13 +304,14 @@ namespace Music2 {
 
             GLib.Bus.unown_name (owner_id);
 
+            tmp_monitor.cancel ();
             player.stop ();
 
             var files = player.get_uris_queue ();
             string to_save = Tools.FileUtils.files_to_str (files);
 
             if (to_save != "") {
-                Tools.FileUtils.save_current_playlist (to_save);
+                Tools.FileUtils.save_playlist (to_save, playlist_path);
             }
 
             Core.Daemon.on_exit (0);
@@ -318,15 +319,55 @@ namespace Music2 {
 
         public void open_files (GLib.File[] files) {
             settings.set_uint64 ("current-media", 0);
-            string to_save = Tools.FileUtils.files_to_str (files);
 
-            if (to_save != "") {
-                if (Tools.FileUtils.save_current_playlist (to_save)) {
-                    settings.set_enum ("source-type", Enums.SourceType.FILE);
+            player.clear_queue ();
 
-                    var now_time = new GLib.DateTime.now ();
-                    settings.set_int64 ("source-media", now_time.to_unix ());
+            var uris = new Gee.ArrayList<string> ();
+            foreach (GLib.File f in files) {
+                try {
+                    if (!f.query_exists ()
+                     || !Tools.FileUtils.is_audio_file (f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NONE))) {
+                        continue;
+                    }
+
+                    uris.add (f.get_uri ());
+                } catch (Error e) {
+                    warning (e.message);
                 }
+            }
+
+            if (uris.size > 0) {
+                settings.set_enum ("source-type", Enums.SourceType.FILE);
+
+                start_scanner (uris, true);
+            }
+        }
+
+        private void load_new_playlist () {
+            player.clear_queue ();
+
+            var new_playlist_file = GLib.File.new_for_path (tmp_path);
+            if (new_playlist_file.query_exists ()) {
+                start_scanner (read_playlist (new_playlist_file, true), true);
+            }
+
+            // settings.set_enum ("source-type", Enums.SourceType.NONE);
+        }
+
+        private void start_scanner (Gee.ArrayList<string> tracks, bool launch_player) {
+            player.current_index = (uint) settings.get_uint64 ("current-media");
+
+            if (tracks.size > 0) {
+                if (scanner != null) {
+                    stop_scanner ();
+                }
+
+                player.launch = launch_player;
+
+                scanner = new CObjects.Scanner ();
+                scanner.init ();
+                scanner.discovered_new_item.connect (on_new_item);
+                scanner.scan_tracks (tracks);
             }
         }
 
@@ -350,28 +391,21 @@ namespace Music2 {
         //     }
         // }
 
-        private void load_current_playlist (bool launch_player) {
+
+
+        private Gee.ArrayList<string> read_playlist (GLib.File playlist_file, bool launch_player) {
+            Gee.ArrayList<string> tracks = new Gee.ArrayList<string> ();
+
             try {
-                string pl_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
-                                                       GLib.Environment.get_user_cache_dir (),
-                                                       Constants.APP_NAME,
-                                                       "cpl");
-
-                var playlist_file = GLib.File.new_for_path (pl_path);
-                if (!playlist_file.query_exists ()) {
-                    settings.set_enum ("source-type", Enums.SourceType.NONE);
-                    settings.set_int64 ("source-media", 0);
-                    return;
-                }
-
-                player.current_index = (uint) settings.get_uint64 ("current-media");
-
                 GLib.DataInputStream dis = new GLib.DataInputStream (playlist_file.read ());
-                Gee.ArrayList<string> tracks = new Gee.ArrayList<string> ();
 
                 int slice_index = 0;
                 string line;
                 while ((line = dis.read_line ()) != null) {
+                    if (line == "") {
+                        continue;
+                    }
+
                     if (launch_player && slice_index == 0 && player.current_index > 0 && line.hash () == player.current_index) {
                         slice_index = tracks.size;
                     }
@@ -384,22 +418,11 @@ namespace Music2 {
                     tracks = tracks.slice (slice_index, tracks.size) as Gee.ArrayList<string>;
                     tracks.add_all (tmp_arr);
                 }
-
-                player.launch = launch_player;
-
-                if (tracks.size > 0) {
-                    if (scanner != null) {
-                        stop_scanner ();
-                    }
-
-                    scanner = new CObjects.Scanner ();
-                    scanner.init ();
-                    scanner.discovered_new_item.connect (on_new_item);
-                    scanner.scan_tracks (tracks);
-                }
             } catch (Error e) {
                 warning ("Error: %s\n", e.message);
             }
+
+            return tracks;
         }
 
         private void on_new_item (CObjects.Media? m) {
