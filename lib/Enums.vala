@@ -63,10 +63,10 @@ namespace Music2.Enums {
     public enum Hint {
         NONE,
         MUSIC,
+        ALBUM_LIST,
         PLAYLIST,
         READ_ONLY_PLAYLIST,
         SMART_PLAYLIST,
-        ALBUM_LIST,
         QUEUE
     }
 

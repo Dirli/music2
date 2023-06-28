@@ -36,10 +36,9 @@ namespace Music2 {
             show_alert ();
         }
 
-        public bool init_store (int p_id, Enums.Hint hint, Enums.SourceType type) {
+        public bool init_store (int p_id, Enums.Hint hint) {
             clear_stack ();
             pid = p_id;
-            source_type = type;
 
             if (playlist_hint != hint) {
                 playlist_hint = hint;

@@ -19,7 +19,7 @@
 namespace Music2 {
     public class Services.LibraryManager : GLib.Object {
         public signal void added_category (Enums.Category category, Gtk.ListStore store);
-        public signal void started_scan ();
+        // public signal void started_scan ();
         public signal void finished_scan (string msg);
         public signal void prepare_scan ();
         public signal void progress_scan (double progress_val);
@@ -29,6 +29,12 @@ namespace Music2 {
         private uint total_m = 0;
 
         public bool loaded = false;
+
+        public bool scans {
+            get {
+                return scanner != null;
+            }
+        }
 
         public Gee.HashMap<uint, CObjects.Media> media_hash;
         public Gee.HashMap<uint, Gtk.TreeIter?> media_iter_hash;
@@ -45,7 +51,7 @@ namespace Music2 {
         public Gee.ArrayList<string> genre_array;
         public Objects.CategoryStore genre_store;
 
-        private Interfaces.Scanner scanner;
+        private Interfaces.Scanner scanner = null;
 
         public LibraryManager () {
             Tools.FileUtils.get_cache_directory ("covers");
@@ -222,7 +228,7 @@ namespace Music2 {
         }
 
         public void scan_library (string uri) {
-            started_scan ();
+            // started_scan ();
 
             source_id = 0;
 
@@ -255,7 +261,7 @@ namespace Music2 {
         }
 
         public void import_folder (string folder_uri, string music_folder) {
-            started_scan ();
+            // started_scan ();
 
             source_id = 0;
 

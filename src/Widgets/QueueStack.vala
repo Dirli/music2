@@ -21,7 +21,7 @@ namespace Music2 {
         private int queue_size;
 
         construct {
-            source_type = Enums.SourceType.QUEUE;
+            hint = Enums.Hint.QUEUE;
             queue_size = 0;
 
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();

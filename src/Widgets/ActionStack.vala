@@ -72,7 +72,7 @@ namespace Music2 {
             set_visible_child_name ("library");
         }
 
-        public void init_dnd (Enums.SourceType source_type, string uri) {
+        public void init_dnd (string uri) {
             if (get_child_by_name ("dnd") == null) {
                 var dnd_selection = new Views.DnDSelection ();
                 dnd_selection.button_clicked.connect ((btn_name, uri) => {

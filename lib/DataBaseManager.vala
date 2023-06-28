@@ -223,7 +223,6 @@ namespace Music2 {
                     Structs.Playlist new_pl = {};
                     new_pl.id = pid;
                     new_pl.name = stmt.column_text (1);
-                    new_pl.type = Enums.SourceType.PLAYLIST;
                     new_pl.tracks = new Gee.ArrayList<uint> ();
 
                     playlists_hash[pid] = new_pl;

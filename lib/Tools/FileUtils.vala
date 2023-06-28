@@ -17,6 +17,13 @@
  */
 
 namespace Music2.Tools.FileUtils {
+    public string get_tmp_path () {
+        return GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
+                                     GLib.Environment.get_tmp_dir (),
+                                     Constants.APP_NAME,
+                                     "cpl");
+    }
+
     public GLib.File get_cache_directory (string child_dir = "") {
         string dir_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
                                                 GLib.Environment.get_user_cache_dir (),
@@ -49,8 +56,7 @@ namespace Music2.Tools.FileUtils {
                     continue;
                 }
 
-                string mime_type = file_info.get_content_type ();
-                if (is_audio_file (mime_type)) {
+                if (is_audio_file (file_info)) {
                     total_files += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
                 }
             }
@@ -92,26 +98,23 @@ namespace Music2.Tools.FileUtils {
         return false;
     }
 
-    public bool save_current_playlist (string to_save) {
-        string playlist_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
-                                                GLib.Environment.get_user_cache_dir (),
-                                                Constants.APP_NAME,
-                                                "cpl");
+    public bool save_playlist (string to_save, string playlist_path) {
+        if (to_save != "") {
+            var playlist_file = GLib.File.new_for_path (playlist_path);
+            try {
+                if (playlist_file.query_exists ()) {
+                    playlist_file.delete ();
+                }
 
-        var playlist_file = GLib.File.new_for_path (playlist_path);
-        try {
-            if (playlist_file.query_exists ()) {
-                playlist_file.delete ();
+                var file_stream = playlist_file.create (GLib.FileCreateFlags.PRIVATE);
+
+                var data_stream = new GLib.DataOutputStream (file_stream);
+                data_stream.put_string (to_save);
+
+                return true;
+            } catch (Error e) {
+                warning (e.message);
             }
-
-            var file_stream = playlist_file.create (GLib.FileCreateFlags.PRIVATE);
-
-            var data_stream = new GLib.DataOutputStream (file_stream);
-            data_stream.put_string (to_save);
-
-            return true;
-        } catch (Error e) {
-            warning (e.message);
         }
 
         return false;
@@ -199,21 +202,12 @@ namespace Music2.Tools.FileUtils {
         var uris = "";
         foreach (GLib.File f in files) {
             try {
-                if (!f.query_exists ()) {
+                if (!f.query_exists () || !is_audio_file (f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NONE))) {
                     continue;
                 }
 
-                var file_info = f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NONE);
-
-                string mime_type = file_info.get_content_type ();
-                if (!Tools.FileUtils.is_audio_file (mime_type)) {
-                    continue;
-                }
-
-                if (uris != "") {
-                    uris += "\n";
-                }
                 uris += f.get_uri ();
+                uris += "\n";
             } catch (Error e) {
                 warning (e.message);
             }
@@ -240,7 +234,9 @@ namespace Music2.Tools.FileUtils {
         return Enums.SourceType.FILE;
     }
 
-    public bool is_audio_file (string mime_type) {
+    public bool is_audio_file (GLib.FileInfo f_info) {
+        string mime_type = f_info.get_content_type ();
+
         return mime_type.has_prefix ("audio/") && !mime_type.contains ("x-mpegurl") && !mime_type.contains ("x-scpls");
     }
 }

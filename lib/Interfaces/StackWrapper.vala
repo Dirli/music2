@@ -18,7 +18,7 @@
 
 namespace Music2 {
     public abstract class Interfaces.StackWrapper : Gtk.Stack {
-        public signal void selected_row (uint row_id, Enums.SourceType source_type);
+        public signal void selected_row (uint row_id, Enums.Hint hint);
         public signal void popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget w);
 
         private bool show_selected = true;
@@ -27,7 +27,7 @@ namespace Music2 {
         protected abstract uint get_selected_tid (Gtk.TreePath iter_path);
 
         public Gtk.ListStore list_store;
-        protected Enums.SourceType source_type;
+        protected Enums.Hint hint;
         protected string current_view { get; set; }
 
         protected LViews.ListView list_view;
@@ -59,7 +59,7 @@ namespace Music2 {
             if (iter != null) {
                 GLib.Value text;
                 list_view.model.get_value (iter, (int) Enums.ListColumn.TRACKID, out text);
-                selected_row ((uint) text, source_type);
+                selected_row ((uint) text, hint);
             }
         }
 

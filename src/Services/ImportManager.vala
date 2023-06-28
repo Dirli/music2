@@ -169,8 +169,7 @@ namespace Music2 {
                         continue;
                     }
 
-                    string mime_type = file_info.get_content_type ();
-                    if (Tools.FileUtils.is_audio_file (mime_type)) {
+                    if (Tools.FileUtils.is_audio_file (file_info)) {
                         Structs.ImportFile i = {};
                         i.parents = parent_path;
                         i.uri = directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25");

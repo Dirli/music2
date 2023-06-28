@@ -18,7 +18,7 @@
 
 namespace Music2 {
     public class Services.PlaylistManager : GLib.Object {
-        public signal bool selected_playlist (int pid, Enums.Hint hint, Enums.SourceType type);
+        public signal bool selected_playlist (int pid, Enums.Hint hint);
         public signal void cleared_playlist ();
         public signal void add_view (uint tid, uint count);
         public signal int remove_view (uint tid);
@@ -131,7 +131,6 @@ namespace Music2 {
             var pid = db_manager.add_playlist (new_name);
             if (pid > 0 && !playlists_hash.has_key (pid)) {
                 Structs.Playlist pl = {};
-                pl.type = Enums.SourceType.PLAYLIST;
                 pl.name = new_name;
                 pl.id = pid;
                 pl.tracks = new Gee.ArrayList<uint> ();
@@ -250,7 +249,7 @@ namespace Music2 {
         public void select_playlist (int pid, Enums.Hint hint) {
             if (hint == Enums.Hint.SMART_PLAYLIST) {
                 active_pid = pid;
-                if (selected_playlist (pid, hint, Enums.SourceType.SMARTPLAYLIST)) {
+                if (selected_playlist (pid, hint)) {
                     var t = new Thread<void*> ("select_auto_playlist", () => {
                         var db_manager = DataBaseManager.to_read ();
                         if (db_manager == null) {
@@ -272,9 +271,7 @@ namespace Music2 {
                     t.join ();
                 }
             } else if (playlists_hash.has_key (pid)) {
-                var type = playlists_hash[pid].type;
-
-                if (selected_playlist (pid, hint, type)) {
+                if (selected_playlist (pid, hint)) {
                     if (pid != active_pid) {
                         active_pid = pid;
                         uint total = 0;

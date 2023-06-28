@@ -1,7 +1,7 @@
 project (
-    'io.elementary.music2',
-    'vala', 'c',
-    version: '0.1.0'
+  'io.elementary.music2',
+  'vala', 'c',
+  version: '0.1.0'
 )
 
 add_global_arguments (
@@ -12,20 +12,18 @@ add_global_arguments (
 vala_args = []
 
 dep_glib = dependency ('glib-2.0')
-dep_gio_unix = dependency ('gio-unix-2.0')
 dep_gio = dependency ('gio-2.0')
 dep_gst = dependency ('gstreamer-1.0')
 dep_pbutils = dependency ('gstreamer-pbutils-1.0')
 dep_gsttag = dependency ('gstreamer-tag-1.0')
-dep_gee = dependency ('gee-0.8')
 dep_dbus = dependency ('dbus-1')
 
 core_deps = [
-    dep_gio_unix,
     dep_gio,
     dep_gst,
-    dep_gee,
     dep_pbutils,
+    dependency ('gio-unix-2.0'),
+    dependency ('gee-0.8'),
 ]
 
 cli_deps = [

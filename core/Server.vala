@@ -337,8 +337,6 @@ namespace Music2 {
             }
 
             if (uris.size > 0) {
-                settings.set_enum ("source-type", Enums.SourceType.FILE);
-
                 start_scanner (uris, true);
             }
         }
@@ -350,8 +348,6 @@ namespace Music2 {
             if (new_playlist_file.query_exists ()) {
                 start_scanner (read_playlist (new_playlist_file, true), true);
             }
-
-            // settings.set_enum ("source-type", Enums.SourceType.NONE);
         }
 
         private void start_scanner (Gee.ArrayList<string> tracks, bool launch_player) {

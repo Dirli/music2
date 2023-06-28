@@ -100,8 +100,7 @@ namespace Music2 {
                     } else if (file_info.get_file_type () == GLib.FileType.DIRECTORY) {
                         scan_directory (directory.get_uri () + "/" + file_info.get_name ());
                     } else {
-                        string mime_type = file_info.get_content_type ();
-                        if (Tools.FileUtils.is_audio_file (mime_type)) {
+                        if (Tools.FileUtils.is_audio_file (file_info)) {
                             tracks_path += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
                         }
                     }

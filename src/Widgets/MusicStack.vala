@@ -33,7 +33,7 @@ namespace Music2 {
         public int active_album = -1;
 
         public MusicStack (Gtk.Window win, GLib.Settings settings_ui, Gtk.ListStore music_store, Gtk.ListStore albums_store) {
-            source_type = Enums.SourceType.LIBRARY;
+            hint = Enums.Hint.MUSIC;
 
             Structs.Filter default_filter = {};
 
@@ -93,10 +93,10 @@ namespace Music2 {
             album_view = new Views.AlbumView (win);
             album_view.selected_row.connect ((row_id) => {
                 if (active_album > 0 && active_album == album_view.active_album_id) {
-                    selected_row (row_id, Enums.SourceType.QUEUE);
+                    selected_row (row_id, Enums.Hint.QUEUE);
                 } else {
                     active_album = album_view.active_album_id;
-                    selected_row (row_id, source_type);
+                    selected_row (row_id, hint);
                 }
             });
 
