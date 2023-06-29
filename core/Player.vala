@@ -69,7 +69,7 @@ namespace Music2 {
                     if (launch) {
                         set_track (value);
                     } else {
-                        load_track (value);
+                        load_track (value, false);
                     }
                 }
             }
@@ -219,13 +219,13 @@ namespace Music2 {
                 return false;
             }
 
-            load_track (track_index);
+            load_track (track_index, true);
             play ();
-            changed_track (tracks_hash[track_index], true);
+
             return true;
         }
 
-        private void load_track (uint i, bool skip_reset = false) {
+        private void load_track (uint i, bool run, bool skip_reset = false) {
             var last_state = get_state ();
 
             if (!skip_reset) {
@@ -243,6 +243,8 @@ namespace Music2 {
             if (last_state != Gst.State.PLAYING) {
                 pause ();
             }
+
+            changed_track (tracks_hash[i], run);
         }
 
         public void set_volume (double val) {
@@ -339,8 +341,7 @@ namespace Music2 {
 
             if (tracks_hash.has_key (current_index)) {
                 // playbin.uri = tracks_hash[current_index].uri;
-                load_track (current_index, true);
-                changed_track (tracks_hash[current_index], false);
+                load_track (current_index, false, true);
             }
         }
 

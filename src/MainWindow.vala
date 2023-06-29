@@ -919,10 +919,11 @@ namespace Music2 {
 
             switch (play_state) {
                 case "Playing":
-                    play_button.sensitive = true;
+                play_button.sensitive = true;
                     top_display.start_progress ();
                     break;
                 case "Paused":
+                    play_button.sensitive = true;
                     top_display.pause_progress ();
                     break;
                 case "Stopped":
