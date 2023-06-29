@@ -127,14 +127,6 @@ namespace Music2 {
             settings = new GLib.Settings (Constants.APP_NAME);
             settings_ui = new GLib.Settings (Constants.APP_NAME + ".ui");
 
-            try {
-                dbus_player = GLib.Bus.get_proxy_sync (GLib.BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
-                dbus_tracklist = GLib.Bus.get_proxy_sync (BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
-                dbus_prop = GLib.Bus.get_proxy_sync (BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
-            } catch (Error e) {
-                warning (e.message);
-            }
-
             int window_x, window_y, window_width, window_height;
             settings_ui.get ("window-position", "(ii)", out window_x, out window_y);
             settings_ui.get ("window-size", "(ii)", out window_width, out window_height);
@@ -165,6 +157,21 @@ namespace Music2 {
             source_list_view.update_badge (queue_id, 0);
             source_list_view.select_active_item (has_music_folder ? -1 : queue_id);
 
+            try {
+                dbus_player = GLib.Bus.get_proxy_sync (GLib.BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
+                dbus_tracklist = GLib.Bus.get_proxy_sync (BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
+                dbus_prop = GLib.Bus.get_proxy_sync (BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
+
+                init_state ();
+
+                dbus_tracklist.track_added.connect (on_track_added);
+                dbus_tracklist.track_list_replaced.connect (on_track_list_replaced);
+                dbus_tracklist.track_removed.connect (on_track_removed);
+                dbus_prop.properties_changed.connect (on_properties_changed);
+            } catch (Error e) {
+                warning (e.message);
+            }
+
             library_manager.added_category.connect (music_stack.add_column_item);
             library_manager.progress_scan.connect (action_stack.update_progress);
             library_manager.prepare_scan.connect (action_stack.init_progress);
@@ -186,13 +193,6 @@ namespace Music2 {
             //     library_manager.init_library ();
             //     return null;
             // });
-
-            init_state ();
-
-            dbus_tracklist.track_added.connect (on_track_added);
-            dbus_tracklist.track_list_replaced.connect (on_track_list_replaced);
-            dbus_tracklist.track_removed.connect (on_track_removed);
-            dbus_prop.properties_changed.connect (on_properties_changed);
 
             // GLib.Timeout.add (Constants.INTERVAL, () => {
             //     if (library_manager.loaded) {
@@ -217,61 +217,6 @@ namespace Music2 {
             playlist_stack = new Widgets.PlaylistStack ();
             playlist_stack.selected_row.connect (on_selected_row);
             playlist_stack.popup_media_menu.connect (on_popup_media_menu);
-
-            menu_button = new Gtk.MenuButton ();
-            menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.SMALL_TOOLBAR);
-            menu_button.valign = Gtk.Align.CENTER;
-
-            previous_button = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
-            previous_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY_PREVIOUS;
-            previous_button.tooltip_text = _("Previous");
-
-            play_button = new Gtk.Button ();
-            play_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY;
-
-            next_button = new Gtk.Button.from_icon_name ("media-skip-forward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
-            next_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY_NEXT;
-            next_button.tooltip_text = _("Next");
-
-            top_display = new Widgets.TopDisplay (settings.get_enum ("repeat-mode"), settings.get_boolean ("shuffle-mode"));
-            top_display.seek_position.connect (on_seek_position);
-            top_display.mode_option_changed.connect ((key, new_val) => {
-                if (key != "shuffle-mode") {
-                    settings.set_enum (key, new_val);
-                } else {
-                    settings.set_boolean (key, new_val == 0 ? false : true);
-                }
-            });
-            top_display.popup_media_menu.connect ((x_point, y_point) => {
-                if (active_track > 0) {
-                    uint[] tids = {active_track};
-
-                    Gdk.Rectangle rect = Gdk.Rectangle () {
-                        x = (int) x_point,
-                        y = (int) y_point,
-                        height = 1,
-                        width = 1
-                    };
-
-                    on_popup_media_menu (Enums.Hint.QUEUE, tids, rect, null);
-                }
-            });
-
-            view_selector = new Views.ViewSelector ();
-            view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
-            view_selector.mode_button.mode_changed.connect (on_mode_changed);
-            view_selector.sensitive = false;
-
-            var headerbar = new Gtk.HeaderBar ();
-            headerbar.show_close_button = true;
-            headerbar.pack_start (previous_button);
-            headerbar.pack_start (play_button);
-            headerbar.pack_start (next_button);
-            headerbar.pack_start (view_selector);
-            headerbar.pack_end (menu_button);
-            headerbar.set_title (_("Music"));
-            headerbar.set_custom_title (top_display);
-            headerbar.show_all ();
 
             source_list_view = new Widgets.SourceListView ();
             source_list_view.selection_changed.connect (on_selection_changed);
@@ -313,8 +258,67 @@ namespace Music2 {
             main_hpaned.show_all ();
 
             add (main_hpaned);
-            set_titlebar (headerbar);
+            set_titlebar (build_header_bar ());
             show ();
+        }
+
+        private Gtk.HeaderBar build_header_bar () {
+            previous_button = new Gtk.Button.from_icon_name ("media-skip-backward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
+            previous_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY_PREVIOUS;
+            previous_button.tooltip_text = _("Previous");
+
+            play_button = new Gtk.Button ();
+            play_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY;
+
+            next_button = new Gtk.Button.from_icon_name ("media-skip-forward-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
+            next_button.action_name = Constants.ACTION_PREFIX + Constants.ACTION_PLAY_NEXT;
+            next_button.tooltip_text = _("Next");
+
+            view_selector = new Views.ViewSelector ();
+            view_selector.mode_button.selected = settings_ui.get_enum ("view-mode");
+            view_selector.mode_button.mode_changed.connect (on_mode_changed);
+            view_selector.sensitive = false;
+
+            menu_button = new Gtk.MenuButton ();
+            menu_button.image = new Gtk.Image.from_icon_name ("open-menu", Gtk.IconSize.SMALL_TOOLBAR);
+            menu_button.valign = Gtk.Align.CENTER;
+
+            top_display = new Widgets.TopDisplay (settings.get_enum ("repeat-mode"), settings.get_boolean ("shuffle-mode"));
+            top_display.seek_position.connect (on_seek_position);
+            top_display.mode_option_changed.connect ((key, new_val) => {
+                if (key != "shuffle-mode") {
+                    settings.set_enum (key, new_val);
+                } else {
+                    settings.set_boolean (key, new_val == 0 ? false : true);
+                }
+            });
+            top_display.popup_media_menu.connect ((x_point, y_point) => {
+                if (active_track > 0) {
+                    uint[] tids = {active_track};
+
+                    Gdk.Rectangle rect = Gdk.Rectangle () {
+                        x = (int) x_point,
+                        y = (int) y_point,
+                        height = 1,
+                        width = 1
+                    };
+
+                    on_popup_media_menu (Enums.Hint.QUEUE, tids, rect, null);
+                }
+            });
+
+            var headerbar = new Gtk.HeaderBar ();
+            headerbar.show_close_button = true;
+            headerbar.pack_start (previous_button);
+            headerbar.pack_start (play_button);
+            headerbar.pack_start (next_button);
+            headerbar.pack_start (view_selector);
+            headerbar.pack_end (menu_button);
+            headerbar.set_title (_("Music"));
+            headerbar.set_custom_title (top_display);
+            headerbar.show_all ();
+
+            return headerbar;
         }
 
         private void init_state () {
