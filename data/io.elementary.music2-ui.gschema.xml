@@ -35,5 +35,15 @@
             <summary>column-browser column height</summary>
             <description>column-browser column height</description>
         </key>
+        <key type="s" name="music-folder">
+            <default>''</default>
+            <summary>Path to music folder</summary>
+            <description>Where music is copied to, saved, and managed</description>
+        </key>
+        <key type="b" name="show-default-dialog">
+            <default>true</default>
+            <summary>Show dialog to select default music folder</summary>
+            <description>Show dialog to select default music folder</description>
+        </key>
     </schema>
 </schemalist>

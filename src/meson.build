@@ -3,6 +3,7 @@ executable(
     'Application.vala',
     'MainWindow.vala',
     'Dialogs/About.vala',
+    'Dialogs/DefaultMusicDir.vala',
     'Dialogs/ImportFolder.vala',
     'Dialogs/PreferencesWindow.vala',
     'Dialogs/SmartPlaylistEditor.vala',

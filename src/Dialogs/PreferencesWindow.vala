@@ -35,19 +35,16 @@ namespace Music2 {
 
             var library_filechooser = new Gtk.FileChooserButton (_("Select Music Folder…"), Gtk.FileChooserAction.SELECT_FOLDER);
             library_filechooser.hexpand = true;
-            var music_folder = main_win.settings.get_string ("music-folder");
+            var music_folder = main_win.settings_ui.get_string ("music-folder");
             if (music_folder == "") {
-                var default_filename = GLib.Environment.get_user_special_dir (GLib.UserDirectory.MUSIC);
-                if (default_filename != null) {
-                    music_folder = default_filename;
-                }
+                music_folder = GLib.Environment.get_home_dir ();
             }
 
             library_filechooser.set_current_folder (music_folder);
             library_filechooser.file_set.connect (() => {
                 string? filename = library_filechooser.get_filename ();
                 if (filename != null) {
-                    main_win.settings.set_string ("music-folder", filename);
+                    main_win.settings_ui.set_string ("music-folder", filename);
                 }
             });
 

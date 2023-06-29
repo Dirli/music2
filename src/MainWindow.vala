@@ -18,7 +18,7 @@
 
 namespace Music2 {
     public class MainWindow : Gtk.ApplicationWindow {
-        private GLib.Settings settings_ui;
+        public GLib.Settings settings_ui;
         public GLib.Settings settings;
 
         private int queue_id = -5;
@@ -50,7 +50,7 @@ namespace Music2 {
 
         private bool has_music_folder {
             get {
-                return settings.get_string ("music-folder") != "";
+                return settings_ui.get_string ("music-folder") != "";
             }
         }
 
@@ -154,9 +154,13 @@ namespace Music2 {
 
             build_ui ();
 
+            settings_ui.changed["music-folder"].connect (changed_music_folder);
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
+            } else if (settings_ui.get_boolean ("show-default-dialog")) {
+                show_default_dir_dialog ();
             }
+
             source_list_view.add_item (queue_id, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
             source_list_view.update_badge (queue_id, 0);
             source_list_view.select_active_item (has_music_folder ? -1 : queue_id);
@@ -177,7 +181,6 @@ namespace Music2 {
 
             settings.bind ("auto-length", playlist_manager, "auto-length", GLib.SettingsBindFlags.GET);
             settings.changed["smart-playlists"].connect (changed_smart_playlists);
-            settings.changed["music-folder"].connect (changed_music_folder);
 
             // new Thread<void*> ("init_library", () => {
             //     library_manager.init_library ();
@@ -661,7 +664,7 @@ namespace Music2 {
                     import_dialog.response.connect ((response_id) => {
                         if (response_id == Gtk.ResponseType.APPLY) {
                             new Thread<void*> ("import_folder", () => {
-                                library_manager.import_folder (folder.get_uri (), settings.get_string ("music-folder"));
+                                library_manager.import_folder (folder.get_uri (), settings_ui.get_string ("music-folder"));
                                 return null;
                             });
                         }
@@ -873,7 +876,8 @@ namespace Music2 {
 
         // changes
         private void changed_music_folder () {
-            if (settings.get_string ("music-folder") != "") {
+            if (has_music_folder) {
+                source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
                 action_stack.init_library_folder (_("A new library folder is set"));
             }
         }
@@ -1013,10 +1017,8 @@ namespace Music2 {
             }
 
             if (has_music_folder) {
-                source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
-
                 new Thread<void*> ("scan_directory", () => {
-                    var music_dir = GLib.File.new_for_path (settings.get_string ("music-folder"));
+                    var music_dir = GLib.File.new_for_path (settings_ui.get_string ("music-folder"));
                     library_manager.scan_library (music_dir.get_uri ());
                     return null;
                 });
@@ -1026,6 +1028,15 @@ namespace Music2 {
                 source_list_view.select_active_item (1);
                 source_list_view.remove_item (-1);
             }
+        }
+
+        private void show_default_dir_dialog () {
+            var default_dir_dialog = new Dialogs.DefaultMusicDir (settings_ui) {
+                transient_for = this
+            };
+
+            default_dir_dialog.show_all ();
+            default_dir_dialog.run ();
         }
 
         private void edit_smart_playlists () {
@@ -1094,7 +1105,7 @@ namespace Music2 {
             }
 
             if (tracks.length > 0) {
-                var path = Tools.GuiUtils.get_playlist_path (item.name, settings.get_string ("music-folder"));
+                var path = Tools.GuiUtils.get_playlist_path (item.name, settings_ui.get_string ("music-folder"));
                 new Thread<void*> ("export_playlist", () => {
                     Tools.FileUtils.save_playlist_m3u (path, tracks);
 

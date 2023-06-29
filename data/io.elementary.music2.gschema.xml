@@ -16,11 +16,6 @@
     </enum>
 
     <schema path="/io/elementary/music2/" id="io.elementary.music2">
-        <key type="s" name="music-folder">
-            <default>''</default>
-            <summary>Path to music folder</summary>
-            <description>Where music is copied to, saved, and managed</description>
-        </key>
         <key type="b" name="shuffle-mode">
             <default>false</default>
             <summary>An index representing the shuffle mode</summary>
