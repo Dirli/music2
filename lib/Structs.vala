@@ -20,22 +20,19 @@ namespace Music2.Structs {
     public struct Album {
         public int album_id;
         public string title;
-        public string genre;
         public uint year;
-        public string artists_id;
-        public string artists;
     }
 
     public struct Playlist {
         public int id;
         public string name;
-        public Gee.ArrayList<uint> tracks;
+        public Gee.ArrayQueue<uint> tracks;
     }
 
     public struct Filter {
         public int id;
         public string str;
-        public Enums.ListColumn category;
+        public Enums.ListColumn column;
     }
 
     public struct Iter {

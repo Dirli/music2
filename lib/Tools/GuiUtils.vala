@@ -22,10 +22,7 @@ namespace Music2.Tools.GuiUtils {
 
         album_struct.album_id = album_id;
         album_struct.title = m.album;
-        album_struct.artists_id = artist_id.to_string ();
-        album_struct.artists = "...";
         album_struct.year = m.year;
-        album_struct.genre = m.genre;
 
         return album_struct;
     }

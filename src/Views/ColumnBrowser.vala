@@ -18,20 +18,17 @@
 
 namespace Music2 {
     public class Views.ColumnBrowser : Interfaces.ColumnBox {
-        public Gee.ArrayList<string>? filter_values = null;
+        public Gee.ArrayList<int>? filter_values = null;
 
         public ColumnBrowser (Enums.Category category) {
             Object (orientation: Gtk.Orientation.HORIZONTAL,
                     category: category);
         }
 
-        public new void filter_list (Gee.ArrayList<string> filter_vals) {
+        public new void filter_list (Gee.ArrayList<int> filter_vals) {
             filter_values = filter_vals.size == 0 ? null : filter_vals;
 
-            var parent_filter = this as Interfaces.ColumnBox;
-            if (parent_filter != null) {
-                parent_filter.filter_list ();
-            }
+            base.filter_list ();
         }
 
         public override bool row_visible (Gtk.TreeModel model, Gtk.TreeIter iter) {
@@ -41,11 +38,11 @@ namespace Music2 {
 
             int iter_id;
             model.@get (iter, 1, out iter_id, -1);
-            if (iter_id == 0) {
+            if (iter_id == -1) {
                 return true;
             }
 
-            return filter_values.contains (iter_id.to_string ());
+            return filter_values.contains (iter_id);
         }
     }
 }

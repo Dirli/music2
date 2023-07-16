@@ -52,11 +52,10 @@ namespace Music2 {
 
         private bool open_database (int flag) {
             var db_path = get_db_path ();
-            // warning (db_path);
             int res = Sqlite.Database.open (db_path, out db);
             // int res = Sqlite.Database.open_v2 (get_db_path (), out db, flag);
             if (res != Sqlite.OK) {
-            	warning ("can't open db");
+            	// warning ("can't open db");
                 warning ("Can't open database: %d: %s\n", db.errcode (), db.errmsg ());
                 return false;
             }
@@ -70,8 +69,18 @@ namespace Music2 {
             string q;
             q = """CREATE TABLE IF NOT EXISTS artists (
                 ID          INTEGER     PRIMARY KEY AUTOINCREMENT,
-                name        TEXT    NOT NULL,
+                name        TEXT        NOT NULL,
                 CONSTRAINT unique_artist UNIQUE (name)
+            );""";
+
+            if (db.exec (q, null, out errormsg) != Sqlite.OK) {
+                warning (errormsg);
+            }
+
+            q = """CREATE TABLE IF NOT EXISTS genres (
+                ID          INTEGER     PRIMARY KEY AUTOINCREMENT,
+                name        TEXT        NOT NULL,
+                CONSTRAINT unique_genre UNIQUE (name)
             );""";
 
             if (db.exec (q, null, out errormsg) != Sqlite.OK) {
@@ -80,24 +89,9 @@ namespace Music2 {
 
             q = """CREATE TABLE IF NOT EXISTS albums (
                 ID          INTEGER     PRIMARY KEY AUTOINCREMENT,
-                title       TEXT        NOT NULL,
-                genre       TEXT        NULL,
+                name        TEXT        NOT NULL,
                 year        INT         NULL,
-                CONSTRAINT unique_album UNIQUE (title, year)
-            );""";
-
-            if (db.exec (q, null, out errormsg) != Sqlite.OK) {
-                warning (errormsg);
-            }
-
-            // artists per album
-            q = """CREATE TABLE IF NOT EXISTS artperalb (
-                ID          INTEGER     PRIMARY KEY AUTOINCREMENT,
-                album_id    INT         NOT NULL,
-                artist_id   INT         NOT NULL,
-                CONSTRAINT unique_iter UNIQUE (album_id, artist_id),
-                FOREIGN KEY (album_id) REFERENCES albums (ID) ON DELETE CASCADE
-                FOREIGN KEY (artist_id) REFERENCES artists (ID) ON DELETE CASCADE
+                CONSTRAINT unique_album UNIQUE (name, year)
             );""";
 
             if (db.exec (q, null, out errormsg) != Sqlite.OK) {
@@ -112,12 +106,14 @@ namespace Music2 {
                 tid         INTEGER     NOT NULL,
                 title       TEXT        NOT NULL,
                 length      INT         NULL,
+                genre_id    INT         NULL,
                 track       INT         NULL,
                 hits        INT         DEFAULT 0,
                 last_access INTEGER     NOT NULL,
                 CONSTRAINT unique_track UNIQUE (path),
                 FOREIGN KEY (album_id) REFERENCES albums (ID) ON DELETE CASCADE
                 FOREIGN KEY (artist_id) REFERENCES artists (ID) ON DELETE CASCADE
+                FOREIGN KEY (genre_id) REFERENCES genres (ID) ON DELETE CASCADE
             );""";
 
             if (db.exec (q, null, out errormsg) != Sqlite.OK) {
@@ -223,13 +219,13 @@ namespace Music2 {
                     Structs.Playlist new_pl = {};
                     new_pl.id = pid;
                     new_pl.name = stmt.column_text (1);
-                    new_pl.tracks = new Gee.ArrayList<uint> ();
+                    new_pl.tracks = new Gee.ArrayQueue<uint> ();
 
                     playlists_hash[pid] = new_pl;
                 }
 
                 if (tid > 0) {
-                    playlists_hash[pid].tracks.add (tid);
+                    playlists_hash[pid].tracks.offer (tid);
                 }
             }
 
@@ -237,7 +233,7 @@ namespace Music2 {
             return playlists_hash;
         }
 
-        public Gee.ArrayList<uint>? get_automatic_playlist (int pid, int length) {
+        public Gee.ArrayQueue<uint>? get_automatic_playlist (int pid, int length) {
             var query_str = "";
             switch (pid) {
                 case Constants.NEVER_PLAYED_ID:
@@ -267,11 +263,11 @@ namespace Music2 {
             res = stmt.bind_int (stmt.bind_parameter_index ("$LENGTH"), length);
             assert (res == Sqlite.OK);
 
-            var tracks_id = new Gee.ArrayList<uint> ();
+            var tracks_id = new Gee.ArrayQueue<uint> ();
             while (stmt.step () == Sqlite.ROW) {
                 uint tid = (uint) stmt.column_int64 (0);
 
-                tracks_id.add (tid);
+                tracks_id.offer (tid);
             }
 
             stmt.reset ();
@@ -503,49 +499,23 @@ namespace Music2 {
             return true;
         }
 
-        public Gee.HashMap<int, string> get_artists () {
-            var artists_hash = new Gee.HashMap<int, string> ();
-            Sqlite.Statement stmt;
-            string sql = """
-                SELECT id, name FROM artists ORDER BY name;
-            """;
-
-            db.prepare_v2 (sql, sql.length, out stmt);
-
-            while (stmt.step () == Sqlite.ROW) {
-                artists_hash[stmt.column_int (0)] = stmt.column_text (1);
-            }
-
-            stmt.reset ();
-            return artists_hash;
+        public int insert_genre (string g) {
+            return insert_val ("genres", g);
         }
 
-        public Gee.HashMap<uint, int> get_artists_hash () {
-            var artists_hash = new Gee.HashMap<uint, int> ();
-            Sqlite.Statement stmt;
-            string sql = """
-                SELECT id, name FROM artists;
-            """;
-
-            db.prepare_v2 (sql, sql.length, out stmt);
-
-            while (stmt.step () == Sqlite.ROW) {
-                artists_hash[stmt.column_text (1).hash ()] = stmt.column_int (0);
-            }
-
-            stmt.reset ();
-            return artists_hash;
+        public int insert_artist (string a) {
+            return insert_val ("artists", a);
         }
 
-        public int insert_artist (string artist) {
+        private int insert_val (string t_name, string val) {
             Sqlite.Statement stmt;
             string sql = """
-                INSERT OR IGNORE INTO artists (name) VALUES ($NAME);
+                INSERT OR IGNORE INTO """ + t_name + """ (name) VALUES ($NAME);
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
-            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), artist);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), val);
             assert (res == Sqlite.OK);
 
             if (stmt.step () != Sqlite.DONE) {
@@ -554,43 +524,122 @@ namespace Music2 {
             stmt.reset ();
 
             sql = """
-                SELECT id FROM artists WHERE name=$NAME;
+                SELECT id FROM """ + t_name + """ WHERE name=$NAME;
             """;
 
             res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
-            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), artist);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), val);
             assert (res == Sqlite.OK);
 
-            int artist_id = -1;
+            int item_id = -1;
             if (stmt.step () == Sqlite.ROW) {
-                artist_id = stmt.column_int (0);
+                item_id = stmt.column_int (0);
             } else {
                 warning ("Error: %d: %s", db.errcode (), db.errmsg ());
             }
 
             stmt.reset ();
-            return artist_id;
+            return item_id;
         }
 
-        public Gee.HashMap<int, Gee.ArrayList<int>> get_artists_per_albums () {
-            var return_hash = new Gee.HashMap<int, Gee.ArrayList<int>> ();
+        public Gee.HashMap<int, string> get_genres_hash () {
+            return get_hash ("genres");
+        }
+
+        public Gee.HashMap<int, string> get_artists_hash () {
+            return get_hash ("artists");
+        }
+
+        private Gee.HashMap<int, string> get_hash (string t_name) {
+            var _hash = new Gee.HashMap<int, string> ();
+            Sqlite.Statement stmt;
+            string sql = """
+                SELECT id, name
+                FROM """ + t_name + """
+                ORDER BY name;
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            while (stmt.step () == Sqlite.ROW) {
+                _hash[stmt.column_int (0)] = stmt.column_text (1);
+            }
+
+            stmt.reset ();
+            return _hash;
+        }
+
+        public Gee.ArrayList<int> get_albums_id (string f_name, int fid) {
             Sqlite.Statement stmt;
 
             string sql = """
-                SELECT album_id, artist_id FROM artperalb;
+                    SELECT DISTINCT album_id
+                    FROM media
+                    WHERE """ + f_name + """=$FID
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            res = stmt.bind_int (stmt.bind_parameter_index ("$FID"), fid);
+            assert (res == Sqlite.OK);
+
+            var a_array = new Gee.ArrayList<int> ();
+            while (stmt.step () == Sqlite.ROW) {
+                a_array.add (stmt.column_int (0));
+            }
+
+            stmt.reset ();
+            return a_array;
+        }
+
+        public Gee.ArrayList<int> get_artists_id (int g_id) {
+            Sqlite.Statement stmt;
+
+            string sql = """
+                    SELECT DISTINCT artist_id
+                    FROM media
+                    WHERE genre_id=$GID
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$GID"), g_id);
+            assert (res == Sqlite.OK);
+
+            var a_array = new Gee.ArrayList<int> ();
+            while (stmt.step () == Sqlite.ROW) {
+                a_array.add (stmt.column_int (0));
+            }
+
+            stmt.reset ();
+            return a_array;
+        }
+
+        public Gee.HashMap<int, string> get_artists_per_albums () {
+            var return_hash = new Gee.HashMap<int, string> ();
+            Sqlite.Statement stmt;
+
+            string sql = """
+                SELECT a.album_id, artists.name
+                FROM (SELECT DISTINCT album_id, artist_id
+                    FROM media
+                    GROUP BY album_id) a
+                INNER JOIN artists
+                ON a.artist_id = artists.id;
             """;
 
             db.prepare_v2 (sql, sql.length, out stmt);
 
             while (stmt.step () == Sqlite.ROW) {
                 var alb_id = stmt.column_int (0);
+
                 if (return_hash.has_key (alb_id)) {
-                    return_hash[alb_id].add (stmt.column_int (1));
+                    return_hash[alb_id] = return_hash[alb_id] + ";" + stmt.column_text (1);
                 } else {
-                    var new_array = new Gee.ArrayList<int> ();
-                    new_array.add (stmt.column_int (1));
-                    return_hash[alb_id] = new_array;
+                    return_hash[alb_id] = stmt.column_text (1);
                 }
             }
 
@@ -598,26 +647,27 @@ namespace Music2 {
             return return_hash;
         }
 
-        public void insert_artist_per_album (int artist_id, int album_id) {
+        public Gee.ArrayQueue<uint> get_album_tracks (int album_id) {
             Sqlite.Statement stmt;
-
             string sql = """
-                INSERT OR IGNORE INTO artperalb (artist_id, album_id) VALUES ($ARTIST_ID, $ALBUM_ID);
+                SELECT tid
+                FROM media
+                WHERE album_id=$AID
+                ORDER BY track, title;
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
-            res = stmt.bind_int (stmt.bind_parameter_index ("$ALBUM_ID"), album_id);
-            assert (res == Sqlite.OK);
-            res = stmt.bind_int (stmt.bind_parameter_index ("$ARTIST_ID"), artist_id);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$AID"), album_id);
             assert (res == Sqlite.OK);
 
-            if (stmt.step () != Sqlite.DONE) {
-                warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+            var tracks_queue = new Gee.ArrayQueue<uint> ();
+            while (stmt.step () == Sqlite.ROW) {
+                tracks_queue.offer ((uint) stmt.column_int64 (0));
             }
 
             stmt.reset ();
-            return;
+            return tracks_queue;
         }
 
         public Gee.ArrayList<Structs.Album?> get_albums () {
@@ -625,7 +675,7 @@ namespace Music2 {
             Sqlite.Statement stmt;
 
             string sql = """
-                SELECT id, title, year, genre FROM albums ORDER BY title;
+                SELECT id, name, year FROM albums ORDER BY name;
             """;
 
             db.prepare_v2 (sql, sql.length, out stmt);
@@ -635,28 +685,8 @@ namespace Music2 {
                 album_struct.album_id = stmt.column_int (0);
                 album_struct.title = stmt.column_text (1);
                 album_struct.year = (uint) stmt.column_int (2);
-                album_struct.genre = stmt.column_text (3);
 
                 return_hash.add (album_struct);
-            }
-
-            stmt.reset ();
-            return return_hash;
-        }
-
-        public Gee.HashMap<uint, int> get_albums_hash () {
-            var return_hash = new Gee.HashMap<uint, int>();
-            Sqlite.Statement stmt;
-
-            string sql = """
-                SELECT id, title, year FROM albums;
-            """;
-
-            db.prepare_v2 (sql, sql.length, out stmt);
-
-            while (stmt.step () == Sqlite.ROW) {
-                var hash_key = (stmt.column_int (2).to_string () + stmt.column_text (1)).hash ();
-                return_hash[hash_key] = stmt.column_int (0);
             }
 
             stmt.reset ();
@@ -666,17 +696,15 @@ namespace Music2 {
         public int insert_album (CObjects.Media m) {
             Sqlite.Statement stmt;
             string sql = """
-                INSERT OR IGNORE INTO albums (title, year, genre) VALUES ($TITLE, $YEAR, $GENRE);
+                INSERT OR IGNORE INTO albums (name, year) VALUES ($NAME, $YEAR);
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
 
-            res = stmt.bind_text (stmt.bind_parameter_index ("$TITLE"), m.album);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), m.album);
             assert (res == Sqlite.OK);
             res = stmt.bind_int (stmt.bind_parameter_index ("$YEAR"), (int) m.year);
-            assert (res == Sqlite.OK);
-            res = stmt.bind_text (stmt.bind_parameter_index ("$GENRE"), m.genre);
             assert (res == Sqlite.OK);
 
             if (stmt.step () != Sqlite.DONE) {
@@ -685,14 +713,14 @@ namespace Music2 {
             stmt.reset ();
 
             sql = """
-                SELECT id FROM albums WHERE year=$YEAR AND title=$TITLE;
+                SELECT id FROM albums WHERE year=$YEAR AND name=$NAME;
             """;
 
             res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
             res = stmt.bind_int (stmt.bind_parameter_index ("$YEAR"), (int) m.year);
             assert (res == Sqlite.OK);
-            res = stmt.bind_text (stmt.bind_parameter_index ("$TITLE"), m.album);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), m.album);
             assert (res == Sqlite.OK);
 
             int album_id = -1;
@@ -706,95 +734,52 @@ namespace Music2 {
             return album_id;
         }
 
-        // public CObjects.Media? get_track (string uri) {
-        //     Sqlite.Statement stmt;
-        //
-        //     string sql = """
-        //         SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
-        //         FROM media
-        //         INNER JOIN albums
-        //         ON media.album_id = albums.id
-        //         INNER JOIN artists
-        //         ON media.artist_id = artists.id
-        //         WHERE media.path=$URI
-        //     """;
-        //
-        //     int res = db.prepare_v2 (sql, sql.length, out stmt);
-        //     assert (res == Sqlite.OK);
-        //
-        //     res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), uri);
-        //     assert (res == Sqlite.OK);
-        //
-        //     CObjects.Media? m = null;
-        //     if (stmt.step () == Sqlite.ROW) {
-        //         m = new CObjects.Media (stmt.column_text (4));
-        //         m.tid = (uint) stmt.column_int64 (0);
-        //         m.title = stmt.column_text (1);
-        //         m.genre = stmt.column_text (2);
-        //         m.track = (uint) stmt.column_int64 (3);
-        //         m.length = (uint) stmt.column_int64 (5);
-        //         m.album = stmt.column_text (6);
-        //         m.year = (uint) stmt.column_int (7);
-        //         m.artist = stmt.column_text (8);
-        //     }
-        //
-        //     stmt.reset ();
-        //     return m;
-        // }
-
-        public Gee.ArrayQueue<CObjects.Media> get_tracks () {
+        public Gee.HashMap<uint, CObjects.Media> get_tracks () {
             Sqlite.Statement stmt;
 
             string sql = """
-                SELECT media.tid, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
+                SELECT media.tid, media.title, genres.name, media.track, media.path, media.length, albums.name, albums.year, artists.name, media.hits
                 FROM media
                 INNER JOIN albums
                 ON media.album_id = albums.id
                 INNER JOIN artists
                 ON media.artist_id = artists.id
-                ORDER BY artists.name, albums.year, albums.title, media.track;
+                INNER JOIN genres
+                ON media.genre_id = genres.id;
             """;
-
-            // string param_name = "";
-            // if (category != null) {
-            //     switch (category) {
-            //         case Enums.Category.GENRE:
-            //             sql += """WHERE albums.genre=$GENRE """;
-            //             param_name = "$GENRE";
-            //             break;
-            //         case Enums.Category.ALBUM:
-            //             sql += """WHERE media.album_id=$ALBUM """;
-            //             param_name = "$ALBUM";
-            //             break;
-            //         case Enums.Category.ARTIST:
-            //             sql += """WHERE media.artist_id=$ARTIST """;
-            //             param_name = "$ARTIST";
-            //             break;
-            //     }
-            // }
-
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
 
-            // if (param_name != "" && filter != "") {
-            //     if (category == Enums.Category.GENRE) {
-            //         res = stmt.bind_text (stmt.bind_parameter_index (param_name), filter);
-            //         assert (res == Sqlite.OK);
-            //     } else {
-            //         res = stmt.bind_int (stmt.bind_parameter_index (param_name), int.parse (filter));
-            //         assert (res == Sqlite.OK);
-            //     }
-            // }
+            var tracks_hash = new Gee.HashMap<uint, CObjects.Media> ();
+            while (stmt.step () == Sqlite.ROW) {
+                var uri = stmt.column_text (4);
+                if (uri == null) {
+                    continue;
+                }
+                var m = new CObjects.Media (uri);
+                m.tid = (uint) stmt.column_int64 (0);
+                m.title = stmt.column_text (1) ?? "";
+                m.genre = stmt.column_text (2) ?? "";
+                m.track = (uint) stmt.column_int64 (3);
+                m.length = (uint) stmt.column_int64 (5);
+                m.album = stmt.column_text (6) ?? "";
+                m.year = (uint) stmt.column_int (7);
+                m.artist = stmt.column_text (8) ?? "";
+                m.hits = (uint) stmt.column_int (9);
 
-            return fill_model (stmt);
+                tracks_hash[m.tid] = m;;
+            }
+
+            stmt.reset ();
+            return tracks_hash;
         }
 
-        public bool insert_track (CObjects.Media m, int album_id, int artist_id) {
+        public bool insert_track (CObjects.Media m, int album_id, int artist_id, int genre_id) {
             Sqlite.Statement stmt;
             string sql = """
-                INSERT OR IGNORE INTO media (tid, album_id, artist_id, title, track, path, length, last_access)
-                VALUES ($TID, $ALBUM_ID, $ARTIST_ID, $TITLE, $TRACK, $URI, $LENGTH, $ACCESS_TIME);
+                INSERT OR IGNORE INTO media (tid, album_id, artist_id, title, track, path, length, genre_id, last_access)
+                VALUES ($TID, $ALBUM_ID, $ARTIST_ID, $TITLE, $TRACK, $URI, $LENGTH, $GENRE_ID, $ACCESS_TIME);
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
@@ -807,6 +792,8 @@ namespace Music2 {
             res = stmt.bind_int (stmt.bind_parameter_index ("$ARTIST_ID"), artist_id);
             assert (res == Sqlite.OK);
             res = stmt.bind_text (stmt.bind_parameter_index ("$TITLE"), m.title);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$GENRE_ID"), genre_id);
             assert (res == Sqlite.OK);
             res = stmt.bind_int64 (stmt.bind_parameter_index ("$TRACK"), (int64) m.track);
             assert (res == Sqlite.OK);
@@ -860,30 +847,66 @@ namespace Music2 {
             stmt.reset ();
         }
 
-        private Gee.ArrayQueue<CObjects.Media> fill_model (Sqlite.Statement stmt) {
-            var tracks_queue = new Gee.ArrayQueue<CObjects.Media> ();
+        // private Gee.ArrayQueue<CObjects.Media> fill_model (Sqlite.Statement stmt) {
+        //     var tracks_queue = new Gee.ArrayQueue<CObjects.Media> ();
+        //
+        //     while (stmt.step () == Sqlite.ROW) {
+        //         var uri = stmt.column_text (4);
+        //         if (uri == null) {
+        //             continue;
+        //         }
+        //         var m = new CObjects.Media (uri);
+        //         m.tid = (uint) stmt.column_int64 (0);
+        //         m.title = stmt.column_text (1) ?? "";
+        //         m.genre = stmt.column_text (2) ?? "";
+        //         m.track = (uint) stmt.column_int64 (3);
+        //         m.length = (uint) stmt.column_int64 (5);
+        //         m.album = stmt.column_text (6) ?? "";
+        //         m.year = (uint) stmt.column_int (7);
+        //         m.artist = stmt.column_text (8) ?? "";
+        //         m.hits = (uint) stmt.column_int (9);
+        //
+        //         tracks_queue.offer (m);
+        //     }
+        //
+        //     stmt.reset ();
+        //     return tracks_queue;
+        // }
 
-            while (stmt.step () == Sqlite.ROW) {
-                var uri = stmt.column_text (4);
-                if (uri == null) {
-                    continue;
-                }
-                var m = new CObjects.Media (uri);
-                m.tid = (uint) stmt.column_int64 (0);
-                m.title = stmt.column_text (1) ?? "";
-                m.genre = stmt.column_text (2) ?? "";
-                m.track = (uint) stmt.column_int64 (3);
-                m.length = (uint) stmt.column_int64 (5);
-                m.album = stmt.column_text (6) ?? "";
-                m.year = (uint) stmt.column_int (7);
-                m.artist = stmt.column_text (8) ?? "";
-                m.hits = (uint) stmt.column_int (9);
-
-                tracks_queue.offer (m);
-            }
-
-            stmt.reset ();
-            return tracks_queue;
-        }
+        // public CObjects.Media? get_track (string uri) {
+        //     Sqlite.Statement stmt;
+        //
+        //     string sql = """
+        //         SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name
+        //         FROM media
+        //         INNER JOIN albums
+        //         ON media.album_id = albums.id
+        //         INNER JOIN artists
+        //         ON media.artist_id = artists.id
+        //         WHERE media.path=$URI
+        //     """;
+        //
+        //     int res = db.prepare_v2 (sql, sql.length, out stmt);
+        //     assert (res == Sqlite.OK);
+        //
+        //     res = stmt.bind_text (stmt.bind_parameter_index ("$URI"), uri);
+        //     assert (res == Sqlite.OK);
+        //
+        //     CObjects.Media? m = null;
+        //     if (stmt.step () == Sqlite.ROW) {
+        //         m = new CObjects.Media (stmt.column_text (4));
+        //         m.tid = (uint) stmt.column_int64 (0);
+        //         m.title = stmt.column_text (1);
+        //         m.genre = stmt.column_text (2);
+        //         m.track = (uint) stmt.column_int64 (3);
+        //         m.length = (uint) stmt.column_int64 (5);
+        //         m.album = stmt.column_text (6);
+        //         m.year = (uint) stmt.column_int (7);
+        //         m.artist = stmt.column_text (8);
+        //     }
+        //
+        //     stmt.reset ();
+        //     return m;
+        // }
     }
 }

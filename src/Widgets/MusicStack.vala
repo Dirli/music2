@@ -18,72 +18,44 @@
 
 namespace Music2 {
     public class Widgets.MusicStack : Interfaces.StackWrapper {
-        public signal void filter_view (Enums.Category cat, int filter_id, Enums.ViewMode view_mode);
+        public signal void filter_categories (Enums.Category c, int id);
+        public signal void selected_album (int id);
 
-        private Widgets.ColumnsView columns_view;
-
-        private Gee.HashMap<int, Interfaces.ColumnBox> categories_hash;
-        private Structs.Filter? current_filter;
+        private Gee.HashMap<int, Views.ColumnBrowser> categories_hash;
+        private Structs.Filter? current_filter = null;
+        private Gee.ArrayQueue<uint> filter_tracks;
 
         private LViews.GridView albums_view;
         private Views.AlbumView album_view;
 
+        public Gee.HashMap<uint, Gtk.TreeIter?> media_iter_hash;
+
         private Gtk.TreeModelFilter? list_filter = null;
 
-        public int active_album = -1;
+        public MusicStack (Gtk.Window win, GLib.Settings settings_ui) {
+            Object (transition_type: Gtk.StackTransitionType.OVER_DOWN);
 
-        public MusicStack (Gtk.Window win, GLib.Settings settings_ui, Gtk.ListStore music_store, Gtk.ListStore albums_store) {
             hint = Enums.Hint.MUSIC;
 
-            Structs.Filter default_filter = {};
-
-            default_filter.str = "";
-            default_filter.id = 0;
-
-            current_filter = default_filter;
-
-            transition_type = Gtk.StackTransitionType.OVER_DOWN;
-
-            categories_hash = new Gee.HashMap<int, Interfaces.ColumnBox> ();
+            media_iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
+            filter_tracks = new Gee.ArrayQueue<uint> ();
 
             welcome_screen = new Granite.Widgets.Welcome (_("Get Some Tunes"), _("Add music to your library."));
             welcome_screen.append ("document-import", _("Import Music"), _("Import music from a source into your library."));
             welcome_screen.append ("folder-music", _("Change Music Folder"), _("Load music from a folder, a network or an external disk."));
             welcome_screen.activated.connect (on_welcome_activated);
 
-            columns_view = new Widgets.ColumnsView ();
-            columns_view.refilter.connect ((filter) => {
-                if (list_filter != null) {
-                    current_filter = filter;
-
-                    list_filter.refilter ();
-                }
-            });
-
-            foreach (unowned Enums.Category category in Enums.Category.get_all ()) {
-                if (category != Enums.Category.N_CATEGORIES) {
-                    if (category == Enums.Category.ALBUM) {
-                        var column = new Views.ColumnAlbum (category);
-                        categories_hash[category] = column;
-                        columns_view.add_column (column);
-                    } else {
-                        var column = new Views.ColumnBrowser (category);
-                        categories_hash[category] = column;
-                        columns_view.add_column (column);
-                    }
-                }
-            }
-
             var browser_pane = new Gtk.Paned (Gtk.Orientation.VERTICAL);
             browser_pane.expand = true;
             settings_ui.bind ("column-browser-height", browser_pane, "position", GLib.SettingsBindFlags.DEFAULT);
 
-            browser_pane.pack1 (columns_view, false, false);
-            browser_pane.pack2 (init_list_view (Enums.Hint.MUSIC, music_store), true, false);
+            browser_pane.pack1 (init_categories (), false, false);
+            browser_pane.pack2 (init_list_view (Enums.Hint.MUSIC), true, false);
+
+            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
 
             albums_view = new LViews.GridView ();
             albums_view.set_columns (-1);
-            albums_view.set_model (albums_store);
             albums_view.selection_changed.connect (grid_selection_changed);
 
             var grid_scrolled = new Gtk.ScrolledWindow (null, null);
@@ -92,14 +64,8 @@ namespace Music2 {
 
             album_view = new Views.AlbumView (win);
             album_view.selected_row.connect ((row_id) => {
-                if (active_album > 0 && active_album == album_view.active_album_id) {
-                    selected_row (row_id, Enums.Hint.QUEUE);
-                } else {
-                    active_album = album_view.active_album_id;
-                    selected_row (row_id, hint);
-                }
+                selected_row (row_id, hint);
             });
-
 
             var grid_pane = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             grid_pane.pack1 (grid_scrolled, true, false);
@@ -109,42 +75,83 @@ namespace Music2 {
             add_named (browser_pane, "listview");
             add_named (grid_pane, "gridview");
             show_welcome ();
+        }
 
-            GLib.Idle.add (() => {
-                grid_item_activated (null);
-                return false;
+        private Gtk.Grid init_categories () {
+            categories_hash = new Gee.HashMap<int, Views.ColumnBrowser> ();
+
+            var columns_view = new Gtk.Grid ();
+            foreach (unowned Enums.Category category in Enums.Category.get_all ()) {
+                if (category != Enums.Category.N_CATEGORIES) {
+                    var column = new Views.ColumnBrowser (category);
+                    column.set_size_request (60, 100);
+                    column.hexpand = column.vexpand = true;
+
+                    column.select_row.connect (on_select_row);
+                    // column.activated_row.connect (() => {
+                    //
+                    // });
+
+                    categories_hash[category] = column;
+                    columns_view.attach (column, (int) category, 0);
+                }
+            }
+
+            return columns_view;
+        }
+
+        public void init_selections (uint tid) {
+            categories_hash.foreach ((entry) => {
+                entry.value.init_box ();
+                return true;
             });
+
+            // select_run_row (tid);
         }
 
-        protected new void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
-            var filter = columns_view.get_filter ();
-            active_album = -1;
+        private void on_welcome_activated (int index) {
+            if (index == 0) {
 
-            if (filter != null && filter.category == Enums.ListColumn.ALBUM) {
-                if (filter.id > 0) {
-                    active_album = filter.id;
+            } else if (index == 1) {
+
+            } else {
+
+            }
+        }
+
+        private void on_select_row (Enums.Category c, string val, int id) {
+            filter_tracks.clear ();
+            current_filter = null;
+
+            if (id > -1) {
+                current_filter = {};
+                current_filter.str = val;
+                current_filter.id = id;
+
+                if (c == Enums.Category.GENRE) {
+                    current_filter.column = Enums.ListColumn.GENRE;
+                } else if (c == Enums.Category.ARTIST) {
+                    current_filter.column = Enums.ListColumn.ARTIST;
+                } else if (c == Enums.Category.ALBUM) {
+                    current_filter.column = Enums.ListColumn.ALBUM;
                 }
             }
 
-            var stack_wrapper = this as Interfaces.StackWrapper;
-            if (stack_wrapper != null) {
-                stack_wrapper.on_row_activated (path, column);
+            if (c < Enums.Category.ALBUM) {
+                filter_categories (c, id);
+            }
+
+            if (list_filter != null) {
+                list_filter.refilter ();
             }
         }
 
-        public Gee.ArrayList<uint>? get_filter_tracks () {
-            if (visible_child_name == "gridview") {
+        public Gee.ArrayQueue<uint> get_filter_tracks () {
+            if (get_visible_child_name () == "gridview") {
                 return album_view.get_tracks ();
-            } else if (visible_child_name == "listview") {
-                var t_array = columns_view.get_tracks ();
-                if (t_array.size == 0) {
-
-                }
-
-                return t_array;
             }
 
-            return null;
+            return filter_tracks;
         }
 
         protected override uint get_selected_tid (Gtk.TreePath filter_path) {
@@ -162,14 +169,11 @@ namespace Music2 {
             return 0;
         }
 
-        public new void select_run_row (Gtk.TreeIter? iter) {
-            if (iter != null) {
-                album_view.select_run_row (iter);
+        public new void select_run_row (uint tid) {
+            if (media_iter_hash.has_key (tid)) {
+                album_view.select_run_row (media_iter_hash[tid]);
 
-                var stack_wrapper = this as Interfaces.StackWrapper;
-                if (stack_wrapper != null) {
-                    stack_wrapper.select_run_row (iter);
-                }
+                base.select_run_row (media_iter_hash[tid]);
             } else {
                 Gtk.TreeIter first_iter;
                 if (list_store.get_iter_first (out first_iter)) {
@@ -181,104 +185,103 @@ namespace Music2 {
             }
         }
 
-        public new void remove_run_icon (Gtk.TreeIter iter) {
-            var stack_wrapper = this as Interfaces.StackWrapper;
-            if (stack_wrapper != null) {
-                stack_wrapper.remove_run_icon (iter);
+        public new void remove_run_icon (uint tid) {
+            if (media_iter_hash.has_key (tid)) {
+                base.remove_run_icon (media_iter_hash[tid]);
             }
 
             album_view.unselect_rows ();
         }
 
-        public void init_selections (Gtk.TreeIter? iter) {
-            categories_hash.foreach ((entry) => {
-                entry.value.init_box ();
+        public new void scroll_to_current (uint tid) {
+            if (media_iter_hash.has_key (tid)) {
+                base.scroll_to_current (media_iter_hash[tid]);
+            }
+        }
+
+        public void add_tracks (Gee.Collection<CObjects.Media> tracks) {
+            tracks.foreach ((m) => {
+                Gtk.TreeIter iter;
+                list_store.insert_with_values (out iter, -1,
+                    Enums.ListColumn.TRACKID, m.tid,
+                    Enums.ListColumn.TRACK, m.track,
+                    Enums.ListColumn.ALBUM, m.get_display_album (),
+                    Enums.ListColumn.LENGTH, m.length,
+                    Enums.ListColumn.YEAR, m.year,
+                    Enums.ListColumn.GENRE, m.get_display_genre (),
+                    Enums.ListColumn.TITLE, m.get_display_title (),
+                    Enums.ListColumn.ARTIST, GLib.Markup.escape_text (m.get_display_artist ()), -1);
+
+                media_iter_hash[m.tid] = iter;
+
                 return true;
             });
 
-            GLib.Idle.add (() => {
-                list_filter = new Gtk.TreeModelFilter (list_store, null);
-                list_filter.set_visible_func (row_visible_cb);
-                list_view.set_model (list_filter);
+            list_store.set_sort_column_id ((int) Enums.ListColumn.ARTIST, Gtk.SortType.ASCENDING);
+            list_store.set_sort_func ((int) Enums.ListColumn.ARTIST, media_sort_func);
 
-                select_run_row (iter);
+            list_filter = new Gtk.TreeModelFilter (list_store, null);
+            list_filter.set_visible_func (row_visible_cb);
+            list_view.set_model (list_filter);
+        }
 
-                var grid_filter = new Gtk.TreeModelFilter (list_store, null);
-                grid_filter.set_visible_func (row_visible_cb);
+        public void add_album_grid (Gee.Collection<Structs.Album?> albums, Gee.HashMap<int, string> artists) {
+            album_view.hide ();
 
-                album_view.set_model (grid_filter);
+            var albums_store = new Gtk.ListStore (2, typeof (Structs.Album), typeof (string));
 
-                return false;
+            albums.foreach ((album) => {
+                var custom_tooltip = artists.has_key (album.album_id) ? artists[album.album_id] : "";
+                custom_tooltip += "\n<span size=\"large\">%u</span>".printf (album.year);
+
+                Gtk.TreeIter grid_iter;
+                albums_store.insert_with_values (out grid_iter, -1,
+                                                 0, album,
+                                                 1, custom_tooltip, -1);
+
+                return true;
             });
+
+            albums_store.set_sort_func (0, grid_sort_func);
+            albums_store.set_sort_column_id (0, Gtk.SortType.ASCENDING);
+
+            albums_view.set_model (albums_store);
         }
 
-        public void show_view (Enums.ViewMode view_mode) {
-            set_visible_child_name (view_mode == Enums.ViewMode.COLUMN ? "listview" : "gridview");
-        }
-
-        public override void clear_stack () {
-            show_welcome ();
-
-            list_view.set_model (list_store);
-            list_filter = null;
-
-            columns_view.clear_columns (null);
-            album_view.set_model (null);
-        }
-
-        public bool row_visible_cb (Gtk.TreeModel m, Gtk.TreeIter iter) {
-            if (current_filter == null) {
-                return false;
+        public void add_album_tracks (Gee.ArrayQueue<CObjects.Media>? tracks) {
+            var track_list = album_view.get_model ();
+            if (track_list == null) {
+                return;
             }
 
-            if (current_filter.str == "") {
-                return true;
-            }
-
-            string iter_value;
-            uint tid;
-            m.@get (iter, current_filter.category, out iter_value, Enums.ListColumn.TRACKID, out tid, -1);
-
-            if (current_filter.str == iter_value) {
-                if (visible_child_name == "listview") {
-                    columns_view.add_track (tid);
-                } else if (visible_child_name == "gridview") {
-                    album_view.add_track (tid);
-                }
+            var album_store = (Gtk.ListStore) track_list;
+            tracks.foreach ((m) => {
+                Gtk.TreeIter iter;
+                album_store.insert_with_values (out iter, -1,
+                    Enums.ListColumn.TRACKID, m.tid,
+                    Enums.ListColumn.TITLE, m.get_display_title (),
+                    Enums.ListColumn.LENGTH, m.length,
+                    Enums.ListColumn.ARTIST, GLib.Markup.escape_text (m.get_display_artist ()), -1);
 
                 return true;
-            }
+            });
 
-            return false;
+            album_view.show_all ();
         }
 
         public void add_column_item (Enums.Category cat, Gtk.ListStore store) {
             if (categories_hash.has_key (cat)) {
+                ((Objects.CategoryStore) store).add_sorting ();
                 categories_hash[cat].set_model (store);
             }
         }
 
-        private void on_welcome_activated (int index) {
-            if (index == 0) {
-
-            } else if (index == 1) {
-
-            } else {
-
-            }
+        public void filter_category (Enums.Category c, Gee.ArrayList<int> vals) {
+            categories_hash[c].filter_list (vals);
         }
 
-        private void grid_item_activated (Structs.Album? album_struct) {
-            if (album_struct == null) {
-                album_view.hide ();
-                return;
-            }
-
-            if (album_view.active_album_id != album_struct.album_id) {
-                album_view.set_album (album_struct);
-            }
-
-            album_view.show_all ();
+        public void show_view (Enums.ViewMode view_mode) {
+            set_visible_child_name (view_mode == Enums.ViewMode.COLUMN ? "listview" : "gridview");
         }
 
         private void grid_selection_changed () {
@@ -289,13 +292,182 @@ namespace Music2 {
                 if (albums_store.get_iter (out selected_iter, path.data)) {
                     unowned Structs.Album? struct_album;
                     albums_store.@get (selected_iter, 0, out struct_album, -1);
-                    grid_item_activated (struct_album);
+
+                    if (album_view.set_album (struct_album)) {
+                        selected_album (struct_album.album_id);
+                    }
 
                     return;
                 }
             }
 
-            grid_item_activated (null);
+            album_view.hide ();
+        }
+
+        public override void clear_stack () {
+            show_welcome ();
+
+            list_view.set_model (null);
+            list_filter = null;
+
+            media_iter_hash.clear ();
+
+            categories_hash.foreach ((entry) => {
+                entry.value.clear_box ();
+                return true;
+            });
+
+            album_view.clear ();
+        }
+
+        public bool row_visible_cb (Gtk.TreeModel m, Gtk.TreeIter iter) {
+            if (current_filter == null || current_filter.str == "") {
+                uint tid;
+                m.@get (iter, Enums.ListColumn.TRACKID, out tid, -1);
+
+                filter_tracks.offer (tid);
+
+                return true;
+            }
+
+            string iter_value;
+            uint tid;
+            m.@get (iter, current_filter.column, out iter_value, Enums.ListColumn.TRACKID, out tid, -1);
+
+            if (current_filter.str == iter_value) {
+                // if (!filter_tracks.contains (tid)) {
+                    filter_tracks.offer (tid);
+                // }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public int media_sort_func (Gtk.TreeModel s, Gtk.TreeIter a, Gtk.TreeIter b) {
+            var l_store = s as Gtk.ListStore;
+
+            int sort_column_id;
+            Gtk.SortType sort_direction;
+            l_store.get_sort_column_id (out sort_column_id, out sort_direction);
+
+            if (sort_column_id < 1) {return 0;}
+
+            int rv = 0;
+            rv = sort_column_id == Enums.ListColumn.ARTIST ? compare_artists (s, a, b) :
+                 sort_column_id == Enums.ListColumn.ALBUM ? compare_albums (s, a, b) :
+                 compare_column_values (s, a, b, (Enums.ListColumn) sort_column_id);
+
+            if (sort_direction == Gtk.SortType.DESCENDING) {
+                rv = (rv > 0) ? -1 : 1;
+            }
+
+            return rv;
+        }
+
+        private int grid_sort_func (Gtk.TreeModel s, Gtk.TreeIter a, Gtk.TreeIter b) {
+            Structs.Album? struct_a;
+            s.@get (a, 0, out struct_a, -1);
+            Structs.Album? struct_b;
+            s.@get (b, 0, out struct_b, -1);
+
+            int rv = 0;
+            if (struct_a != null && struct_b != null) {
+                rv = Tools.String.compare (struct_a.title, struct_b.title);
+            }
+
+            return rv;
+        }
+
+        private int compare_artists (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
+            string artist_name_a, artist_name_b;
+            string album_name_a, album_name_b;
+            uint album_year_a, album_year_b;
+            uint track_number_a, track_number_b;
+
+            store.@get (a,
+                        Enums.ListColumn.ARTIST, out artist_name_a,
+                        Enums.ListColumn.YEAR, out album_year_a,
+                        Enums.ListColumn.ALBUM, out album_name_a,
+                        Enums.ListColumn.TRACK, out track_number_a,
+                        -1);
+
+            store.@get (b,
+                        Enums.ListColumn.ARTIST, out artist_name_b,
+                        Enums.ListColumn.YEAR, out album_year_b,
+                        Enums.ListColumn.ALBUM, out album_name_b,
+                        Enums.ListColumn.TRACK, out track_number_b,
+                        -1);
+
+            int res = Tools.String.compare (artist_name_a, artist_name_b);
+            if (res != 0) {
+                return res;
+            }
+
+            if (album_year_a != album_year_b) {
+                return album_year_a > album_year_b ? 1 : -1;
+            }
+
+            res = Tools.String.compare (album_name_a, album_name_b);
+            if (res != 0) {return res;}
+
+            if (track_number_a != track_number_b) {
+                return track_number_a > track_number_b ? 1 : -1;
+            }
+
+            return res;
+        }
+
+        private int compare_albums (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b) {
+            string album_name_a, album_name_b;
+            uint album_year_a, album_year_b;
+            uint track_number_a, track_number_b;
+
+            store.@get (a,
+                        Enums.ListColumn.YEAR, out album_year_a,
+                        Enums.ListColumn.ALBUM, out album_name_a,
+                        Enums.ListColumn.TRACK, out track_number_a,
+                        -1);
+
+            store.@get (b,
+                        Enums.ListColumn.YEAR, out album_year_b,
+                        Enums.ListColumn.ALBUM, out album_name_b,
+                        Enums.ListColumn.TRACK, out track_number_b,
+                        -1);
+
+            int res = Tools.String.compare (album_name_a, album_name_b);
+            if (res != 0) {
+                return res;
+            }
+
+            if (album_year_a != album_year_b) {
+                return album_year_a > album_year_b ? 1 : -1;
+            }
+
+            if (track_number_a != track_number_b) {
+                return track_number_a > track_number_b ? 1 : -1;
+            }
+
+            return res;
+        }
+
+        private int compare_column_values (Gtk.TreeModel store, Gtk.TreeIter a, Gtk.TreeIter b, Enums.ListColumn col_id) {
+            GLib.Value val_a;
+            store.get_value (a, col_id, out val_a);
+            GLib.Value val_b;
+            store.get_value (b, col_id, out val_b);
+
+            var col_type = col_id.get_data_type ();
+            if (col_type == GLib.Type.STRING) {
+                return Tools.String.compare (val_a.get_string (), val_b.get_string ());
+            } else if (col_type == GLib.Type.UINT) {
+                uint uint_a = val_a.get_uint ();
+                uint uint_b = val_b.get_uint ();
+                return uint_a == uint_b ? 0 : uint_a > uint_b ? 1 : -1;
+            }
+
+            return 0;
         }
     }
 }

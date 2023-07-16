@@ -18,7 +18,7 @@
 
 namespace Music2 {
     public abstract class Interfaces.ColumnBox : Gtk.Box {
-        public signal void select_row (string val_str, int val_id);
+        public signal void select_row (Enums.Category cat, string name, int id);
         public signal void activated_row ();
 
         protected int n_items = 0;
@@ -111,7 +111,7 @@ namespace Music2 {
 
             Gtk.TreeIter child_iter;
             list_filter.convert_iter_to_child_iter (out child_iter, first_iter);
-            list_store.@set (child_iter, 0, Tools.String.get_first_item_text (category, n_items));
+            list_store.@set (child_iter, 0, Tools.String.get_first_item_text (category, n_items), -1);
 
             init_selection ();
         }
@@ -126,7 +126,7 @@ namespace Music2 {
                 temp_model.@get (iter, 0, out value_str, 1, out value_id, -1);
                 if (value_id != selected_item) {
                     if (selected_item != -1) {
-                        select_row (value_str, value_id);
+                        select_row (category, value_str, value_id);
                     }
 
                     selected_item = value_id;

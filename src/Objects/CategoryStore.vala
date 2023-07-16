@@ -28,8 +28,6 @@ namespace Music2 {
             Object (category: category);
 
             set_column_types (types);
-            set_sort_column_id (0, Gtk.SortType.ASCENDING);
-            set_sort_func (0, new_sort_func);
             add_first_element ();
 
             row_inserted.connect (on_row_inserted);
@@ -40,10 +38,15 @@ namespace Music2 {
             update_first_item ();
         }
 
+        public void add_sorting () {
+            set_sort_func (0, new_sort_func);
+            set_sort_column_id (0, Gtk.SortType.ASCENDING);
+        }
+
         public void add_first_element () {
             var first_text = Tools.String.get_first_item_text (category, n_items);
             Gtk.TreeIter tmp_iter;
-            insert_with_values (out tmp_iter, -1, 0, first_text, 1, 0, -1);
+            insert_with_values (out tmp_iter, -1, 0, first_text, 1, -1, -1);
             first_iter = tmp_iter;
         }
 
@@ -65,16 +68,14 @@ namespace Music2 {
         }
 
         private int new_sort_func (Gtk.TreeModel store , Gtk.TreeIter a, Gtk.TreeIter b) {
-            string val_first;
-            store.@get (first_iter, 0, out val_first, -1);
-            string val_a;
-            store.@get (a, 0, out val_a, -1);
-            string val_b;
-            store.@get (b, 0, out val_b, -1);
+            string val_a, val_b;
+            int id_a, id_b;
+            store.@get (a, 0, out val_a, 1, out id_a, -1);
+            store.@get (b, 0, out val_b, 1, out id_b, -1);
 
             // "All" is always the first
-            if (val_first == val_a) {return -1;}
-            if (val_first == val_b) {return 1;}
+            if (id_a == -1) {return -1;}
+            if (id_b == -1) {return 1;}
 
             return Tools.String.compare (val_a, val_b);
         }

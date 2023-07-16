@@ -28,10 +28,12 @@ namespace Music2 {
             alert_view = new Granite.Widgets.AlertView ("", "", "");
 
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
-            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
 
             add_named (alert_view, "alert");
-            add_named (init_list_view (Enums.Hint.PLAYLIST, list_store), "listview");
+            add_named (init_list_view (Enums.Hint.PLAYLIST), "listview");
+
+            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
+            list_view.set_model (list_store);
 
             show_alert ();
         }
@@ -49,7 +51,6 @@ namespace Music2 {
         }
 
         public override int add_iter (CObjects.Media m) {
-
             Gtk.TreeIter iter;
             list_store.insert_with_values (out iter, -1,
                 Enums.ListColumn.TRACKID, m.tid,

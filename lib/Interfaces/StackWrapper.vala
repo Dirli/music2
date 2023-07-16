@@ -26,7 +26,8 @@ namespace Music2 {
         public abstract void clear_stack ();
         protected abstract uint get_selected_tid (Gtk.TreePath iter_path);
 
-        public Gtk.ListStore list_store;
+        protected Gtk.ListStore list_store;
+
         protected Enums.Hint hint;
         protected string current_view { get; set; }
 
@@ -63,11 +64,9 @@ namespace Music2 {
             }
         }
 
-        protected Gtk.ScrolledWindow init_list_view (Enums.Hint hint, Gtk.ListStore list_store) {
-            this.list_store = list_store;
-
+        protected Gtk.ScrolledWindow init_list_view (Enums.Hint hint) {
             list_view = new LViews.ListView (hint);
-            list_view.set_model (list_store);
+
             tree_sel = list_view.get_selection ();
 
             list_view.popup_media_menu.connect ((popup_hint, x_point, y_point, widget) => {
@@ -128,7 +127,6 @@ namespace Music2 {
         }
 
         public void select_run_row (Gtk.TreeIter iter) {
-
             GLib.Idle.add (() => {
                 list_store.@set (iter, (int) Enums.ListColumn.ICON, new GLib.ThemedIcon ("audio-volume-high-symbolic"), -1);
 

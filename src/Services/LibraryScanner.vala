@@ -24,8 +24,7 @@ namespace Music2 {
 
         private Gee.HashMap<uint, int> artists_cache;
         private Gee.HashMap<uint, int> albums_cache;
-
-        public Gee.HashMap<int, Gee.ArrayList<int>> apa_cache;
+        private Gee.HashMap<string, int> genres_cache;
 
         private Objects.LibraryTagger? lib_tagger;
         private DataBaseManager? db_manager;
@@ -41,9 +40,11 @@ namespace Music2 {
 
             recorded_tracks = 0;
             stop_flag = false;
-            apa_cache = new Gee.HashMap<int, Gee.ArrayList<int>> ();
+
             artists_cache = new Gee.HashMap<uint, int> ();
             albums_cache = new Gee.HashMap<uint, int> ();
+
+            genres_cache = new Gee.HashMap<string, int> ();
 
             var now_time = new GLib.DateTime.now ();
             start_time = now_time.to_unix ();
@@ -116,42 +117,25 @@ namespace Music2 {
         }
 
         private void add_track (CObjects.Media m) {
-            int art_id;
-            if (!artists_cache.has_key (m.artist.hash ())) {
-                art_id = db_manager.insert_artist (m.artist);
-                // art_id = artists_cache.size + 1;
-                artists_cache[m.artist.hash ()] = art_id;
-            } else {
-                art_id = artists_cache[m.artist.hash ()];
+            if (!genres_cache.has_key (m.genre)) {
+                genres_cache[m.genre] = db_manager.insert_genre (m.genre);
             }
+            int genre_id = genres_cache[m.genre];
 
-            int alb_id;
+            if (!artists_cache.has_key (m.artist.hash ())) {
+                artists_cache[m.artist.hash ()] = db_manager.insert_artist (m.artist);
+            }
+            int art_id = artists_cache[m.artist.hash ()];
+
             var alb_hash = ("%u".printf (m.year) + m.album).hash ();
             if (!albums_cache.has_key (alb_hash)) {
-                alb_id = db_manager.insert_album (m);
-                // alb_id = albums_cache.size + 1;
-                albums_cache[alb_hash] = alb_id;
-            } else {
-                alb_id = albums_cache[alb_hash];
+                albums_cache[alb_hash] = db_manager.insert_album (m);
             }
+            int alb_id = albums_cache[alb_hash];
 
-            if (!apa_cache.has_key (alb_id) || !apa_cache[alb_id].contains (art_id)) {
-                db_manager.insert_artist_per_album (art_id, alb_id);
-                if (!apa_cache.has_key (alb_id)) {
-                    var new_arr = new Gee.ArrayList<int> ();
-                    new_arr.add (art_id);
-                    apa_cache[alb_id] = new_arr;
-                } else {
-                    apa_cache[alb_id].add (art_id);
-                }
-            }
-
-            // m.tid = ++recorded_tracks;
-            // added_track (m, art_id, alb_id);
-            if (db_manager.insert_track (m, alb_id, art_id)) {
+            if (db_manager.insert_track (m, alb_id, art_id, genre_id)) {
                 added_track (m, art_id, alb_id);
             }
-
         }
     }
 }

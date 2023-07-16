@@ -25,14 +25,16 @@ namespace Music2 {
             queue_size = 0;
 
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
-            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
 
             alert_view = new Granite.Widgets.AlertView (_("No songs in Queue"),
                                                         _("To add songs to the queue, use the <b>secondary click</b> on an item and choose <b>Queue</b>. When a song finishes, the queued songs will be played first before the next song in the currently playing list."),
                                                         "dialog-information");
 
             add_named (alert_view, "alert");
-            add_named (init_list_view (Enums.Hint.QUEUE, list_store), "listview");
+            add_named (init_list_view (Enums.Hint.QUEUE), "listview");
+
+            list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
+            list_view.set_model (list_store);
 
             show_alert ();
         }

@@ -62,7 +62,7 @@ namespace Music2 {
             return available_hash;
         }
 
-        public Gee.ArrayList<uint>? get_playlist (int pid) {
+        public Gee.ArrayQueue<uint>? get_playlist (int pid) {
             if (pid < 0) {
                 var db_manager = DataBaseManager.to_read ();
                 if (db_manager != null) {
@@ -133,7 +133,7 @@ namespace Music2 {
                 Structs.Playlist pl = {};
                 pl.name = new_name;
                 pl.id = pid;
-                pl.tracks = new Gee.ArrayList<uint> ();
+                pl.tracks = new Gee.ArrayQueue<uint> ();
 
                 playlists_hash[pid] = pl;
                 added_playlist (pid, new_name, Enums.Hint.PLAYLIST, new ThemedIcon ("playlist"));
@@ -192,7 +192,7 @@ namespace Music2 {
                 }
 
                 modified_pid = pid;
-                playlists_hash[pid].tracks.add (tid);
+                playlists_hash[pid].tracks.offer (tid);
 
                 if (active_pid == pid) {
                     var total = playlists_hash[pid].tracks.size;

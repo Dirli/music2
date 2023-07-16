@@ -18,24 +18,11 @@
 
 namespace Music2 {
     public class Views.AlbumView : Gtk.Grid {
-        public signal void refilter (Structs.Filter? filter);
         public signal void selected_row (uint row_id);
-
-        private Gee.ArrayList<uint> filter_tracks;
 
         private Gtk.Window parent_window;
 
         private Gtk.TreeSelection tree_sel;
-
-        public int active_album_id {
-            get {
-                if (current_album == null) {
-                    return -1;
-                }
-
-                return current_album.album_id;
-            }
-        }
 
         public Gtk.TreeView tracks_view;
         private Structs.Album? current_album = null;
@@ -50,8 +37,6 @@ namespace Music2 {
             album_cover.width_request = 184;
             album_cover.margin = 28;
             album_cover.margin_bottom = 12;
-
-            filter_tracks = new Gee.ArrayList<uint> ();
 
             var cover_event_box = new Gtk.EventBox ();
             cover_event_box.add (album_cover);
@@ -75,6 +60,7 @@ namespace Music2 {
             tracks_view.headers_visible = false;
             tracks_view.set_tooltip_column ((int) Enums.ListColumn.ARTIST);
             tracks_view.get_style_context ().remove_class (Gtk.STYLE_CLASS_VIEW);
+            tracks_view.set_model (new Gtk.ListStore.newv (Enums.ListColumn.get_all ()));
 
             var tracks_scrolled = new Gtk.ScrolledWindow (null, null);
             tracks_scrolled.margin_top = 18;
@@ -92,17 +78,17 @@ namespace Music2 {
         }
 
         protected void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
-            var filter_model = tracks_view.get_model ();
-            if (filter_model == null) {
+            var tree_model = tracks_view.get_model ();
+            if (tree_model == null) {
                 return;
             }
 
             Gtk.TreeIter? iter;
-            filter_model.get_iter (out iter, path);
+            tree_model.get_iter (out iter, path);
 
             if (iter != null) {
                 uint tid;
-                filter_model.@get (iter, (int) Enums.ListColumn.TRACKID, out tid, -1);
+                tree_model.@get (iter, (int) Enums.ListColumn.TRACKID, out tid, -1);
                 selected_row (tid);
             }
         }
@@ -114,42 +100,49 @@ namespace Music2 {
             return true;
         }
 
-        public Gee.ArrayList<uint> get_tracks () {
-            return filter_tracks;
+        public Gtk.TreeModel? get_model () {
+            return tracks_view.get_model ();
         }
 
-        public void add_track (uint tid) {
-            if (!filter_tracks.contains (tid)) {
-                filter_tracks.add (tid);
+        public Gee.ArrayQueue<uint> get_tracks () {
+            var tracks = new Gee.ArrayQueue<uint> ();
+            var tree_model = get_model ();
+            if (tree_model != null) {
+                tree_model.@foreach ((model, path, iter) => {
+                    uint tid;
+                    tree_model.@get (iter, (int) Enums.ListColumn.TRACKID, out tid, -1);
+
+                    tracks.offer (tid);
+
+                    return false;
+                });
             }
+
+            return tracks;
         }
 
-        public void set_model (Gtk.TreeModel? tree_model) {
-            tracks_view.set_model (tree_model);
-        }
-
-        private void reset () {
+        public void clear () {
             current_album = null;
             album_label.set_label ("");
 
-            filter_tracks.clear ();
+            var tree_model = get_model ();
+            if (tree_model != null) {
+                ((Gtk.ListStore) tree_model).clear ();
+            }
         }
 
-        public void set_album (Structs.Album album_struct) {
-            reset ();
+        public bool set_album (Structs.Album album_struct) {
+            if (current_album != null && album_struct.album_id == current_album.album_id) {
+                return false;
+            }
+
+            clear ();
 
             current_album = album_struct;
             album_label.set_label (album_struct.title);
 
             album_cover.image.gicon = Tools.GuiUtils.get_cover_icon (album_struct.year, album_struct.title);
-
-            Structs.Filter f = {};
-
-            f.category = Enums.ListColumn.ALBUM;
-            f.str = current_album.title;
-            f.id = current_album.album_id;
-
-            refilter (f);
+            return true;
         }
 
         private void set_new_cover () {

@@ -58,15 +58,8 @@ namespace Music2 {
         public uint active_track {
             set {
                 queue_stack.select_run_row (value);
-
-                if (library_manager.loaded) {
-                    var iter = library_manager.get_media_iter (value);
-                    if (iter != null) {
-                        music_stack.select_run_row (iter);
-                    }
-
-                    playlist_stack.select_run_row (value);
-                }
+                music_stack.select_run_row (value);
+                playlist_stack.select_run_row (value);
 
                 _active_track = value;
 
@@ -124,6 +117,8 @@ namespace Music2 {
             actions.add_action_entries (ACTION_ENTRIES, this);
             insert_action_group ("win", actions);
 
+            Tools.FileUtils.get_tmp_directory ();
+
             settings = new GLib.Settings (Constants.APP_NAME);
             settings_ui = new GLib.Settings (Constants.APP_NAME + ".ui");
 
@@ -147,11 +142,7 @@ namespace Music2 {
             build_ui ();
 
             settings_ui.changed["music-folder"].connect (changed_music_folder);
-            if (has_music_folder) {
-                source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
-            } else if (settings_ui.get_boolean ("show-default-dialog")) {
-                show_default_dir_dialog ();
-            }
+            changed_music_folder ();
 
             source_list_view.add_item (queue_id, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
             source_list_view.update_badge (queue_id, 0);
@@ -172,11 +163,6 @@ namespace Music2 {
                 warning (e.message);
             }
 
-            library_manager.added_category.connect (music_stack.add_column_item);
-            library_manager.progress_scan.connect (action_stack.update_progress);
-            library_manager.prepare_scan.connect (action_stack.init_progress);
-            library_manager.finished_scan.connect (on_finished_scan);
-
             playlist_manager.add_view.connect (on_add_view);
             playlist_manager.remove_view.connect (playlist_stack.remove_iter);
             playlist_manager.selected_playlist.connect (on_selected_playlist);
@@ -189,20 +175,7 @@ namespace Music2 {
             settings.bind ("auto-length", playlist_manager, "auto-length", GLib.SettingsBindFlags.GET);
             settings.changed["smart-playlists"].connect (changed_smart_playlists);
 
-            // new Thread<void*> ("init_library", () => {
-            //     library_manager.init_library ();
-            //     return null;
-            // });
-
-            // GLib.Timeout.add (Constants.INTERVAL, () => {
-            //     if (library_manager.loaded) {
-            //         after_init (true);
-            //
-            //         return false;
-            //     }
-            //
-            //     return true;
-            // });
+            library_manager.init_library.begin ();
         }
 
         private void build_ui () {
@@ -210,9 +183,11 @@ namespace Music2 {
             queue_stack.selected_row.connect (on_selected_row);
             queue_stack.popup_media_menu.connect (on_popup_media_menu);
 
-            music_stack = new Widgets.MusicStack (this, settings_ui, library_manager.media_store, library_manager.albums_grid_store);
+            music_stack = new Widgets.MusicStack (this, settings_ui);
             music_stack.selected_row.connect (on_selected_row);
             music_stack.popup_media_menu.connect (on_popup_media_menu);
+            music_stack.filter_categories.connect (on_filter_categories);
+            music_stack.selected_album.connect (on_selected_album);
 
             playlist_stack = new Widgets.PlaylistStack ();
             playlist_stack.selected_row.connect (on_selected_row);
@@ -443,13 +418,7 @@ namespace Music2 {
         private void action_show_current () {
             var visible_widget = view_stack.get_visible_child ();
             if (visible_widget is Widgets.MusicStack) {
-                var stack_wrapper = visible_widget as Interfaces.StackWrapper;
-                if (stack_wrapper != null) {
-                    var iter = library_manager.get_media_iter (active_track);
-                    if (iter != null) {
-                        stack_wrapper.scroll_to_current (iter);
-                    }
-                }
+                ((Widgets.MusicStack) visible_widget).scroll_to_current (active_track);
             } else if (visible_widget is Interfaces.ListStack) {
                 var list_stack = visible_widget as Interfaces.ListStack;
                 if (list_stack != null) {
@@ -622,13 +591,10 @@ namespace Music2 {
             main_menu.append_item (edit_item);
 
             if (hint == Enums.Hint.MUSIC || hint == Enums.Hint.PLAYLIST || hint == Enums.Hint.SMART_PLAYLIST) {
-                // if ((active_source_type == Enums.SourceType.LIBRARY ||
-                //      active_source_type == Enums.SourceType.PLAYLIST ||
-                //      active_source_type == Enums.SourceType.SMARTPLAYLIST) &&
-                //      !queue_stack.exist_iter (tids[0])) {
+                if (!queue_stack.exist_iter (tids[0])) {
                     var queue_item = new GLib.MenuItem (_("Add to Queue"), "win.action_to_queue(%d)".printf ((int) tids[0]));
                     main_menu.append_item (queue_item);
-                // }
+                }
             }
 
             string remove_label = hint == Enums.Hint.QUEUE ? _("Remove from Queue") :
@@ -707,38 +673,52 @@ namespace Music2 {
             }
         }
 
+        private void on_filter_categories (Enums.Category c, int id) {
+            for (var i = (int) c + 1; i < Enums.Category.N_CATEGORIES; i++) {
+                if (id == -1) {
+                    music_stack.filter_category ((Enums.Category) i, new Gee.ArrayList<int> ());
+                } else {
+                    var id_arr = library_manager.get_filtered_category ((Enums.Category) i, c, id);
+                    if (id_arr != null) {
+                        music_stack.filter_category ((Enums.Category) i, id_arr);
+                    }
+                }
+            }
+        }
+
+        private void on_selected_album (int album_id) {
+            var a_tracks = library_manager.get_album_tracks (album_id);
+            if (a_tracks.size > 0) {
+                music_stack.add_album_tracks (a_tracks);
+            }
+        }
+
         private void on_selected_row (uint row_id, Enums.Hint active_hint) {
             if (active_hint == Enums.Hint.QUEUE) {
                 run_selected_row (row_id);
                 return;
             }
 
-            if (active_hint != Enums.Hint.MUSIC) {
-                music_stack.active_album = -1;
+            if (library_manager.scans) {
+                return;
             }
 
-            if (active_hint == Enums.Hint.MUSIC) {
-                if (library_manager.scans) {
-                    return;
-                } else {
-                    var tids = music_stack.get_filter_tracks ();
-                    if (tids != null && tids.size == 0) {
-                        tids.add (row_id);
-                    }
+            settings.set_uint64 ("current-media", row_id);
 
-                    if (!playlist_from_library (tids)) {
-                        return;
-                    }
+            if (active_hint == Enums.Hint.MUSIC) {
+                var tids = music_stack.get_filter_tracks ();
+                if (tids.size > 0 && playlist_from_library (tids)) {
+                    return;
                 }
             } else if (active_hint >= Enums.Hint.PLAYLIST) {
                 var tids = playlist_manager.get_playlist (playlist_stack.pid);
 
-                if (!playlist_from_library (tids)) {
+                if (playlist_from_library (tids)) {
                     return;
                 }
             }
 
-            settings.set_uint64 ("current-media", row_id);
+            settings.set_uint64 ("current-media", 0);
         }
 
         private void on_menu_activated (Views.SourceListItem item, Enums.ActionType action_type) {
@@ -750,7 +730,7 @@ namespace Music2 {
                     break;
                 case Enums.ActionType.CLEAR:
                     if (item.hint == Enums.Hint.QUEUE) {
-                        // settings.set_int64 ("source-media", 0);
+                        //
                     } else if (item.hint == Enums.Hint.PLAYLIST) {
                         var pid = item.pid;
                         playlist_manager.clear_playlist (pid);
@@ -759,20 +739,17 @@ namespace Music2 {
                     break;
                 case Enums.ActionType.SAVE:
                     if (item.hint == Enums.Hint.QUEUE) {
-                        // if (active_source_type == Enums.SourceType.LIBRARY
-                        //  || active_source_type == Enums.SourceType.PLAYLIST) {
-                            var pid = playlist_manager.create_playlist (_("Queue"));
-                            if (pid > 0) {
-                                try {
-                                    var tracks = dbus_tracklist.get_tracklist ();
-                                    foreach (var tid in tracks) {
-                                        playlist_manager.add_to_playlist (pid, tid);
-                                    }
-                                } catch (Error e) {
-                                    warning (e.message);
+                        var pid = playlist_manager.create_playlist (_("Queue"));
+                        if (pid > 0) {
+                            try {
+                                var tracks = dbus_tracklist.get_tracklist ();
+                                foreach (var tid in tracks) {
+                                    playlist_manager.add_to_playlist (pid, tid);
                                 }
+                            } catch (Error e) {
+                                warning (e.message);
                             }
-                        // }
+                        }
                     }
                     break;
                 case Enums.ActionType.REMOVE:
@@ -820,7 +797,24 @@ namespace Music2 {
         private void on_finished_scan (string msg) {
             action_stack.hide_widget ("progress");
 
-            after_init (false);
+            library_manager.init_library.begin ();
+        }
+
+        private void on_library_loaded () {
+            music_stack.add_tracks (library_manager.get_track_list ());
+            music_stack.add_album_grid (library_manager.get_albums (),
+                                        library_manager.get_artists_per_albums ());
+
+            view_selector.sensitive = true;
+            on_mode_changed ();
+            music_stack.init_selections (active_track);
+            status_bar.sensitive_btns (true);
+            // if (library_manager.library_not_empty) {
+            // } else if (check_exist) {
+            //     if (has_music_folder) {
+            //         action_stack.init_library_folder (_("Library folder found"));
+            //     }
+            // }
         }
 
         private void on_edited_playlist (int pid, string playlist_name) {
@@ -883,6 +877,14 @@ namespace Music2 {
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
                 action_stack.init_library_folder (_("A new library folder is set"));
+
+                library_manager.library_loaded.connect (on_library_loaded);
+                library_manager.added_category.connect (music_stack.add_column_item);
+                library_manager.progress_scan.connect (action_stack.update_progress);
+                library_manager.prepare_scan.connect (action_stack.init_progress);
+                library_manager.finished_scan.connect (on_finished_scan);
+            } else if (settings_ui.get_boolean ("show-default-dialog")) {
+                show_default_dir_dialog ();
             }
         }
 
@@ -933,12 +935,7 @@ namespace Music2 {
                         var tid = _active_track;
                         if (tid > 0) {
                             queue_stack.remove_run_icon (tid);
-
-                            var iter = library_manager.get_media_iter (tid);
-                            if (iter != null) {
-                                music_stack.remove_run_icon (iter);
-                            }
-
+                            music_stack.remove_run_icon (tid);
                             playlist_stack.remove_run_icon (tid);
                         }
                     }
@@ -964,12 +961,6 @@ namespace Music2 {
                     foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
                         on_track_added (meta);
                     }
-                    // foreach (var tid in tids) {
-                    //     var m = library_manager.get_media (tid);
-                    //     if (m != null) {
-                    //         add_to_queue (m);
-                    //     }
-                    // }
                 } catch (GLib.Error e) {
                     warning (e.message);
                 }
@@ -987,35 +978,14 @@ namespace Music2 {
             }
         }
 
-        private void after_init (bool check_exist) {
-            if (library_manager.dirty_library ()) {
-                view_selector.sensitive = true;
-                on_mode_changed ();
-
-                var iter = library_manager.get_media_iter (active_track);
-                music_stack.init_selections (iter);
-
-                status_bar.sensitive_btns (true);
-            } else if (check_exist) {
-                if (has_music_folder) {
-                    action_stack.init_library_folder (_("Library folder found"));
-                }
-            }
-
-            if (active_track > 0) {
-                // playlist_stack.select_run_row (active_track);
-            }
-        }
-
         private void start_scanning_library () {
             if (library_manager.scans) {
                 return;
             }
 
-            if (library_manager.dirty_library ()) {
-                if (library_manager.clear_library ()) {
-                    music_stack.clear_stack ();
-                }
+            if (library_manager.library_not_empty) {
+                library_manager.clear_library ();
+                music_stack.clear_stack ();
 
                 view_selector.sensitive = false;
                 status_bar.sensitive_btns (false);
@@ -1028,7 +998,7 @@ namespace Music2 {
                     return null;
                 });
 
-                source_list_view.select_active_item (-1);
+                // source_list_view.select_active_item (-1);
             } else {
                 source_list_view.select_active_item (1);
                 source_list_view.remove_item (-1);
@@ -1051,7 +1021,7 @@ namespace Music2 {
             smart_preferences.run ();
         }
 
-        private bool playlist_from_library (Gee.ArrayList<uint>? tids) {
+        private bool playlist_from_library (Gee.ArrayQueue<uint>? tids) {
             if (tids != null) {
                 var to_save = "";
                 tids.foreach ((tid) => {
