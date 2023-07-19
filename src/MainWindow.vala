@@ -141,12 +141,15 @@ namespace Music2 {
 
             build_ui ();
 
-            settings_ui.changed["music-folder"].connect (changed_music_folder);
-            changed_music_folder ();
+            library_manager.library_loaded.connect (on_library_loaded);
+            library_manager.added_category.connect (music_stack.add_column_item);
+            library_manager.progress_scan.connect (action_stack.update_progress);
+            library_manager.prepare_scan.connect (action_stack.init_progress);
+            library_manager.finished_scan.connect (on_finished_scan);
 
             source_list_view.add_item (queue_id, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
             source_list_view.update_badge (queue_id, 0);
-            source_list_view.select_active_item (has_music_folder ? -1 : queue_id);
+            source_list_view.select_active_item (queue_id);
 
             try {
                 dbus_player = GLib.Bus.get_proxy_sync (GLib.BusType.SESSION, Constants.MPRIS_NAME, Constants.MPRIS_PATH);
@@ -174,8 +177,15 @@ namespace Music2 {
 
             settings.bind ("auto-length", playlist_manager, "auto-length", GLib.SettingsBindFlags.GET);
             settings.changed["smart-playlists"].connect (changed_smart_playlists);
+            settings_ui.changed["music-folder"].connect (changed_music_folder);
 
-            library_manager.init_library.begin ();
+            if (has_music_folder) {
+                source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
+
+                library_manager.init_library.begin ();
+            } else if (settings_ui.get_boolean ("show-default-dialog")) {
+                show_default_dir_dialog ();
+            }
         }
 
         private void build_ui () {
@@ -806,15 +816,9 @@ namespace Music2 {
                                         library_manager.get_artists_per_albums ());
 
             view_selector.sensitive = true;
-            on_mode_changed ();
+            // on_mode_changed ();
             music_stack.init_selections (active_track);
             status_bar.sensitive_btns (true);
-            // if (library_manager.library_not_empty) {
-            // } else if (check_exist) {
-            //     if (has_music_folder) {
-            //         action_stack.init_library_folder (_("Library folder found"));
-            //     }
-            // }
         }
 
         private void on_edited_playlist (int pid, string playlist_name) {
@@ -875,16 +879,9 @@ namespace Music2 {
         // changes
         private void changed_music_folder () {
             if (has_music_folder) {
-                source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
                 action_stack.init_library_folder (_("A new library folder is set"));
-
-                library_manager.library_loaded.connect (on_library_loaded);
-                library_manager.added_category.connect (music_stack.add_column_item);
-                library_manager.progress_scan.connect (action_stack.update_progress);
-                library_manager.prepare_scan.connect (action_stack.init_progress);
-                library_manager.finished_scan.connect (on_finished_scan);
-            } else if (settings_ui.get_boolean ("show-default-dialog")) {
-                show_default_dir_dialog ();
+            } else {
+                //
             }
         }
 
@@ -997,8 +994,6 @@ namespace Music2 {
                     library_manager.scan_library (music_dir.get_uri ());
                     return null;
                 });
-
-                // source_list_view.select_active_item (-1);
             } else {
                 source_list_view.select_active_item (1);
                 source_list_view.remove_item (-1);
