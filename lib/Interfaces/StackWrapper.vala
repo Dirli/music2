@@ -28,29 +28,34 @@ namespace Music2 {
 
         protected Gtk.ListStore list_store;
 
-        protected Enums.Hint hint;
-        protected string current_view { get; set; }
+        protected Enums.Hint hint { get; set; }
+        protected string view_name { get; set; }
 
         protected LViews.ListView list_view;
-        protected Granite.Widgets.AlertView alert_view { get; set; }
-        protected Granite.Widgets.Welcome welcome_screen { get; set; }
-
         protected Gtk.TreeSelection tree_sel;
 
-        public bool has_list_view {
+        protected bool has_list_view {
             get {return list_view != null;}
-        }
-
-        public bool has_alert_view {
-            get {return alert_view != null;}
-        }
-
-        public bool has_welcome_screen {
-            get {return welcome_screen != null;}
         }
 
         construct {
             transition_type = Gtk.StackTransitionType.OVER_RIGHT;
+
+            notify["visible-child-name"].connect (on_changed_child);
+        }
+
+        private void on_changed_child () {
+            var v_name = get_visible_child_name ();
+            if (list_store == null || v_name == null) {
+                return;
+            }
+
+            if (v_name != "listview" && v_name != "gridview") {
+                list_store.row_inserted.disconnect (on_row_inserted);
+                list_store.row_inserted.connect (on_row_inserted);
+            } else {
+                view_name = v_name;
+            }
         }
 
         protected void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
@@ -64,7 +69,7 @@ namespace Music2 {
             }
         }
 
-        protected Gtk.ScrolledWindow init_list_view (Enums.Hint hint) {
+        protected Gtk.ScrolledWindow init_list_view () {
             list_view = new LViews.ListView (hint);
 
             tree_sel = list_view.get_selection ();
@@ -127,6 +132,10 @@ namespace Music2 {
         }
 
         public void select_run_row (Gtk.TreeIter iter) {
+            if (list_store == null) {
+                return;
+            }
+
             GLib.Idle.add (() => {
                 list_store.@set (iter, (int) Enums.ListColumn.ICON, new GLib.ThemedIcon ("audio-volume-high-symbolic"), -1);
 
@@ -183,36 +192,22 @@ namespace Music2 {
 
         private void on_row_inserted (Gtk.TreePath path, Gtk.TreeIter iter) {
             list_store.row_inserted.disconnect (on_row_inserted);
-            if (get_child_by_name ("listview") != null && (get_visible_child_name () == "alert" || get_visible_child_name () == "welcome")) {
-                set_visible_child_name ("listview");
-            }
+            set_visible_child_name (view_name);
         }
 
         public void show_welcome () {
-            if (has_welcome_screen && visible_child_name != "welcome") {
-                visible_child_name = "welcome";
-
-                if (has_list_view) {
-                    list_store.row_inserted.disconnect (on_row_inserted);
-                    list_store.row_inserted.connect (on_row_inserted);
-                }
+            var welcome_screen = get_child_by_name ("welcome");
+            if (welcome_screen != null && visible_child_name != "welcome") {
+                set_visible_child (welcome_screen);
             }
         }
 
-        public void show_alert () {
-            if (has_alert_view && visible_child_name != "alert") {
-                current_view = visible_child_name;
-                visible_child_name = "alert";
-
-                if (has_list_view) {
-                    list_store.row_inserted.disconnect (on_row_inserted);
-                    list_store.row_inserted.connect (on_row_inserted);
-                }
+        protected void show_alert () {
+            var alert_view = get_child_by_name ("alert");
+            if (alert_view != null && visible_child_name != "alert") {
+                view_name = visible_child_name == "welcome" ? "" : visible_child_name;
+                set_visible_child (alert_view);
             }
-        }
-
-        public void hide_alert () {
-            visible_child_name = current_view;
         }
     }
 }

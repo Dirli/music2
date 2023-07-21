@@ -193,7 +193,7 @@ namespace Music2 {
             queue_stack.selected_row.connect (on_selected_row);
             queue_stack.popup_media_menu.connect (on_popup_media_menu);
 
-            music_stack = new Widgets.MusicStack (this, settings_ui);
+            music_stack = new Widgets.MusicStack (this, settings_ui,(Enums.ViewMode) settings_ui.get_enum ("view-mode"));
             music_stack.selected_row.connect (on_selected_row);
             music_stack.popup_media_menu.connect (on_popup_media_menu);
             music_stack.filter_categories.connect (on_filter_categories);
@@ -816,7 +816,6 @@ namespace Music2 {
                                         library_manager.get_artists_per_albums ());
 
             view_selector.sensitive = true;
-            // on_mode_changed ();
             music_stack.init_selections (active_track);
             status_bar.sensitive_btns (true);
         }

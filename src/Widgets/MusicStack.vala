@@ -32,15 +32,15 @@ namespace Music2 {
 
         private Gtk.TreeModelFilter? list_filter = null;
 
-        public MusicStack (Gtk.Window win, GLib.Settings settings_ui) {
-            Object (transition_type: Gtk.StackTransitionType.OVER_DOWN);
-
-            hint = Enums.Hint.MUSIC;
+        public MusicStack (Gtk.Window win, GLib.Settings settings_ui, Enums.ViewMode v) {
+            Object (transition_type: Gtk.StackTransitionType.OVER_DOWN,
+                    hint: Enums.Hint.MUSIC,
+                    view_name: v == Enums.ViewMode.COLUMN ? "listview" : "gridview");
 
             media_iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
             filter_tracks = new Gee.ArrayQueue<uint> ();
 
-            welcome_screen = new Granite.Widgets.Welcome (_("Get Some Tunes"), _("Add music to your library."));
+            var welcome_screen = new Granite.Widgets.Welcome (_("Get Some Tunes"), _("Add music to your library."));
             welcome_screen.append ("document-import", _("Import Music"), _("Import music from a source into your library."));
             welcome_screen.append ("folder-music", _("Change Music Folder"), _("Load music from a folder, a network or an external disk."));
             welcome_screen.activated.connect (on_welcome_activated);
@@ -50,7 +50,7 @@ namespace Music2 {
             settings_ui.bind ("column-browser-height", browser_pane, "position", GLib.SettingsBindFlags.DEFAULT);
 
             browser_pane.pack1 (init_categories (), false, false);
-            browser_pane.pack2 (init_list_view (Enums.Hint.MUSIC), true, false);
+            browser_pane.pack2 (init_list_view (), true, false);
 
             list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
 
@@ -74,6 +74,7 @@ namespace Music2 {
             add_named (welcome_screen, "welcome");
             add_named (browser_pane, "listview");
             add_named (grid_pane, "gridview");
+
             show_welcome ();
         }
 

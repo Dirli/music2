@@ -17,20 +17,33 @@
  */
 
 namespace Music2 {
-    public class Widgets.ViewStack : Interfaces.StackWrapper {
+    public class Widgets.ViewStack : Gtk.Stack {
+        // private string current_view = "";
+
+        public ViewStack () {
+            Object (expand: true);
+        }
+
         construct {
-            expand = true;
-
-            alert_view = new Granite.Widgets.AlertView (_("No Results"), _("Try another search"), "edit-find-symbolic");
-            add_named (alert_view, "alert");
+            add_named (new Granite.Widgets.AlertView (_("No Results"), _("Try another search"), "edit-find-symbolic"),
+                       "alert");
         }
 
-        public override void clear_stack () {
-            show_alert ();
-        }
+        // private void show_alert () {
+        //     var v_name = get_visible_child_name ();
+        //     if (v_name != "alert") {
+        //         if (v_name != null) {
+        //             current_view = v_name;
+        //         }
+        //
+        //         visible_child_name = "alert";
+        //     }
+        // }
 
-        protected override uint get_selected_tid (Gtk.TreePath filter_path) {
-            return 0;
-        }
+        // private void hide_alert () {
+        //     if (current_view != "") {
+        //         visible_child_name = current_view;
+        //     }
+        // }
     }
 }

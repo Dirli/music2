@@ -22,15 +22,17 @@ namespace Music2 {
             get;
             private set;
         }
-        public Enums.Hint playlist_hint;
+
+        public PlaylistStack () {
+            Object (view_name: "listview",
+                    hint: Enums.Hint.PLAYLIST);
+        }
 
         construct {
-            alert_view = new Granite.Widgets.AlertView ("", "", "");
-
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
 
-            add_named (alert_view, "alert");
-            add_named (init_list_view (Enums.Hint.PLAYLIST), "listview");
+            add_named (new Granite.Widgets.AlertView ("", "", ""), "alert");
+            add_named (init_list_view (), "listview");
 
             list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
             list_view.set_model (list_store);
@@ -38,12 +40,12 @@ namespace Music2 {
             show_alert ();
         }
 
-        public bool init_store (int p_id, Enums.Hint hint) {
+        public bool init_store (int p_id, Enums.Hint h) {
             clear_stack ();
             pid = p_id;
 
-            if (playlist_hint != hint) {
-                playlist_hint = hint;
+            if (hint != h) {
+                hint = h;
                 update_visible ();
             }
 
@@ -97,7 +99,12 @@ namespace Music2 {
             string message_head = "";
             string message_body = "";
 
-            switch (playlist_hint) {
+            var alert_view = (Granite.Widgets.AlertView) get_child_by_name ("alert");
+            if (alert_view == null) {
+                return;
+            }
+
+            switch (hint) {
                 case Enums.Hint.READ_ONLY_PLAYLIST:
                     message_head = _("No Songs");
                     message_body = _("Updating playlist. Please wait.");
@@ -126,8 +133,6 @@ namespace Music2 {
             alert_view.icon_name = "dialog-information";
             alert_view.title = message_head;
             alert_view.description = message_body;
-
-            show_alert ();
         }
     }
 }
