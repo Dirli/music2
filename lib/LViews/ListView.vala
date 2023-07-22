@@ -38,71 +38,49 @@ namespace Music2 {
         }
 
         public override void add_column (Gtk.TreeViewColumn column) {
-            column.sizing = Gtk.TreeViewColumnSizing.FIXED;
-
-            bool column_resizable = true;
-            int column_width = -1;
-            int insert_index = -1;
             var test_strings = new string[0];
 
-            Gtk.CellRenderer? renderer = null;
             Enums.ListColumn type = Tools.CellDataHelper.get_column_type (column);
 
-            switch (type) {
-                case Enums.ListColumn.ICON:
-                    insert_index = type;
-                    column_resizable = false;
-                    var icon_renderer = new Gtk.CellRendererPixbuf ();
-                    icon_renderer.stock_size = Gtk.IconSize.MENU;
-                    int width, height;
-                    Gtk.icon_size_lookup ((Gtk.IconSize) icon_renderer.stock_size, out width, out height);
-                    column_width = int.max (width, height) + 7;
-                    column.set_cell_data_func (icon_renderer, Tools.CellDataHelper.icon_func);
-                    renderer = icon_renderer;
-                    break;
-                case Enums.ListColumn.TRACKID:
-                case Enums.ListColumn.TRACK:
-                    renderer = new Gtk.CellRendererText ();
-                    column.set_cell_data_func (renderer, Tools.CellDataHelper.intelligent_func);
-                    column_resizable = false;
-                    test_strings += "9999";
-                    break;
-                case Enums.ListColumn.LENGTH:
-                    renderer = new Gtk.CellRendererText ();
-                    column.set_cell_data_func (renderer, Tools.CellDataHelper.length_func);
-                    column_resizable = false;
-                    test_strings += "0000:00";
-                    break;
-                case Enums.ListColumn.ALBUM:
-                case Enums.ListColumn.TITLE:
-                case Enums.ListColumn.ARTIST:
-                    renderer = new Gtk.CellRendererText ();
-                    column.set_cell_data_func (renderer, Tools.CellDataHelper.string_func);
-                    test_strings += _("Sample List String");
-                    break;
-                default:
-                    GLib.return_if_reached ();
+            Gtk.CellRenderer? renderer = null;
+            if (type == Enums.ListColumn.ICON) {
+                var icon_renderer = new Gtk.CellRendererPixbuf () {
+                    stock_size = Gtk.IconSize.MENU
+                };
+                int width, height;
+                Gtk.icon_size_lookup ((Gtk.IconSize) icon_renderer.stock_size, out width, out height);
+
+                column.fixed_width = int.max (width, height) + 7;
+                column.set_cell_data_func (icon_renderer, Tools.CellDataHelper.icon_func);
+                column.pack_start (icon_renderer, true);
+            } else if (type == Enums.ListColumn.TRACKID || type == Enums.ListColumn.TRACK) {
+                renderer = new Gtk.CellRendererText ();
+                column.pack_start (renderer, true);
+                column.set_cell_data_func (renderer, Tools.CellDataHelper.intelligent_func);
+
+                test_strings += "9999";
+            } else if (type == Enums.ListColumn.LENGTH) {
+                renderer = new Gtk.CellRendererText ();
+                column.pack_start (renderer, true);
+                column.set_cell_data_func (renderer, Tools.CellDataHelper.length_func);
+
+                test_strings += "0000:00";
+            } else if (type == Enums.ListColumn.ALBUM || type == Enums.ListColumn.TITLE || type == Enums.ListColumn.ARTIST) {
+                renderer = new Gtk.CellRendererText ();
+                column.pack_start (renderer, true);
+                column.add_attribute (renderer, "text", type);
+
+                test_strings += _("Sample List String");
             }
 
-            column.pack_start (renderer, true);
-            insert_column (column, insert_index);
+            insert_column (column, type == Enums.ListColumn.ICON ? type : -1);
 
-            if (column_width > 0) {
-                column.fixed_width = column_width;
-            } else if (renderer != null) {
+            if (renderer != null) {
                 var text_renderer = renderer as Gtk.CellRendererText;
                 if (text_renderer != null) {
                     set_fixed_column_width (this, column, text_renderer, test_strings, 5);
                 }
             }
-
-            bool sortable = type != Enums.ListColumn.TRACKID && type != Enums.ListColumn.ICON;
-            column.reorderable = false;
-            column.clickable = true;
-            column.resizable = column_resizable;
-            column.expand = column_resizable;
-            column.sort_column_id = sortable ? (int) type : -1;
-            column.sort_indicator = sortable;
 
             var header_button = column.get_button ();
 
@@ -135,10 +113,9 @@ namespace Music2 {
         }
 
         private void add_column_chooser_menu_item (Gtk.TreeViewColumn tvc, Enums.ListColumn type) {
-            if (type == Enums.ListColumn.TITLE || type == Enums.ListColumn.ICON) {
-                return;
-            }
-            if (hint == Enums.Hint.MUSIC && type == Enums.ListColumn.TRACKID) {
+            if ((hint == Enums.Hint.MUSIC && type == Enums.ListColumn.TRACKID)
+                || type == Enums.ListColumn.TITLE
+                || type == Enums.ListColumn.ICON) {
                 return;
             }
 

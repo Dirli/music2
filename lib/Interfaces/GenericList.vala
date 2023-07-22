@@ -60,6 +60,32 @@ namespace Music2 {
             column.set_data<int> (Constants.TYPE_DATA_KEY, (int) type);
             column.title = type.to_string ();
             column.visible = visible;
+            column.sizing = Gtk.TreeViewColumnSizing.FIXED;
+
+            bool column_resizable = true;
+            switch (type) {
+                case Enums.ListColumn.ICON:
+                    column_resizable = false;
+                    break;
+                case Enums.ListColumn.TRACKID:
+                case Enums.ListColumn.TRACK:
+                    column_resizable = false;
+                    break;
+                case Enums.ListColumn.LENGTH:
+                    column_resizable = false;
+                    break;
+            }
+
+            bool sortable = false;
+            column.clickable = true;
+            column.sort_column_id = sortable || type != Enums.ListColumn.ICON
+                                    ? (int) type
+                                    : -1;
+            column.sort_indicator = sortable;
+
+            column.reorderable = false;
+            column.resizable = column_resizable;
+            column.expand = column_resizable;
 
             // column.clicked.connect (() => {
             //     sort_direction = column.get_sort_order ();

@@ -80,27 +80,27 @@ namespace Music2.Tools.CellDataHelper {
         renderer.text = val > 0 ? val.to_string () : "";
     }
 
-    public static inline void string_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
-        if (tree_model == null) {
-            return;
-        }
-
-        var tvc = layout as Gtk.TreeViewColumn;
-
-        if (tvc != null) {
-            int column = tvc.sort_column_id;
-            if (column < 0) {
-                return;
-            }
-
-            GLib.Value val;
-            tree_model.get_value (iter, column, out val);
-            var renderer_text = cell as Gtk.CellRendererText;
-            if (renderer_text != null) {
-                renderer_text.text = val.get_string ();
-            }
-        }
-    }
+    // public static inline void string_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
+    //     if (tree_model == null) {
+    //         return;
+    //     }
+    //
+    //     var tvc = layout as Gtk.TreeViewColumn;
+    //
+    //     if (tvc != null) {
+    //         int column = tvc.sort_column_id;
+    //         if (column < 0) {
+    //             return;
+    //         }
+    //
+    //         string val;
+    //         tree_model.@get (iter, column, out val, -1);
+    //         var renderer_text = cell as Gtk.CellRendererText;
+    //         if (renderer_text != null) {
+    //             renderer_text.text = val;
+    //         }
+    //     }
+    // }
 
     public static inline void length_func (Gtk.CellLayout layout, Gtk.CellRenderer cell, Gtk.TreeModel tree_model, Gtk.TreeIter iter) {
         if (tree_model == null) {
