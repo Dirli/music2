@@ -30,13 +30,15 @@ namespace Music2 {
         private Gee.HashMap<int, Structs.Playlist?> playlists_hash;
         private Gee.HashMap<int, string> names_hash;
 
+        private Services.DataBaseManager? db_manager;
+
         public int auto_length {
             get; set;
         }
 
         public PlaylistManager () {
             names_hash = new Gee.HashMap<int, string> ();
-            var db_manager = DataBaseManager.to_read ();
+            db_manager = Services.DataBaseManager.get_instance ();
             if (db_manager != null) {
                 playlists_hash = db_manager.get_playlists ();
             } else {
@@ -45,7 +47,6 @@ namespace Music2 {
         }
 
         public int get_playlist_id (string name) {
-            var db_manager = DataBaseManager.to_read ();
             return db_manager != null ? db_manager.get_playlist_id (name) : -1;
         }
 
@@ -64,7 +65,6 @@ namespace Music2 {
 
         public Gee.ArrayQueue<uint>? get_playlist (int pid) {
             if (pid < 0) {
-                var db_manager = DataBaseManager.to_read ();
                 if (db_manager != null) {
                     return db_manager.get_automatic_playlist (pid, auto_length);
                 }
@@ -91,7 +91,6 @@ namespace Music2 {
         public void update_playlist_sync () {
             if (modified_pid > 0 && playlists_hash.has_key (modified_pid)) {
                 uint[] arr_to_write = playlists_hash[modified_pid].tracks.to_array ();
-                var db_manager = DataBaseManager.to_write ();
                 if (db_manager != null) {
                     db_manager.update_playlist (modified_pid, arr_to_write, true);
                 }
@@ -102,7 +101,6 @@ namespace Music2 {
             if (playlists_hash.has_key (pid)) {
                 new Thread<void*> ("update_playlist", () => {
                     uint[] arr_to_write = playlists_hash[pid].tracks.to_array ();
-                    var db_manager = DataBaseManager.to_write ();
                     if (db_manager != null) {
                         db_manager.update_playlist (pid, arr_to_write, true);
                     }
@@ -123,7 +121,6 @@ namespace Music2 {
                 new_name = "%s %d".printf (name, i++);
             }
 
-            var db_manager = DataBaseManager.to_write ();
             if (db_manager == null) {
                 return -1;
             }
@@ -147,7 +144,6 @@ namespace Music2 {
 
         public void clear_playlist (int pid) {
             new Thread<void*> ("clear_pl", () => {
-                var db_manager = DataBaseManager.to_write ();
                 if (db_manager != null) {
                     return null;
                 }
@@ -167,7 +163,6 @@ namespace Music2 {
         }
 
         public bool remove_playlist (int pid) {
-            var db_manager = DataBaseManager.to_write ();
             if (db_manager != null) {
                 return false;
             }
@@ -203,7 +198,6 @@ namespace Music2 {
 
         public string edit_playlist (int pid, string name) {
             if (playlists_hash.has_key (pid)) {
-                var db_manager = DataBaseManager.to_read ();
                 if (db_manager == null) {
                     return "";
                 }
@@ -233,7 +227,6 @@ namespace Music2 {
                 playlists_hash[pid].tracks.remove (tid);
 
                 new Thread<void*> ("remove_from_playlist", () => {
-                    var db_manager = DataBaseManager.to_write ();
                     if (db_manager != null) {
                         db_manager.remove_from_playlist (pid, tid);
                     }
@@ -251,7 +244,6 @@ namespace Music2 {
                 active_pid = pid;
                 if (selected_playlist (pid, hint)) {
                     var t = new Thread<void*> ("select_auto_playlist", () => {
-                        var db_manager = DataBaseManager.to_read ();
                         if (db_manager == null) {
                             return null;
                         }

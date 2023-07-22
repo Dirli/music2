@@ -1,3 +1,9 @@
+if get_option ('sqlite')
+    app_files += files (
+        'Services/DataBaseManager.vala',
+    )
+endif
+
 executable(
     meson.project_name(),
     'Application.vala',

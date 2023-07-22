@@ -40,7 +40,7 @@ namespace Music2 {
             }
         }
 
-        private DataBaseManager? db_manager = null;
+        private Services.DataBaseManager? db_manager = null;
 
         public Gee.HashMap<uint, CObjects.Media> media_hash;
         public Gee.HashMap<int, Structs.Album?> albums_hash;
@@ -54,7 +54,7 @@ namespace Music2 {
         }
 
         construct {
-            db_manager = DataBaseManager.to_read ();
+            db_manager = Services.DataBaseManager.get_instance ();
 
             media_hash = new Gee.HashMap<uint, CObjects.Media> ();
             artists_hash = new Gee.HashMap<int, string> ();
@@ -70,13 +70,15 @@ namespace Music2 {
         }
 
         public Gee.ArrayList<int>? get_filtered_category (Enums.Category c, Enums.Category f, int id) {
-            if (c == Enums.Category.ARTIST) {
-                return db_manager.get_artists_id (id);
-            } else if (c == Enums.Category.ALBUM) {
-                if (f == Enums.Category.GENRE) {
-                    return db_manager.get_albums_id ("genre_id", id);
-                } else if (f == Enums.Category.ARTIST) {
-                    return db_manager.get_albums_id ("artist_id", id);
+            if (db_manager != null) {
+                if (c == Enums.Category.ARTIST) {
+                    return db_manager.get_artists_id (id);
+                } else if (c == Enums.Category.ALBUM) {
+                    if (f == Enums.Category.GENRE) {
+                        return db_manager.get_albums_id ("genre_id", id);
+                    } else if (f == Enums.Category.ARTIST) {
+                        return db_manager.get_albums_id ("artist_id", id);
+                    }
                 }
             }
 
@@ -84,7 +86,9 @@ namespace Music2 {
         }
 
         public Gee.HashMap<int, string> get_artists_per_albums () {
-            return db_manager.get_artists_per_albums ();
+            return db_manager != null
+                   ? db_manager.get_artists_per_albums ()
+                   : new Gee.HashMap<int, string> ();
         }
 
         public CObjects.Media? get_media (uint tid) {
@@ -97,13 +101,15 @@ namespace Music2 {
 
         public Gee.ArrayQueue<CObjects.Media> get_album_tracks (int album_id) {
             var tracks_queue = new Gee.ArrayQueue<CObjects.Media> ();
-            db_manager.get_album_tracks (album_id).foreach ((tid) => {
-                if (media_hash.has_key (tid)) {
-                    tracks_queue.offer (media_hash[tid]);
-                }
+            if (db_manager != null) {
+                db_manager.get_album_tracks (album_id).foreach ((tid) => {
+                    if (media_hash.has_key (tid)) {
+                        tracks_queue.offer (media_hash[tid]);
+                    }
 
-                return true;
-            });
+                    return true;
+                });
+            }
 
             return tracks_queue;
         }

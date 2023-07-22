@@ -17,32 +17,26 @@
  */
 
 namespace Music2 {
-    public class DataBaseManager : GLib.Object {
+    public class Services.DataBaseManager : GLib.Object {
         private Sqlite.Database? db;
         private string errormsg;
 
-        public static DataBaseManager? to_read () {
-            var db_manager = new DataBaseManager ();
-            if (!GLib.FileUtils.test (db_manager.get_db_path (), GLib.FileTest.IS_REGULAR)) {
-                return null;
+        private static Services.DataBaseManager instance;
+
+        public static DataBaseManager? get_instance () {
+            if (instance == null) {
+                var db_manager = new Services.DataBaseManager ();
+
+                if (!db_manager.open_database ()) {
+                    return null;
+                }
+
+                instance = db_manager;
             }
 
-            if (!db_manager.open_database (Sqlite.OPEN_READONLY)) {
-                return null;
-            }
-
-            return db_manager;
+            return instance;
         }
 
-        public static DataBaseManager? to_write () {
-            var db_manager = new DataBaseManager ();
-
-            if (!db_manager.open_database (Sqlite.OPEN_READWRITE)) {
-                return null;
-            }
-
-            return db_manager;
-        }
 
         private DataBaseManager () {
             errormsg = "";
@@ -50,20 +44,12 @@ namespace Music2 {
             Tools.FileUtils.get_cache_directory ();
         }
 
-        private bool open_database (int flag) {
-            var db_path = get_db_path ();
-            int res = Sqlite.Database.open (db_path, out db);
-            // int res = Sqlite.Database.open_v2 (get_db_path (), out db, flag);
+        private bool open_database () {
+            int res = Sqlite.Database.open (get_db_path (), out db);
             if (res != Sqlite.OK) {
-            	// warning ("can't open db");
                 warning ("Can't open database: %d: %s\n", db.errcode (), db.errmsg ());
+
                 return false;
-            }
-
-            db.busy_timeout (1000);
-
-            if (flag == Sqlite.OPEN_READONLY) {
-                return true;
             }
 
             string q;

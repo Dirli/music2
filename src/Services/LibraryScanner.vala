@@ -27,10 +27,10 @@ namespace Music2 {
         private Gee.HashMap<string, int> genres_cache;
 
         private Objects.LibraryTagger? lib_tagger;
-        private DataBaseManager? db_manager;
+        private Services.DataBaseManager? db_manager;
 
         public LibraryScanner () {
-            db_manager = DataBaseManager.to_write ();
+            db_manager = Services.DataBaseManager.get_instance ();
         }
 
         public override void start_scan (string uri) {

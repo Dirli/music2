@@ -49,10 +49,4 @@ if get_option ('gtk')
         'Tools/CellDataHelper.vala',
         'Tools/GuiUtils.vala',
     )
-
-    if get_option ('sqlite')
-        app_files += files (
-            'DataBaseManager.vala',
-        )
-    endif
 endif

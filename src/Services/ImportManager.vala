@@ -18,8 +18,6 @@
 
 namespace Music2 {
     public class Services.ImportManager : Interfaces.Scanner {
-        private DataBaseManager db_manager;
-
         private string base_folder;
 
         private Structs.ImportFile[] import_files;
@@ -37,7 +35,7 @@ namespace Music2 {
             scan_import_folder (import_uri);
 
             if (import_files.length > 0) {
-                db_manager = DataBaseManager.to_write ();
+                var db_manager = Services.DataBaseManager.get_instance ();
                 if (db_manager == null) {
                     var finish_time = new GLib.DateTime.now ();
                     finished_scan (finish_time.to_unix () - start_time.to_unix ());
