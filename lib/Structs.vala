@@ -23,12 +23,6 @@ namespace Music2.Structs {
         public uint year;
     }
 
-    public struct Playlist {
-        public int id;
-        public string name;
-        public Gee.ArrayQueue<uint> tracks;
-    }
-
     public struct Filter {
         public int id;
         public string str;

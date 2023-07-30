@@ -108,15 +108,9 @@ namespace Music2 {
 
             q = """CREATE TABLE IF NOT EXISTS playlists (
                 ID          INTEGER     PRIMARY KEY AUTOINCREMENT,
-                title       TEXT        NOT NULL,
-                CONSTRAINT unique_title UNIQUE (title)
+                name        TEXT        NOT NULL,
+                CONSTRAINT unique_name UNIQUE (name)
             );""";
-
-            if (db.exec (q, null, out errormsg) != Sqlite.OK) {
-                warning (errormsg);
-            }
-
-            q = """INSERT OR IGNORE INTO playlists (title) VALUES ('""" + Constants.QUEUE + """');""";
 
             if (db.exec (q, null, out errormsg) != Sqlite.OK) {
                 warning (errormsg);
@@ -159,16 +153,17 @@ namespace Music2 {
             }
         }
 
-        public int get_playlist_id (string playlist_name) {
+        private int get_playlist_id (string playlist_name) {
             Sqlite.Statement stmt;
-
             string sql = """
-                SELECT id FROM playlists WHERE title=$TITLE
+                SELECT id
+                FROM playlists
+                WHERE name=$NAME;
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
-            res = stmt.bind_text (stmt.bind_parameter_index ("$TITLE"), playlist_name);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), playlist_name);
             assert (res == Sqlite.OK);
 
             int playlist_id = -1;
@@ -182,41 +177,49 @@ namespace Music2 {
             return playlist_id;
         }
 
-        public Gee.HashMap<int, Structs.Playlist?> get_playlists () {
-            var playlists_hash = new Gee.HashMap<int, Structs.Playlist?> ();
-
+        public Gee.HashMap<int, string> get_playlists () {
             Sqlite.Statement stmt;
             string sql = """
-                SELECT playlists.id, playlists.title, playlist_tracks.track_id
-                FROM playlists
-                LEFT JOIN playlist_tracks
-                ON playlists.id = playlist_tracks.playlist_id
-                WHERE playlists.title != '""" + Constants.QUEUE + """'
-                ORDER BY playlists.title, playlist_tracks.number;
+                SELECT id, name
+                FROM playlists;
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
 
+            var playlists_hash = new Gee.HashMap<int, string> ();
             while (stmt.step () == Sqlite.ROW) {
-                var pid = stmt.column_int (0);
-                var tid = (uint) stmt.column_int64 (2);
-                if (!playlists_hash.has_key (pid)) {
-                    Structs.Playlist new_pl = {};
-                    new_pl.id = pid;
-                    new_pl.name = stmt.column_text (1);
-                    new_pl.tracks = new Gee.ArrayQueue<uint> ();
-
-                    playlists_hash[pid] = new_pl;
-                }
-
-                if (tid > 0) {
-                    playlists_hash[pid].tracks.offer (tid);
-                }
+                playlists_hash[stmt.column_int (0)] = stmt.column_text (1);
             }
 
             stmt.reset ();
             return playlists_hash;
+        }
+
+        public Gee.ArrayList<int> get_available_playlists (uint tid) {
+            Sqlite.Statement stmt;
+            string sql = """
+                SELECT id
+                FROM playlists
+                WHERE id NOT IN (
+                    SELECT DISTINCT playlist_id
+                    FROM playlist_tracks
+                    WHERE track_id=$TID
+                    );
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$TID"), (int) tid);
+            assert (res == Sqlite.OK);
+
+            var playlists = new Gee.ArrayList<int> ();
+            while (stmt.step () == Sqlite.ROW) {
+                playlists.add (stmt.column_int (0));
+            }
+
+            stmt.reset ();
+            return playlists;
         }
 
         public Gee.ArrayQueue<uint>? get_automatic_playlist (int pid, int length) {
@@ -260,131 +263,124 @@ namespace Music2 {
             return tracks_id;
         }
 
-        // public Gee.ArrayQueue<CObjects.Media> get_automatic_tracks (int pid, int length) {
-        //     Sqlite.Statement stmt;
-        //
-        //     var query_str = "";
-        //     switch (pid) {
-        //         case Constants.NEVER_PLAYED_ID:
-        //             query_str = """ WHERE hits=0 """;
-        //             break;
-        //         case Constants.FAVORITE_SONGS_ID:
-        //             query_str = """ WHERE hits>1 ORDER BY hits DESC """;
-        //             break;
-        //         case Constants.RECENTLY_PLAYED_ID:
-        //             query_str = """ WHERE hits>0 ORDER BY last_access DESC """;
-        //             break;
-        //         default:
-        //             return new Gee.ArrayQueue<CObjects.Media> ();
-        //     }
-        //
-        //     string sql = """
-        //         SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
-        //         FROM media
-        //         INNER JOIN albums
-        //         ON media.album_id = albums.id
-        //         INNER JOIN artists
-        //         ON media.artist_id = artists.id
-        //     """;
-        //
-        //     sql += query_str;
-        //     sql += """LIMIT $LENGTH;""";
-        //
-        //     int res = db.prepare_v2 (sql, sql.length, out stmt);
-        //     assert (res == Sqlite.OK);
-        //     res = stmt.bind_int (stmt.bind_parameter_index ("$LENGTH"), length);
-        //     assert (res == Sqlite.OK);
-        //
-        //     return fill_model (stmt);
-        // }
-
-        // public Gee.ArrayQueue<CObjects.Media> get_playlist_tracks (int playlist_id) {
-        //     Sqlite.Statement stmt;
-        //
-        //     string sql = """
-        //         SELECT media.id, media.title, albums.genre, media.track, media.path, media.length, albums.title, albums.year, artists.name, media.hits
-        //         FROM playlist_tracks
-        //         INNER JOIN media
-        //         ON playlist_tracks.track_id = media.ID
-        //         INNER JOIN albums
-        //         ON media.album_id = albums.id
-        //         INNER JOIN artists
-        //         ON media.artist_id = artists.id
-        //         WHERE playlist_tracks.playlist_id=$ID
-        //         ORDER BY playlist_tracks.number;
-        //     """;
-        //
-        //     int res = db.prepare_v2 (sql, sql.length, out stmt);
-        //     assert (res == Sqlite.OK);
-        //     res = stmt.bind_int (stmt.bind_parameter_index ("$ID"), playlist_id);
-        //     assert (res == Sqlite.OK);
-        //
-        //     return fill_model (stmt);
-        // }
-
-        public int add_playlist (string playlist_name) {
+        public Gee.ArrayQueue<uint> get_playlist_tracks (int playlist_id) {
             Sqlite.Statement stmt;
-
             string sql = """
-                INSERT OR IGNORE INTO playlists (title) VALUES ($TITLE);
+                SELECT track_id
+                FROM playlist_tracks
+                WHERE playlist_id=$ID
+                ORDER BY number;
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
-            res = stmt.bind_text (stmt.bind_parameter_index ("$TITLE"), playlist_name);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$ID"), playlist_id);
+            assert (res == Sqlite.OK);
+
+            var tracks_queue = new Gee.ArrayQueue<uint> ();
+            while (stmt.step () == Sqlite.ROW) {
+                tracks_queue.offer ((uint) stmt.column_int64 (0));
+            }
+
+            stmt.reset ();
+            return tracks_queue;
+        }
+
+        private int get_playlist_size (int pid) {
+            Sqlite.Statement stmt;
+            string sql = """
+                SELECT COUNT()
+                FROM playlist_tracks
+                WHERE playlist_id=$PID;
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$PID"), pid);
+            assert (res == Sqlite.OK);
+
+            int playlist_size = 0;
+            if (stmt.step () == Sqlite.ROW) {
+                playlist_size = stmt.column_int (0);
+            } else {
+                warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                stmt.reset ();
+                return -1;
+            }
+
+            stmt.reset ();
+            return playlist_size;
+        }
+
+        public int add_playlist (string playlist_name) {
+            Sqlite.Statement stmt;
+            string sql = """
+                INSERT OR IGNORE INTO playlists (name) VALUES ($NAME);
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), playlist_name);
             assert (res == Sqlite.OK);
 
             if (stmt.step () != Sqlite.DONE) {
                 warning ("Error: %d: %s", db.errcode (), db.errmsg ());
                 stmt.reset ();
-
                 return 0;
             }
 
             stmt.reset ();
-
             return get_playlist_id (playlist_name);
         }
 
-        public void update_playlist (int playlist_id, uint[] tracks_arr, bool rewrite) {
-            Sqlite.Statement stmt;
-            int nums = 1;
-            if (rewrite) {
-                if (!clear_playlist (playlist_id)) {
-                    return;
-                }
-            } else {
-                string sql = """
-                    SELECT COUNT() FROM playlist_tracks WHERE playlist_id=$ID;
-                """;
-
-                int res = db.prepare_v2 (sql, sql.length, out stmt);
-                assert (res == Sqlite.OK);
-                res = stmt.bind_int (stmt.bind_parameter_index ("$ID"), playlist_id);
-                assert (res == Sqlite.OK);
-
-                if (stmt.step () == Sqlite.ROW) {
-                    nums = stmt.column_int (0) + 1;
-                } else {
-                    warning ("Error: %d: %s", db.errcode (), db.errmsg ());
-                    stmt.reset ();
-                    return;
-                }
-
-                stmt.reset ();
+        public bool add_to_playlist (int pid, uint tid) {
+            var pl_size = get_playlist_size (pid);
+            if (pl_size < 0) {
+                return false;
             }
 
+            Sqlite.Statement stmt;
             string sql = """
                 INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, number) VALUES ($PLAYLIST, $TRACK, $NUM);
             """;
 
-            int t_count = 0;
-            foreach (var t in tracks_arr) {
-                int res = db.prepare_v2 (sql, sql.length, out stmt);
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$PLAYLIST"), pid);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$TRACK"), (int) tid);
+            assert (res == Sqlite.OK);
+            res = stmt.bind_int (stmt.bind_parameter_index ("$NUM"), ++pl_size);
+            assert (res == Sqlite.OK);
+
+            if (stmt.step () != Sqlite.DONE) {
+                warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                stmt.reset ();
+                return false;
+            }
+
+            stmt.reset ();
+            return true;
+        }
+
+        public void update_playlist (int pid, Gee.ArrayQueue<uint> tracks) {
+            if (!clear_playlist (pid) || tracks.size == 0) {
+                return;
+            }
+
+            Sqlite.Statement stmt;
+            string sql = """
+                INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_id, number) VALUES ($PID, $TID, $NUM);
+            """;
+
+            int res = db.prepare_v2 (sql, sql.length, out stmt);
+            assert (res == Sqlite.OK);
+
+            int nums = 1;
+            tracks.foreach ((t) => {
+                res = stmt.bind_int (stmt.bind_parameter_index ("$PID"), pid);
                 assert (res == Sqlite.OK);
-                res = stmt.bind_int (stmt.bind_parameter_index ("$PLAYLIST"), playlist_id);
-                assert (res == Sqlite.OK);
-                res = stmt.bind_int (stmt.bind_parameter_index ("$TRACK"), (int) t);
+                res = stmt.bind_int (stmt.bind_parameter_index ("$TID"), (int) t);
                 assert (res == Sqlite.OK);
                 res = stmt.bind_int (stmt.bind_parameter_index ("$NUM"), nums);
                 assert (res == Sqlite.OK);
@@ -393,33 +389,11 @@ namespace Music2 {
                     warning ("Error: %d: %s", db.errcode (), db.errmsg ());
                 } else {
                     nums++;
-                    warning (@"write next num $(nums)");
-                    t_count++;
                 }
 
                 stmt.reset ();
-            }
-        }
-
-        public void remove_from_playlist (int pid, uint tid) {
-            Sqlite.Statement stmt;
-
-            string sql = """
-                DELETE FROM playlist_tracks WHERE playlist_id=$PID and track_id=$TID;
-            """;
-
-            int res = db.prepare_v2 (sql, sql.length, out stmt);
-            assert (res == Sqlite.OK);
-            res = stmt.bind_int (stmt.bind_parameter_index ("$PID"), pid);
-            assert (res == Sqlite.OK);
-            res = stmt.bind_int (stmt.bind_parameter_index ("$TID"), (int) tid);
-            assert (res == Sqlite.OK);
-
-            if (stmt.step () != Sqlite.DONE) {
-                warning ("Error: %d: %s", db.errcode (), db.errmsg ());
-            }
-
-            stmt.reset ();
+                return true;
+            });
         }
 
         public bool clear_playlist (int playlist_id) {
@@ -435,6 +409,7 @@ namespace Music2 {
 
             if (stmt.step () != Sqlite.DONE) {
                 warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                stmt.reset ();
                 return false;
             }
 
@@ -444,20 +419,20 @@ namespace Music2 {
 
         public bool edit_playlist_name (int pid, string name) {
             Sqlite.Statement stmt;
-
             string sql = """
-                UPDATE playlists SET title=$TITLE WHERE id=$ID;
+                UPDATE playlists SET name=$NAME WHERE id=$ID;
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
             res = stmt.bind_int (stmt.bind_parameter_index ("$ID"), pid);
             assert (res == Sqlite.OK);
-            res = stmt.bind_text (stmt.bind_parameter_index ("$TITLE"), name);
+            res = stmt.bind_text (stmt.bind_parameter_index ("$NAME"), name);
             assert (res == Sqlite.OK);
 
             if (stmt.step () != Sqlite.DONE) {
                 warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                stmt.reset ();
                 return false;
             }
 
@@ -478,6 +453,7 @@ namespace Music2 {
 
             if (stmt.step () != Sqlite.DONE) {
                 warning ("Error: %d: %s", db.errcode (), db.errmsg ());
+                stmt.reset ();
                 return false;
             }
 

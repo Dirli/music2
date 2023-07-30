@@ -18,29 +18,33 @@
 
 namespace Music2 {
     public class Widgets.PlaylistStack : Interfaces.ListStack {
+        public bool modified { get; set; default = false; }
+
         public int pid {
             get;
             private set;
         }
 
         public PlaylistStack () {
-            Object (view_name: "listview",
-                    hint: Enums.Hint.PLAYLIST);
+            Object (view_name: "listview");
         }
 
         construct {
+            hint = Enums.Hint.PLAYLIST;
+
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
 
-            add_named (new Granite.Widgets.AlertView ("", "", ""), "alert");
+            add_named (new Granite.Widgets.AlertView (_("No Songs"), "", "dialog-information"), "alert");
             add_named (init_list_view (), "listview");
 
             list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
             list_view.set_model (list_store);
 
+            update_visible ();
             show_alert ();
         }
 
-        public bool init_store (int p_id, Enums.Hint h) {
+        public void init_store (int p_id, Enums.Hint h) {
             clear_stack ();
             pid = p_id;
 
@@ -48,11 +52,25 @@ namespace Music2 {
                 hint = h;
                 update_visible ();
             }
+        }
 
-            return true;
+        public Gee.ArrayQueue<uint> get_playlist () {
+            var tracks = new Gee.ArrayQueue<uint> ();
+
+            list_store.@foreach ((model, path, iter) => {
+                uint tid;
+                list_store.@get (iter, (int) Enums.ListColumn.TRACKID, out tid, -1);
+
+                tracks.offer (tid);
+
+                return false;
+            });
+
+            return tracks;
         }
 
         public override int add_iter (CObjects.Media m) {
+            m.track = iter_hash.size + 1;
             Gtk.TreeIter iter;
             list_store.insert_with_values (out iter, -1,
                 Enums.ListColumn.TRACKID, m.tid,
@@ -84,9 +102,11 @@ namespace Music2 {
                 }
 
                 iter_hash.unset (tid);
+
+                return 1;
             }
 
-            return 1;
+            return 0;
         }
 
         public override void clear_stack () {
@@ -96,31 +116,28 @@ namespace Music2 {
         }
 
         private void update_visible () {
-            string message_head = "";
-            string message_body = "";
-
             var alert_view = (Granite.Widgets.AlertView) get_child_by_name ("alert");
             if (alert_view == null) {
                 return;
             }
 
+            alert_view.hide_action ();
+
+            string message_body = "";
             switch (hint) {
                 case Enums.Hint.READ_ONLY_PLAYLIST:
-                    message_head = _("No Songs");
                     message_body = _("Updating playlist. Please wait.");
                     break;
                 case Enums.Hint.PLAYLIST:
-                    message_head = _("No Songs");
                     message_body = _("To add songs to this playlist, use the <b>secondary click</b> on an item and choose <b>Add to Playlist</b>.");
                     break;
                 case Enums.Hint.SMART_PLAYLIST:
                     alert_view.show_action (_("Edit Smart Playlist"));
 
-                    alert_view.action_activated.connect (() => {
-                        //
-                    });
+                    // alert_view.action_activated.connect (() => {
+                    //
+                    // });
 
-                    message_head = _("No Songs");
                     message_body = _("This playlist will be automatically populated with songs that match its rules. To modify these rules, use the <b>secondary click</b> on it in the sidebar and click on <b>Edit</b>. Optionally, you can click on the button below.");
                     break;
                 case Enums.Hint.NONE:
@@ -130,8 +147,6 @@ namespace Music2 {
                     GLib.assert_not_reached ();
             }
 
-            alert_view.icon_name = "dialog-information";
-            alert_view.title = message_head;
             alert_view.description = message_body;
         }
     }

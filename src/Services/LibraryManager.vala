@@ -69,6 +69,10 @@ namespace Music2 {
             return albums_hash.values;
         }
 
+        public bool in_library (uint tid) {
+            return media_hash.has_key (tid);
+        }
+
         public Gee.ArrayList<int>? get_filtered_category (Enums.Category c, Enums.Category f, int id) {
             if (db_manager != null) {
                 if (c == Enums.Category.ARTIST) {

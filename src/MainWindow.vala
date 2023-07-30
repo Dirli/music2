@@ -167,8 +167,6 @@ namespace Music2 {
             }
 
             playlist_manager.add_view.connect (on_add_view);
-            playlist_manager.remove_view.connect (playlist_stack.remove_iter);
-            playlist_manager.selected_playlist.connect (on_selected_playlist);
             playlist_manager.cleared_playlist.connect (playlist_stack.clear_stack);
             playlist_manager.added_playlist.connect (source_list_view.add_item);
 
@@ -487,7 +485,13 @@ namespace Music2 {
             int tid;
             pars.@get ("(ii)", out pid, out tid);
 
-            playlist_manager.add_to_playlist (pid, (uint) tid);
+            if (playlist_stack.pid == pid) {
+                if (on_add_view ((uint) tid)) {
+                    playlist_stack.modified = true;
+                }
+            } else {
+                playlist_manager.add_to_playlist (pid, (uint) tid);
+            }
         }
 
         private void action_remove_track (GLib.SimpleAction action, GLib.Variant? pars) {
@@ -504,7 +508,9 @@ namespace Music2 {
                         }
                         break;
                     case "playlist":
-                        playlist_manager.remove_from_playlist (playlist_stack.pid, (uint) tid);
+                        if (playlist_stack.remove_iter ((uint) tid) > 0) {
+                            playlist_stack.modified = true;
+                        }
                         break;
                     case "music":
                         //
@@ -623,8 +629,8 @@ namespace Music2 {
                     main_menu.append_item (playlist_item);
 
                     available_pl.foreach ((playlist) => {
-                        var pl = new GLib.MenuItem (playlist.value, "win.action_to_playlist((%d,%d))".printf (playlist.key, (int) tids[0]));
-                        playlist_menu.append_item (pl);
+                        var pl_menu_item = new GLib.MenuItem (playlist.value, "win.action_to_playlist((%d,%d))".printf (playlist.key, (int) tids[0]));
+                        playlist_menu.append_item (pl_menu_item);
 
                         return true;
                     });
@@ -668,6 +674,17 @@ namespace Music2 {
         }
 
         private void on_selection_changed (int pid, Enums.Hint hint) {
+            if (view_stack.visible_child_name == "playlist" && playlist_stack.modified) {
+                var old_pid = playlist_stack.pid;
+                var tracks = playlist_stack.get_playlist ();
+                new Thread<void*> ("update_playlist", () => {
+                    playlist_manager.update_playlist (old_pid, tracks);
+                    return null;
+                });
+
+                playlist_stack.modified = false;
+            }
+
             switch (hint) {
                 case Enums.Hint.QUEUE:
                     view_stack.set_visible_child_name (Constants.QUEUE);
@@ -675,7 +692,7 @@ namespace Music2 {
                 case Enums.Hint.SMART_PLAYLIST:
                 case Enums.Hint.PLAYLIST:
                     view_stack.set_visible_child_name ("playlist");
-                    playlist_manager.select_playlist (pid, hint);
+                    select_playlist_item (pid, hint);
                     break;
                 case Enums.Hint.MUSIC:
                     view_stack.set_visible_child_name ("music");
@@ -717,12 +734,11 @@ namespace Music2 {
 
             if (active_hint == Enums.Hint.MUSIC) {
                 var tids = music_stack.get_filter_tracks ();
-                if (tids.size > 0 && playlist_from_library (tids)) {
+                if (playlist_from_library (tids)) {
                     return;
                 }
             } else if (active_hint >= Enums.Hint.PLAYLIST) {
-                var tids = playlist_manager.get_playlist (playlist_stack.pid);
-
+                var tids = playlist_stack.get_playlist ();
                 if (playlist_from_library (tids)) {
                     return;
                 }
@@ -743,7 +759,7 @@ namespace Music2 {
                         //
                     } else if (item.hint == Enums.Hint.PLAYLIST) {
                         var pid = item.pid;
-                        playlist_manager.clear_playlist (pid);
+                        playlist_manager.clear_playlist (pid, pid == playlist_stack.pid);
                     }
 
                     break;
@@ -754,7 +770,9 @@ namespace Music2 {
                             try {
                                 var tracks = dbus_tracklist.get_tracklist ();
                                 foreach (var tid in tracks) {
-                                    playlist_manager.add_to_playlist (pid, tid);
+                                    if (library_manager.in_library (tid)) {
+                                        playlist_manager.add_to_playlist (pid, tid);
+                                    }
                                 }
                             } catch (Error e) {
                                 warning (e.message);
@@ -765,7 +783,7 @@ namespace Music2 {
                 case Enums.ActionType.REMOVE:
                     if (item.hint == Enums.Hint.PLAYLIST) {
                         var pid = item.pid;
-                        if (pid != queue_id && playlist_manager.remove_playlist (pid)) {
+                        if (playlist_manager.remove_playlist (pid, pid == playlist_stack.pid)) {
                             source_list_view.remove_item (pid);
                         }
                     }
@@ -781,27 +799,18 @@ namespace Music2 {
             }
         }
 
-        private bool on_selected_playlist (int pid, Enums.Hint playlist_hint) {
-            if (playlist_stack.pid != pid) {
-                return playlist_stack.init_store (pid, playlist_hint);
-            }
-
-            if (playlist_hint == Enums.Hint.SMART_PLAYLIST) {
-                playlist_stack.clear_stack ();
-            }
-
-            return true;
-        }
-
-        private void on_add_view (uint tid, uint count) {
+        private bool on_add_view (uint tid) {
             var m = library_manager.get_media (tid);
             if (m != null) {
-                m.track = count;
                 playlist_stack.add_iter (m);
                 if (active_track >= 0 && m.tid == active_track) {
                     playlist_stack.select_run_row (active_track);
                 }
+
+                return true;
             }
+
+            return false;
         }
 
         private void on_finished_scan (string msg) {
@@ -965,6 +974,18 @@ namespace Music2 {
             });
         }
 
+        private void select_playlist_item (int pid, Enums.Hint playlist_hint) {
+            if (playlist_stack.pid != pid) {
+                playlist_stack.init_store (pid, playlist_hint);
+            } else if (playlist_hint == Enums.Hint.SMART_PLAYLIST) {
+                playlist_stack.clear_stack ();
+            } else {
+                return;
+            }
+
+            playlist_manager.select_playlist (pid, playlist_hint);
+        }
+
         private void add_to_queue (CObjects.Media m) {
             var queue_size = queue_stack.add_iter (m);
             source_list_view.update_badge (queue_id, queue_size);
@@ -1015,18 +1036,18 @@ namespace Music2 {
             smart_preferences.run ();
         }
 
-        private bool playlist_from_library (Gee.ArrayQueue<uint>? tids) {
-            if (tids != null) {
-                var to_save = "";
-                tids.foreach ((tid) => {
-                    var m = library_manager.get_media (tid);
-                    if (m != null) {
-                        to_save += @"$(m.uri)\n";
-                    }
+        private bool playlist_from_library (Gee.ArrayQueue<uint> tids) {
+            var to_save = "";
+            tids.foreach ((tid) => {
+                var m = library_manager.get_media (tid);
+                if (m != null) {
+                    to_save += @"$(m.uri)\n";
+                }
 
-                    return true;
-                });
+                return true;
+            });
 
+            if (to_save != "") {
                 return Tools.FileUtils.save_playlist (to_save, Tools.FileUtils.get_tmp_path ());
             }
 
@@ -1060,7 +1081,9 @@ namespace Music2 {
                     warning (e.message);
                 }
             } else if (hint == Enums.Hint.PLAYLIST || hint == Enums.Hint.SMART_PLAYLIST) {
-                var tids = playlist_manager.get_playlist (pid);
+                var tids = playlist_stack.pid == pid
+                           ? playlist_stack.get_playlist ()
+                           : playlist_manager.get_playlist (pid);
                 if (tids != null) {
                     tids.foreach ((tid) => {
                         var m = library_manager.get_media (tid);
@@ -1103,7 +1126,9 @@ namespace Music2 {
         }
 
         public override bool delete_event (Gdk.EventAny event) {
-            playlist_manager.update_playlist_sync ();
+            if (playlist_stack.modified) {
+                playlist_manager.update_playlist (playlist_stack.pid, playlist_stack.get_playlist ());
+            }
             settings_ui.set_boolean ("window-maximized", is_maximized);
 
             if (!is_maximized) {
