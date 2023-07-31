@@ -53,8 +53,6 @@ namespace Music2 {
             total_found (tracks_path.length);
 
             if (tracks_path.length > 0) {
-                // db_manager.reset_database ();
-
                 lib_tagger = new Objects.LibraryTagger ();
                 lib_tagger.init ();
 

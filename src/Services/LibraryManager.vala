@@ -22,11 +22,10 @@ namespace Music2 {
         public signal void added_category (Enums.Category category, Gtk.ListStore store);
         public signal void finished_scan (string msg);
         public signal void prepare_scan ();
-        public signal void progress_scan (double progress_val);
+        public signal void progress_scan (double progress_val, string progress_count);
 
         private uint source_id = 0;
         private uint scan_m = 0;
-        private uint total_m = 0;
 
         public bool library_not_empty {
             get {
@@ -195,6 +194,12 @@ namespace Music2 {
         }
 
         public void scan_library (string uri) {
+            if (db_manager == null) {
+                return;
+            }
+
+            db_manager.reset_database ();
+
             source_id = 0;
 
             scanner = new Services.LibraryScanner ();
@@ -221,7 +226,7 @@ namespace Music2 {
         }
 
         private void on_total_found (uint total_media) {
-            total_m = total_media;
+            var total_m = total_media;
 
             scan_m = 0;
             if (total_m > 0) {
@@ -230,7 +235,7 @@ namespace Music2 {
                         return true;
                     }
 
-                    progress_scan ((double) scan_m / total_m);
+                    progress_scan ((double) scan_m / total_m, @"$(scan_m) / $(total_m)");
                     return true;
                 });
             }
@@ -250,7 +255,6 @@ namespace Music2 {
             }
 
             finished_scan (msg);
-            total_m = 0;
             scan_m = 0;
 
             scanner = null;

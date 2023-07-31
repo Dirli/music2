@@ -53,7 +53,7 @@ namespace Music2 {
                 add_named (progress_box, "progress");
             }
 
-            update_progress (0);
+            update_progress (0, "");
             set_visible_child_name ("progress");
         }
 
@@ -90,12 +90,12 @@ namespace Music2 {
             }
         }
 
-        public void update_progress (double progress_val) {
+        public void update_progress (double progress_val, string progress_string) {
             var child = get_child_by_name ("progress");
             if (child != null) {
                 var progress_box = child as Views.ProgressBox;
                 if (progress_box != null) {
-                    progress_box.update_progress (progress_val);
+                    progress_box.update_progress (progress_val, progress_string);
                 }
             }
         }

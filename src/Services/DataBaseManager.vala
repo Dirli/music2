@@ -145,12 +145,15 @@ namespace Music2 {
         public void reset_database () {
             GLib.File db_file = GLib.File.new_for_path (get_db_path ());
             if (db_file.query_exists ()) {
+                db = null;
                 try {
                     db_file.delete ();
                 } catch (Error err) {
                     warning (err.message);
                 }
             }
+
+            open_database ();
         }
 
         private int get_playlist_id (string playlist_name) {
