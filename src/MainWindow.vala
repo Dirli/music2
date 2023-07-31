@@ -191,7 +191,8 @@ namespace Music2 {
             queue_stack.selected_row.connect (on_selected_row);
             queue_stack.popup_media_menu.connect (on_popup_media_menu);
 
-            music_stack = new Widgets.MusicStack (this, settings_ui,(Enums.ViewMode) settings_ui.get_enum ("view-mode"));
+            music_stack = new Widgets.MusicStack (this, (Enums.ViewMode) settings_ui.get_enum ("view-mode"));
+            music_stack.paned_position = settings_ui.get_int ("column-browser-height");
             music_stack.selected_row.connect (on_selected_row);
             music_stack.popup_media_menu.connect (on_popup_media_menu);
             music_stack.filter_categories.connect (on_filter_categories);
@@ -1129,6 +1130,7 @@ namespace Music2 {
             if (playlist_stack.modified) {
                 playlist_manager.update_playlist (playlist_stack.pid, playlist_stack.get_playlist ());
             }
+            settings_ui.set_int ("column-browser-height", music_stack.paned_position);
             settings_ui.set_boolean ("window-maximized", is_maximized);
 
             if (!is_maximized) {

@@ -21,6 +21,19 @@ namespace Music2 {
         public signal void filter_categories (Enums.Category c, int id);
         public signal void selected_album (int id);
 
+        public int paned_position {
+            get {
+                var w = get_child_by_name ("listview");
+                return w != null ? ((Gtk.Paned) w).get_position () : 200;
+            }
+            set {
+                var w = get_child_by_name ("listview");
+                if (w != null) {
+                    ((Gtk.Paned) w).set_position (value);
+                }
+            }
+        }
+
         private Gee.HashMap<int, Views.ColumnBrowser> categories_hash;
         private Structs.Filter? current_filter = null;
         private Gee.ArrayQueue<uint> filter_tracks;
@@ -32,7 +45,7 @@ namespace Music2 {
 
         private Gtk.TreeModelFilter? list_filter = null;
 
-        public MusicStack (Gtk.Window win, GLib.Settings settings_ui, Enums.ViewMode v) {
+        public MusicStack (Gtk.Window win, Enums.ViewMode v) {
             Object (transition_type: Gtk.StackTransitionType.OVER_DOWN,
                     hint: Enums.Hint.MUSIC,
                     view_name: v == Enums.ViewMode.COLUMN ? "listview" : "gridview");
@@ -45,9 +58,9 @@ namespace Music2 {
             welcome_screen.append ("folder-music", _("Change Music Folder"), _("Load music from a folder, a network or an external disk."));
             welcome_screen.activated.connect (on_welcome_activated);
 
-            var browser_pane = new Gtk.Paned (Gtk.Orientation.VERTICAL);
-            browser_pane.expand = true;
-            settings_ui.bind ("column-browser-height", browser_pane, "position", GLib.SettingsBindFlags.DEFAULT);
+            var browser_pane = new Gtk.Paned (Gtk.Orientation.VERTICAL) {
+                expand = true
+            };
 
             browser_pane.pack1 (init_categories (), false, false);
             browser_pane.pack2 (init_list_view (), true, false);
