@@ -286,7 +286,7 @@ namespace Music2 {
                         width = 1
                     };
 
-                    on_popup_media_menu (Enums.Hint.QUEUE, tids, rect, null);
+                    on_popup_media_menu (Enums.Hint.QUEUE, tids, rect, top_display);
                 }
             });
 
@@ -593,7 +593,7 @@ namespace Music2 {
             }
         }
 
-        private void on_popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget? w) {
+        private void on_popup_media_menu (Enums.Hint hint, uint[] tids, Gdk.Rectangle rect, Gtk.Widget w) {
             var main_menu = new GLib.Menu ();
 
             if (active_track > 0 && hint == Enums.Hint.QUEUE) {
@@ -637,7 +637,7 @@ namespace Music2 {
                 }
             }
 
-            var media_menu = new Gtk.Popover.from_model (w ?? top_display, main_menu);
+            var media_menu = new Gtk.Popover.from_model (w, main_menu);
             media_menu.set_pointing_to (rect);
 
             media_menu.show_all ();

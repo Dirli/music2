@@ -74,7 +74,7 @@ namespace Music2 {
 
             tree_sel = list_view.get_selection ();
 
-            list_view.popup_media_menu.connect ((popup_hint, x_point, y_point, widget) => {
+            list_view.popup_media_menu.connect ((x_point, y_point) => {
                 int cell_x, cell_y;
                 Gtk.TreePath? cursor_path;
                 Gtk.TreeViewColumn? cursor_column;
@@ -115,7 +115,7 @@ namespace Music2 {
                 rect.height = 1;
                 rect.width = 1;
 
-                popup_media_menu (popup_hint, tids, rect, widget);
+                popup_media_menu (hint, tids, rect, list_view);
             });
 
             var scrolled_view = new Gtk.ScrolledWindow (null, null);

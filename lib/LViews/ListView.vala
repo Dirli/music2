@@ -19,7 +19,7 @@
 namespace Music2 {
     public class LViews.ListView : Interfaces.GenericList {
         public signal void selected_row (uint row_id);
-        public signal void popup_media_menu (Enums.Hint hint, double x_point, double y_point, Gtk.Widget w);
+        public signal void popup_media_menu (double x_point, double y_point);
 
         protected Gtk.Menu column_chooser_menu;
         private Gtk.MenuItem autosize_menu_item;
@@ -163,7 +163,7 @@ namespace Music2 {
             }
 
             if (event.button == Gdk.BUTTON_SECONDARY) {
-                popup_media_menu (hint, event.x, event.y, this);
+                popup_media_menu (event.x, event.y);
                 return true;
             }
 
