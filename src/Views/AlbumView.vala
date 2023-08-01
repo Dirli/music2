@@ -19,8 +19,7 @@
 namespace Music2 {
     public class Views.AlbumView : Gtk.Grid {
         public signal void selected_row (uint row_id);
-
-        private Gtk.Window parent_window;
+        public signal void choose_cover ();
 
         private Gtk.TreeSelection tree_sel;
 
@@ -31,39 +30,43 @@ namespace Music2 {
 
         private Gtk.Menu cover_action_menu;
 
-        public AlbumView (Gtk.Window p) {
-            parent_window = p;
-            album_cover = new Views.AlbumImage ();
-            album_cover.width_request = 184;
-            album_cover.margin = 28;
-            album_cover.margin_bottom = 12;
+        public AlbumView () {
+            album_cover = new Views.AlbumImage () {
+                margin = 28,
+                margin_bottom = 12,
+                width_request = 184
+            };
 
             var cover_event_box = new Gtk.EventBox ();
             cover_event_box.add (album_cover);
 
-            var cover_set_new = new Gtk.MenuItem.with_label (_("Set new album cover"));
+            var cover_menu_item = new Gtk.MenuItem.with_label (_("Set new album cover"));
 
             cover_action_menu = new Gtk.Menu ();
-            cover_action_menu.append (cover_set_new);
+            cover_action_menu.append (cover_menu_item);
             cover_action_menu.show_all ();
 
-            album_label = new Gtk.Label ("");
-            album_label.halign = Gtk.Align.START;
-            album_label.margin_start = album_label.margin_end = 28;
-            album_label.max_width_chars = 30;
-            album_label.wrap = true;
-            album_label.xalign = 0;
+            album_label = new Gtk.Label ("") {
+                halign = Gtk.Align.START,
+                margin_end = 28,
+                margin_start = 28,
+                max_width_chars = 30,
+                wrap = true,
+                xalign = 0
+            };
             album_label.get_style_context ().add_class (Granite.STYLE_CLASS_H2_LABEL);
 
-            tracks_view = new LViews.ListView (Enums.Hint.ALBUM_LIST);
-            tracks_view.expand = true;
-            tracks_view.headers_visible = false;
+            tracks_view = new LViews.ListView (Enums.Hint.ALBUM_LIST) {
+                expand = true,
+                headers_visible = false
+            };
             tracks_view.set_tooltip_column ((int) Enums.ListColumn.ARTIST);
             tracks_view.get_style_context ().remove_class (Gtk.STYLE_CLASS_VIEW);
             tracks_view.set_model (new Gtk.ListStore.newv (Enums.ListColumn.get_all ()));
 
-            var tracks_scrolled = new Gtk.ScrolledWindow (null, null);
-            tracks_scrolled.margin_top = 18;
+            var tracks_scrolled = new Gtk.ScrolledWindow (null, null) {
+                margin_top = 18
+            };
             tracks_scrolled.add (tracks_view);
 
             attach (cover_event_box, 0, 0, 1, 1);
@@ -74,7 +77,9 @@ namespace Music2 {
 
             tracks_view.row_activated.connect (on_row_activated);
             cover_event_box.button_press_event.connect (show_cover_context_menu);
-            cover_set_new.activate.connect (set_new_cover);
+            cover_menu_item.activate.connect (() => {
+                choose_cover ();
+            });
         }
 
         protected void on_row_activated (Gtk.TreePath path, Gtk.TreeViewColumn column) {
@@ -145,27 +150,10 @@ namespace Music2 {
             return true;
         }
 
-        private void set_new_cover () {
-            var image_filter = new Gtk.FileFilter ();
-            image_filter.set_filter_name (_("Image files"));
-            image_filter.add_mime_type ("image/*");
-
-            var file = new Gtk.FileChooserNative (
-                _("Open"),
-                parent_window,
-                Gtk.FileChooserAction.OPEN,
-                _("_Open"),
-                _("_Cancel")
-            );
-            file.add_filter (image_filter);
-
-            if (file.run () == Gtk.ResponseType.ACCEPT) {
-                if (Tools.FileUtils.save_cover_file (file.get_file (), current_album.year, current_album.title)) {
-                    album_cover.image.gicon = Tools.GuiUtils.get_cover_icon (current_album.year, current_album.title);
-                }
+        public void set_new_cover (GLib.File f) {
+            if (Tools.FileUtils.save_cover_file (f, current_album.year, current_album.title)) {
+                album_cover.image.gicon = Tools.GuiUtils.get_cover_icon (current_album.year, current_album.title);
             }
-
-            file.destroy ();
         }
 
         public void unselect_rows () {

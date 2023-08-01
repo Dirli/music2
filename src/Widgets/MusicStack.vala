@@ -20,6 +20,7 @@ namespace Music2 {
     public class Widgets.MusicStack : Interfaces.StackWrapper {
         public signal void filter_categories (Enums.Category c, int id);
         public signal void selected_album (int id);
+        public signal GLib.File choose_album_cover (string title, Gtk.FileChooserAction a, Gtk.FileFilter f);
 
         public int paned_position {
             get {
@@ -45,11 +46,13 @@ namespace Music2 {
 
         private Gtk.TreeModelFilter? list_filter = null;
 
-        public MusicStack (Gtk.Window win, Enums.ViewMode v) {
+        public MusicStack (Enums.ViewMode v) {
             Object (transition_type: Gtk.StackTransitionType.OVER_DOWN,
                     hint: Enums.Hint.MUSIC,
                     view_name: v == Enums.ViewMode.COLUMN ? "listview" : "gridview");
+        }
 
+        construct {
             media_iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
             filter_tracks = new Gee.ArrayQueue<uint> ();
 
@@ -75,10 +78,11 @@ namespace Music2 {
             grid_scrolled.set_policy (Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC);
             grid_scrolled.add (albums_view);
 
-            album_view = new Views.AlbumView (win);
+            album_view = new Views.AlbumView ();
             album_view.selected_row.connect ((row_id) => {
                 selected_row (row_id, hint);
             });
+            album_view.choose_cover.connect (on_choose_cover);
 
             var grid_pane = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
             grid_pane.pack1 (grid_scrolled, true, false);
@@ -157,6 +161,17 @@ namespace Music2 {
 
             if (list_filter != null) {
                 list_filter.refilter ();
+            }
+        }
+
+        private void on_choose_cover () {
+            var image_filter = new Gtk.FileFilter ();
+            image_filter.set_filter_name (_("Image files"));
+            image_filter.add_mime_type ("image/*");
+
+            var f = choose_album_cover (_("Choose cover"), Gtk.FileChooserAction.OPEN, image_filter);
+            if (f != null) {
+                album_view.set_new_cover (f);
             }
         }
 

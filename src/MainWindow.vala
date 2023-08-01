@@ -191,12 +191,13 @@ namespace Music2 {
             queue_stack.selected_row.connect (on_selected_row);
             queue_stack.popup_media_menu.connect (on_popup_media_menu);
 
-            music_stack = new Widgets.MusicStack (this, (Enums.ViewMode) settings_ui.get_enum ("view-mode"));
+            music_stack = new Widgets.MusicStack ((Enums.ViewMode) settings_ui.get_enum ("view-mode"));
             music_stack.paned_position = settings_ui.get_int ("column-browser-height");
             music_stack.selected_row.connect (on_selected_row);
             music_stack.popup_media_menu.connect (on_popup_media_menu);
             music_stack.filter_categories.connect (on_filter_categories);
             music_stack.selected_album.connect (on_selected_album);
+            music_stack.choose_album_cover.connect (run_file_chooser);
 
             playlist_stack = new Widgets.PlaylistStack ();
             playlist_stack.selected_row.connect (on_selected_row);
@@ -395,25 +396,10 @@ namespace Music2 {
                 return;
             }
 
-            var file_chooser = new Gtk.FileChooserNative (
-                _("Import Music"),
-                this,
-                Gtk.FileChooserAction.SELECT_FOLDER,
-                _("Open"),
-                _("Cancel")
-            );
-            file_chooser.set_select_multiple (false);
-            file_chooser.set_local_only (true);
+            var f = run_file_chooser (_("Import Music"), Gtk.FileChooserAction.SELECT_FOLDER, null);
 
-            var select_folder = "";
-            if (file_chooser.run () == Gtk.ResponseType.ACCEPT) {
-                select_folder = file_chooser.get_filename ();
-            }
-
-            file_chooser.destroy ();
-
-            if (select_folder != "") {
-                on_import_folder (GLib.File.new_for_path (select_folder));
+            if (f != null) {
+                on_import_folder (f);
             }
         }
 
@@ -958,6 +944,31 @@ namespace Music2 {
 
             settings.set_uint64 ("current-media", 0);
             Tools.FileUtils.save_playlist (to_save, Tools.FileUtils.get_tmp_path ());
+        }
+
+        private GLib.File run_file_chooser (string title, Gtk.FileChooserAction a, Gtk.FileFilter? filter) {
+            var file_chooser = new Gtk.FileChooserNative (
+                title,
+                this,
+                a,
+                _("_Open"),
+                _("_Cancel")
+            );
+
+            file_chooser.set_select_multiple (false);
+            // file_chooser.set_local_only (true);
+
+            if (filter != null) {
+                file_chooser.add_filter (filter);
+            }
+
+            GLib.File f = null;
+            if (file_chooser.run () == Gtk.ResponseType.ACCEPT) {
+                f = file_chooser.get_file ();
+            }
+
+            file_chooser.destroy ();
+            return f;
         }
 
         private void fill_queue (owned uint[] tids) {
