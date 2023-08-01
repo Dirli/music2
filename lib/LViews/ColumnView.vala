@@ -48,6 +48,8 @@ namespace Music2 {
                     column.set_cell_data_func (renderer, cell_data_func);
                     test_strings = _("Sample List String");
                     break;
+                default:
+                    break;
             }
 
             column.pack_start (renderer, true);

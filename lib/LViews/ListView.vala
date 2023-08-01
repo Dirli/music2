@@ -73,7 +73,7 @@ namespace Music2 {
                 test_strings += _("Sample List String");
             }
 
-            insert_column (column, type == Enums.ListColumn.ICON ? type : -1);
+            insert_column (column, type == Enums.ListColumn.ICON ? (int) type : -1);
 
             if (renderer != null) {
                 var text_renderer = renderer as Gtk.CellRendererText;

@@ -23,7 +23,7 @@ namespace Music2 {
         construct {
             element = Gst.ElementFactory.make ("equalizer-10bands", "equalizer");
 
-            int[10] freqs = {60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000};
+            int[] freqs = {60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000};
             float last_freq = 0;
 
             for (int index = 0; index < 10; index++) {

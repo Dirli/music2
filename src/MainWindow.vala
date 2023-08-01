@@ -684,6 +684,8 @@ namespace Music2 {
                 case Enums.Hint.MUSIC:
                     view_stack.set_visible_child_name ("music");
                     break;
+                default:
+                    break;
             }
         }
 
@@ -783,6 +785,8 @@ namespace Music2 {
                         edit_smart_playlists ();
                     }
                     break;
+                default:
+                    break;
             }
         }
 
@@ -843,6 +847,8 @@ namespace Music2 {
                     if (!library_manager.scans) {
                         on_import_folder (GLib.File.new_for_uri (uri));
                     }
+                    break;
+                default:
                     break;
             }
         }

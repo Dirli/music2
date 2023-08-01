@@ -74,6 +74,8 @@ namespace Music2 {
                 case Enums.ListColumn.LENGTH:
                     column_resizable = false;
                     break;
+                default:
+                    break;
             }
 
             bool sortable = false;

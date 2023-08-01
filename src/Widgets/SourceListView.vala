@@ -123,6 +123,8 @@ namespace Music2 {
                     case Enums.Hint.MUSIC:
                         library_category.remove (removed_item);
                         break;
+                    default:
+                        break;
                 }
 
                 items_hash.unset (pid);
