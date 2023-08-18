@@ -19,7 +19,7 @@
 namespace Music2 {
     public class Core.Player : GLib.Object {
         public signal void changed_track (CObjects.Media m, bool run_track);
-        public signal void changed_state (string s);
+        public signal void changed_state ();
         public signal void changed_volume (double v);
         public signal void changed_duration (int64 d);
         public signal void changed_navigation (Enums.NavType t, bool can_nav);
@@ -168,7 +168,7 @@ namespace Music2 {
                 return;
             }
 
-            changed_state (get_state_str ());
+            changed_state ();
         }
 
         public void toggle_playing () {

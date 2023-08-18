@@ -80,7 +80,7 @@ namespace Music2 {
             player.changed_volume.connect ((volume_value) => {
                 settings.set_double ("volume", volume_value);
             });
-
+            
             init_player ();
         }
 
@@ -106,10 +106,6 @@ namespace Music2 {
             //         return null;
             //     });
             // }
-
-            if (scrsaver_iface != null) {
-                inhibit ();
-            }
 
             var cover_path = "";
             if (m.album != null) {
@@ -163,6 +159,14 @@ namespace Music2 {
             player.shuffle_mode = settings.get_boolean ("shuffle-mode");
         }
 
+        private void on_changed_state () {
+            if (player.get_state () == Gst.State.PLAYING) {
+                inhibit ();
+            } else {
+                uninhibit ();
+            }
+        }
+
         private void on_changed_sleep () {
             if (settings.get_boolean ("block-sleep-mode")) {
                 if (scrsaver_iface == null) {
@@ -171,11 +175,15 @@ namespace Music2 {
                                                                   "org.freedesktop.ScreenSaver",
                                                                   "/ScreenSaver",
                                                                   DBusProxyFlags.NONE);
+
+                        player.changed_state.connect (on_changed_state);
                     } catch (Error e) {
                         warning ("Could not start screensaver interface: %s", e.message);
                     }
                 }
             } else {
+                player.changed_state.disconnect (on_changed_state);
+
                 uninhibit ();
                 scrsaver_iface = null;
             }
@@ -459,6 +467,12 @@ namespace Music2 {
         }
 
         private void inhibit () {
+            if (scrsaver_iface == null) {
+                inhibit_cookie = null;
+
+                return;
+            }
+
             try {
                 inhibit_cookie = scrsaver_iface.Inhibit (Constants.APP_NAME, "Playing music");
             } catch (Error e) {

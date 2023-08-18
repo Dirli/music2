@@ -176,11 +176,11 @@ namespace Music2 {
             return player.position / Constants.MILI_INV;
         }
 
-        private void on_changed_state (string state) {
+        private void on_changed_state () {
             if (player.get_state () == Gst.State.NULL) {
                 _metadata.remove_all ();
             }
-            send_properties ("PlaybackStatus", state);
+            send_properties ("PlaybackStatus", player.get_state_str ());
         }
 
         private void on_changed_duration (int64 d) {
