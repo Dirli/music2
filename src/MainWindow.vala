@@ -179,8 +179,11 @@ namespace Music2 {
 
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
+                new Thread<void*> ("init_library", () => {
+                    library_manager.init_library ();
 
-                library_manager.init_library.begin ();
+                    return null;
+                });
             } else if (settings_ui.get_boolean ("show-default-dialog")) {
                 show_default_dir_dialog ();
             }
@@ -807,7 +810,11 @@ namespace Music2 {
         private void on_finished_scan (string msg) {
             action_stack.hide_widget ("progress");
 
-            library_manager.init_library.begin ();
+            new Thread<void*> ("init_library", () => {
+                library_manager.init_library ();
+
+                return null;
+            });
         }
 
         private void on_library_loaded () {

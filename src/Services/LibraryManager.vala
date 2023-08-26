@@ -117,7 +117,7 @@ namespace Music2 {
             return tracks_queue;
         }
 
-        public async void init_library () {
+        public void init_library () {
             if (db_manager == null) {
                 return;
             }
