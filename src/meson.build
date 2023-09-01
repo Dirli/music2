@@ -27,7 +27,6 @@ executable(
     'Views/OptionChooser.vala',
     'Views/PlayListCategory.vala',
     'Views/ProgressBox.vala',
-    'Views/ScanLibraryAction.vala',
     'Views/SourceListItem.vala',
     'Views/SourceListRoot.vala',
     'Views/ViewSelector.vala',

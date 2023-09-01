@@ -19,7 +19,6 @@
 namespace Music2 {
     public class Widgets.ActionStack : Gtk.Stack {
         public signal void cancelled_scan ();
-        public signal void scan_library ();
         public signal void dnd_button_clicked (Enums.ActionType action_type, string uri);
 
         public ActionStack () {
@@ -55,21 +54,6 @@ namespace Music2 {
 
             update_progress (0, "");
             set_visible_child_name ("progress");
-        }
-
-        public void init_library_folder (string box_label) {
-            hide_widget ("library");
-
-            var library_box = new Views.ScanLibraryAction (box_label);
-            library_box.button_clicked.connect ((response_id) => {
-                hide_widget ("library");
-                if (response_id == Gtk.ResponseType.OK) {
-                    scan_library ();
-                }
-            });
-
-            add_named (library_box, "library");
-            set_visible_child_name ("library");
         }
 
         public void init_dnd (string uri) {

@@ -202,10 +202,13 @@ namespace Music2 {
             }
         }
 
-        protected void show_alert () {
+        public void show_alert () {
             var alert_view = get_child_by_name ("alert");
             if (alert_view != null && visible_child_name != "alert") {
-                view_name = visible_child_name == "welcome" ? "" : visible_child_name;
+                if (visible_child_name != "welcome") {
+                    view_name = visible_child_name;
+                }
+
                 set_visible_child (alert_view);
             }
         }

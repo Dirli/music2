@@ -20,6 +20,7 @@ namespace Music2 {
     public class Widgets.MusicStack : Interfaces.StackWrapper {
         public signal void filter_categories (Enums.Category c, int id);
         public signal void selected_album (int id);
+        public signal void welcome_activate (int i);
         public signal GLib.File choose_album_cover (string title, Gtk.FileChooserAction a, Gtk.FileFilter f);
 
         public int paned_position {
@@ -38,6 +39,8 @@ namespace Music2 {
         private Gee.HashMap<int, Views.ColumnBrowser> categories_hash;
         private Structs.Filter? current_filter = null;
         private Gee.ArrayQueue<uint> filter_tracks;
+
+        private Granite.Widgets.AlertView alert_page;
 
         private LViews.GridView albums_view;
         private Views.AlbumView album_view;
@@ -59,7 +62,12 @@ namespace Music2 {
             var welcome_screen = new Granite.Widgets.Welcome (_("Get Some Tunes"), _("Add music to your library."));
             welcome_screen.append ("document-import", _("Import Music"), _("Import music from a source into your library."));
             welcome_screen.append ("folder-music", _("Change Music Folder"), _("Load music from a folder, a network or an external disk."));
+            welcome_screen.append ("media-playback-start", _("Scan Music Folder"), _("Add tracks from music folder to your library."));
             welcome_screen.activated.connect (on_welcome_activated);
+
+            alert_page = new Granite.Widgets.AlertView (_("Music folder is being scanned"),
+                                                        _("Need to wait a bit while your music collection is being scanned."),
+                                                        "tools-timer");
 
             var browser_pane = new Gtk.Paned (Gtk.Orientation.VERTICAL) {
                 expand = true
@@ -89,6 +97,7 @@ namespace Music2 {
             grid_pane.pack2 (album_view, false, false);
 
             add_named (welcome_screen, "welcome");
+            add_named (alert_page, "alert");
             add_named (browser_pane, "listview");
             add_named (grid_pane, "gridview");
 
@@ -128,13 +137,7 @@ namespace Music2 {
         }
 
         private void on_welcome_activated (int index) {
-            if (index == 0) {
-
-            } else if (index == 1) {
-
-            } else {
-
-            }
+            welcome_activate (index);
         }
 
         private void on_select_row (Enums.Category c, string val, int id) {

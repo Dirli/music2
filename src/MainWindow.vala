@@ -155,7 +155,7 @@ namespace Music2 {
             library_manager.library_loaded.connect (on_library_loaded);
             library_manager.added_category.connect (music_stack.add_column_item);
             library_manager.progress_scan.connect (action_stack.update_progress);
-            library_manager.prepare_scan.connect (action_stack.init_progress);
+            library_manager.prepare_scan.connect (on_prepare_scan);
             library_manager.finished_scan.connect (on_finished_scan);
 
             source_list_view.add_item (queue_id, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
@@ -212,6 +212,7 @@ namespace Music2 {
             music_stack.filter_categories.connect (on_filter_categories);
             music_stack.selected_album.connect (on_selected_album);
             music_stack.choose_album_cover.connect (run_file_chooser);
+            music_stack.welcome_activate.connect (on_welcome_activate);
 
             playlist_stack = new Widgets.PlaylistStack ();
             playlist_stack.selected_row.connect (on_selected_row);
@@ -225,7 +226,6 @@ namespace Music2 {
             action_stack = new Widgets.ActionStack ();
             action_stack.cancelled_scan.connect (library_manager.stop_scanner);
             action_stack.dnd_button_clicked.connect (on_dnd_button_clicked);
-            action_stack.scan_library.connect (start_scanning_library);
 
             status_bar = new Widgets.StatusBar ();
             status_bar.create_new_pl.connect (playlist_manager.create_playlist);
@@ -804,6 +804,12 @@ namespace Music2 {
             }
         }
 
+        private void on_welcome_activate (int index) {
+            if (index == 2) {
+                start_scanning_library ();
+            }
+        }
+
         private bool on_add_view (uint tid) {
             var m = library_manager.get_media (tid);
             if (m != null) {
@@ -816,6 +822,11 @@ namespace Music2 {
             }
 
             return false;
+        }
+
+        private void on_prepare_scan () {
+            action_stack.init_progress ();
+            music_stack.show_alert ();
         }
 
         private void on_finished_scan (string msg) {
@@ -898,7 +909,8 @@ namespace Music2 {
         // changes
         private void changed_music_folder () {
             if (has_music_folder) {
-                action_stack.init_library_folder (_("A new library folder is set"));
+                music_stack.show_welcome ();
+                view_stack.set_visible_child_name ("music");
             } else {
                 //
             }
