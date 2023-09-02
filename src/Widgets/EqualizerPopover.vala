@@ -215,7 +215,7 @@ namespace Music2 {
                 }
             } else {
                 for (int i = 0; i < scales.size; ++i) {
-                    //
+                    // do something
                 }
             }
 
@@ -291,7 +291,7 @@ namespace Music2 {
                     notify_current_preset ();
 
                     if (!preset_combo.automatic_chosen && target_level == 0) {
-                        //
+                        // do something
                     }
                 } else {
                     scale.set_value (scale.get_value () + (difference / 8.0));

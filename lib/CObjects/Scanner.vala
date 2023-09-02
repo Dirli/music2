@@ -40,7 +40,7 @@ namespace Music2 {
         }
 
         public void scan_tracks (Gee.ArrayList<string> tracks_uri) {
-            new Thread<void*> ("scan_tracks", () => {
+            new Thread<void> ("scan_tracks", () => {
                 tracks_uri.foreach ((uri) => {
                     scan_uri (uri);
 
@@ -55,13 +55,11 @@ namespace Music2 {
                     finished = true;
                 }
                 discovered_new_item (null);
-
-                return null;
             });
         }
 
         private void scan_directory (string uri) {
-            new Thread<void*> ("scan_directory", () => {
+            new Thread<void> ("scan_directory", () => {
                 foreach (var s in Tools.FileUtils.get_audio_files (uri)) {
                     scan_uri (s);
 
@@ -74,8 +72,6 @@ namespace Music2 {
                     finished = true;
                 }
                 discovered_new_item (null);
-
-                return null;
             });
         }
 

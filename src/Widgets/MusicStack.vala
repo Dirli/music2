@@ -367,6 +367,7 @@ namespace Music2 {
             m.@get (iter, current_filter.column, out iter_value, Enums.ListColumn.TRACKID, out tid, -1);
 
             if (current_filter.str == iter_value) {
+                // The check looks redundant, but for now I won’t delete it completely
                 // if (!filter_tracks.contains (tid)) {
                     filter_tracks.offer (tid);
                 // }

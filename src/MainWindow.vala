@@ -397,7 +397,9 @@ namespace Music2 {
             destroy ();
         }
 
-        private void action_search () {}
+        private void action_search () {
+            //  do something
+        }
 
         private void action_preferences () {
             var preferences = new Dialogs.PreferencesWindow (this);
@@ -411,7 +413,6 @@ namespace Music2 {
             }
 
             var f = run_file_chooser (_("Import Music"), Gtk.FileChooserAction.SELECT_FOLDER, null);
-
             if (f != null) {
                 on_import_folder (f);
             }
@@ -466,7 +467,9 @@ namespace Music2 {
             }
         }
 
-        private void action_edit_song () {}
+        private void action_edit_song () {
+            // do something
+        }
 
         private void action_to_queue (GLib.SimpleAction action, GLib.Variant? pars) {
             int tid;
@@ -514,7 +517,7 @@ namespace Music2 {
                         }
                         break;
                     case "music":
-                        //
+                        // do something
                         break;
                 }
             }
@@ -650,9 +653,8 @@ namespace Music2 {
                     var import_dialog = new Dialogs.ImportFolder (this, folder.get_path ());
                     import_dialog.response.connect ((response_id) => {
                         if (response_id == Gtk.ResponseType.APPLY) {
-                            new Thread<void*> ("import_folder", () => {
+                            new Thread<void> ("import_folder", () => {
                                 library_manager.import_folder (folder.get_uri (), settings_ui.get_string ("music-folder"));
-                                return null;
                             });
                         }
 
@@ -678,9 +680,8 @@ namespace Music2 {
             if (view_stack.visible_child_name == "playlist" && playlist_stack.modified) {
                 var old_pid = playlist_stack.pid;
                 var tracks = playlist_stack.get_playlist ();
-                new Thread<void*> ("update_playlist", () => {
+                new Thread<void> ("update_playlist", () => {
                     playlist_manager.update_playlist (old_pid, tracks);
-                    return null;
                 });
 
                 playlist_stack.modified = false;
@@ -759,7 +760,7 @@ namespace Music2 {
                     break;
                 case Enums.ActionType.CLEAR:
                     if (item.hint == Enums.Hint.QUEUE) {
-                        //
+                        // do something
                     } else if (item.hint == Enums.Hint.PLAYLIST) {
                         var pid = item.pid;
                         playlist_manager.clear_playlist (pid, pid == playlist_stack.pid);
@@ -912,7 +913,7 @@ namespace Music2 {
                 music_stack.show_welcome ();
                 view_stack.set_visible_child_name ("music");
             } else {
-                //
+                // do something
             }
         }
 
@@ -949,7 +950,7 @@ namespace Music2 {
 
             switch (play_state) {
                 case "Playing":
-                play_button.sensitive = true;
+                    play_button.sensitive = true;
                     top_display.start_progress ();
                     break;
                 case "Paused":
@@ -971,8 +972,9 @@ namespace Music2 {
             }
 
             play_button.tooltip_text = play_state == "Playing" ? _("Pause") : _("Play");
-            play_button.image = new Gtk.Image.from_icon_name (play_state == "Playing" ? "media-playback-pause-symbolic" : "media-playback-start-symbolic",
-                                                              Gtk.IconSize.LARGE_TOOLBAR);
+            play_button.image = new Gtk.Image.from_icon_name (play_state == "Playing" ?
+                                                              "media-playback-pause-symbolic" :
+                                                              "media-playback-start-symbolic", Gtk.IconSize.LARGE_TOOLBAR);
         }
 
         public void open_files (GLib.File[] files) {
@@ -1008,7 +1010,7 @@ namespace Music2 {
         }
 
         private void fill_queue (owned uint[] tids) {
-            new Thread<void*> ("fill_queue", () => {
+            new Thread<void> ("fill_queue", () => {
                 try {
                     var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
                     foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
@@ -1017,8 +1019,6 @@ namespace Music2 {
                 } catch (GLib.Error e) {
                     warning (e.message);
                 }
-
-                return null;
             });
         }
 
@@ -1116,22 +1116,13 @@ namespace Music2 {
             if (hint == Enums.Hint.QUEUE) {
                 try {
                     var tids = dbus_tracklist.get_tracklist ();
-                    // if (active_source_type == Enums.SourceType.DIRECTORY || active_source_type == Enums.SourceType.EXTPLAYLIST || active_source_type == Enums.SourceType.FILE) {
-                        var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
-                        foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
-                            var m = Tools.GuiUtils.metadata_to_media (meta);
-                            if (m != null) {
-                                tracks += m;
-                            }
+                    var tracks_meta = dbus_tracklist.get_tracks_metadata (tids);
+                    foreach (unowned GLib.HashTable<string, GLib.Variant> meta in tracks_meta) {
+                        var m = Tools.GuiUtils.metadata_to_media (meta);
+                        if (m != null) {
+                            tracks += m;
                         }
-                    // } else {
-                    //     foreach (var tid in tids) {
-                    //         var m = library_manager.get_media (tid);
-                    //         if (m != null) {
-                    //             tracks += m;
-                    //         }
-                    //     }
-                    // }
+                    }
                 } catch (Error e) {
                     warning (e.message);
                 }
@@ -1153,10 +1144,8 @@ namespace Music2 {
 
             if (tracks.length > 0) {
                 var path = Tools.GuiUtils.get_playlist_path (item.name, settings_ui.get_string ("music-folder"));
-                new Thread<void*> ("export_playlist", () => {
+                new Thread<void> ("export_playlist", () => {
                     Tools.FileUtils.save_playlist_m3u (path, tracks);
-
-                    return null;
                 });
             }
         }

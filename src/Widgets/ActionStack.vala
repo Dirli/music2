@@ -24,7 +24,9 @@ namespace Music2 {
         public ActionStack () {
             Object (margin_start: 5,
                     margin_end: 5);
+        }
 
+        construct {
             var empty_grid = new Gtk.Grid ();
             transition_type = Gtk.StackTransitionType.CROSSFADE;
 
