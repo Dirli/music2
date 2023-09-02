@@ -29,18 +29,17 @@ namespace Music2 {
         }
 
         public override void start_scan (string import_uri) {
+            var db_manager = Services.DataBaseManager.get_instance ();
+            if (db_manager == null) {
+                 return;
+            }
+
             stop_flag = false;
             var start_time = new GLib.DateTime.now ();
 
             scan_import_folder (import_uri);
 
             if (import_files.length > 0) {
-                var db_manager = Services.DataBaseManager.get_instance ();
-                if (db_manager == null) {
-                    var finish_time = new GLib.DateTime.now ();
-                    finished_scan (finish_time.to_unix () - start_time.to_unix ());
-                    return;
-                }
 
                 total_found (import_files.length);
 
@@ -91,7 +90,7 @@ namespace Music2 {
             }
 
             var finish_time = new GLib.DateTime.now ();
-            finished_scan (finish_time.to_unix () - start_time.to_unix ());
+            finished_scan (import_files.length, finish_time.to_unix () - start_time.to_unix ());
         }
 
         private bool copy_media (GLib.File target_file, GLib.File dest_file) {

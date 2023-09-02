@@ -47,6 +47,7 @@ namespace Music2 {
 
         private Services.LibraryManager library_manager;
         private Services.PlaylistManager playlist_manager;
+        private Services.LibraryScanner library_scanner = null;
 
         private bool has_music_folder {
             get {
@@ -154,9 +155,6 @@ namespace Music2 {
 
             library_manager.library_loaded.connect (on_library_loaded);
             library_manager.added_category.connect (music_stack.add_column_item);
-            library_manager.progress_scan.connect (action_stack.update_progress);
-            library_manager.prepare_scan.connect (on_prepare_scan);
-            library_manager.finished_scan.connect (on_finished_scan);
 
             source_list_view.add_item (queue_id, _("Queue"), Enums.Hint.QUEUE, new ThemedIcon ("playlist-queue"));
             source_list_view.update_badge (queue_id, 0);
@@ -190,10 +188,8 @@ namespace Music2 {
 
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
-                new Thread<void*> ("init_library", () => {
+                new Thread<void> ("init_library", () => {
                     library_manager.init_library ();
-
-                    return null;
                 });
             } else if (settings_ui.get_boolean ("show-default-dialog")) {
                 show_default_dir_dialog ();
@@ -224,7 +220,11 @@ namespace Music2 {
             source_list_view.edited.connect (on_edited_playlist);
 
             action_stack = new Widgets.ActionStack ();
-            action_stack.cancelled_scan.connect (library_manager.stop_scanner);
+            action_stack.cancelled_scan.connect (() => {
+                if (library_scanner != null) {
+                    library_scanner.stop_scan ();
+                }
+            });
             action_stack.dnd_button_clicked.connect (on_dnd_button_clicked);
 
             status_bar = new Widgets.StatusBar ();
@@ -406,7 +406,7 @@ namespace Music2 {
         }
 
         private void action_import () {
-            if (library_manager.scans) {
+            if (library_scanner != null) {
                 return;
             }
 
@@ -729,7 +729,7 @@ namespace Music2 {
                 return;
             }
 
-            if (library_manager.scans) {
+            if (library_scanner != null) {
                 return;
             }
 
@@ -829,13 +829,13 @@ namespace Music2 {
             music_stack.show_alert ();
         }
 
-        private void on_finished_scan (string msg) {
+        private void on_finished_scan (int64 total_scans, int64 scan_time) {
+            library_scanner = null;
+
             action_stack.hide_widget ("progress");
 
-            new Thread<void*> ("init_library", () => {
+            new Thread<void> ("init_library", () => {
                 library_manager.init_library ();
-
-                return null;
             });
         }
 
@@ -873,7 +873,7 @@ namespace Music2 {
 
                     break;
                 case Enums.ActionType.IMPORT:
-                    if (!library_manager.scans) {
+                    if (library_scanner == null) {
                         on_import_folder (GLib.File.new_for_uri (uri));
                     }
                     break;
@@ -1044,7 +1044,7 @@ namespace Music2 {
         }
 
         private void start_scanning_library () {
-            if (library_manager.scans) {
+            if (library_scanner != null) {
                 return;
             }
 
@@ -1057,15 +1057,22 @@ namespace Music2 {
             }
 
             if (has_music_folder) {
-                new Thread<void*> ("scan_directory", () => {
-                    var music_dir = GLib.File.new_for_path (settings_ui.get_string ("music-folder"));
-                    library_manager.scan_library (music_dir.get_uri ());
-                    return null;
-                });
+                new Thread<void> ("scan_directory", run_scanner);
             } else {
                 source_list_view.select_active_item (1);
                 source_list_view.remove_item (-1);
             }
+        }
+
+        private void run_scanner () {
+            library_scanner = new Services.LibraryScanner ();
+
+            library_scanner.progress_scan.connect (action_stack.update_progress);
+            library_scanner.prepare_scan.connect (on_prepare_scan);
+            library_scanner.finished_scan.connect (on_finished_scan);
+
+            var music_dir = GLib.File.new_for_path (settings_ui.get_string ("music-folder"));
+            library_scanner.start_scan (music_dir.get_uri ());
         }
 
         private void show_default_dir_dialog () {

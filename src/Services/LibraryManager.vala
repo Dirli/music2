@@ -20,22 +20,10 @@ namespace Music2 {
     public class Services.LibraryManager : GLib.Object {
         public signal void library_loaded ();
         public signal void added_category (Enums.Category category, Gtk.ListStore store);
-        public signal void finished_scan (string msg);
-        public signal void prepare_scan ();
-        public signal void progress_scan (double progress_val, string progress_count);
-
-        private uint source_id = 0;
-        private uint scan_m = 0;
 
         public bool library_not_empty {
             get {
                 return media_hash.size > 0 || artists_hash.size > 0 || albums_hash.size > 0;
-            }
-        }
-
-        public bool scans {
-            get {
-                return scanner != null;
             }
         }
 
@@ -45,8 +33,6 @@ namespace Music2 {
         public Gee.HashMap<int, Structs.Album?> albums_hash;
         public Gee.HashMap<int, string> artists_hash;
         public Gee.HashMap<int, string> genres_hash;
-
-        private Interfaces.Scanner scanner = null;
 
         public LibraryManager () {
             Tools.FileUtils.get_cache_directory ("covers");
@@ -193,83 +179,17 @@ namespace Music2 {
             added_category (Enums.Category.ALBUM, albums_store);
         }
 
-        public void scan_library (string uri) {
-            if (db_manager == null) {
-                return;
-            }
-
-            db_manager.reset_database ();
-
-            source_id = 0;
-
-            scanner = new Services.LibraryScanner ();
-            scanner.total_found.connect (on_total_found);
-            scanner.added_track.connect (on_added_track);
-            scanner.finished_scan.connect (on_finished_scan);
-
-            scanner.start_scan (uri);
-        }
-
         public void import_folder (string folder_uri, string music_folder) {
-            source_id = 0;
+            //  source_id = 0;
 
-            scanner = new Services.ImportManager (music_folder);
-            scanner.total_found.connect (on_total_found);
-            scanner.added_track.connect (on_added_track);
-            scanner.finished_scan.connect (on_finished_scan);
+            //  scanner = new Services.ImportManager (music_folder);
+            //  scanner.total_found.connect (on_total_found);
+            //  scanner.added_track.connect (on_added_track);
+            //  scanner.finished_scan.connect (on_finished_scan);
 
-            scanner.start_scan (folder_uri);
+            //  scanner.start_scan (folder_uri);
         }
 
-        private void on_added_track (CObjects.Media m, int artist_id, int album_id) {
-            scan_m++;
-        }
-
-        private void on_total_found (uint total_media) {
-            var total_m = total_media;
-
-            scan_m = 0;
-            if (total_m > 0) {
-                source_id = GLib.Timeout.add (1000, () => {
-                    if (scan_m == 0) {
-                        return true;
-                    }
-
-                    progress_scan ((double) scan_m / total_m, @"$(scan_m) / $(total_m)");
-                    return true;
-                });
-            }
-
-            prepare_scan ();
-        }
-
-        private void on_finished_scan (int64 scan_time) {
-            if (source_id > 0) {
-                GLib.Source.remove (source_id);
-                source_id = 0;
-            }
-
-            string msg = _("Added %lld tracks to the library,").printf (scan_m);
-            if (scan_time >= 0) {
-                msg += _(" passed %s").printf (Tools.TimeUtils.pretty_time_from_sec (scan_time));
-            }
-
-            finished_scan (msg);
-            scan_m = 0;
-
-            scanner = null;
-        }
-
-        public void stop_scanner () {
-            if (source_id > 0) {
-                if (scanner != null) {
-                    scanner.stop_scan ();
-                } else {
-                    GLib.Source.remove (source_id);
-                    source_id = 0;
-                }
-            }
-        }
 
         public void clear_library () {
             media_hash.clear ();
