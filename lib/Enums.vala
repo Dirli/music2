@@ -33,17 +33,6 @@ namespace Music2.Enums {
         NEXT
     }
 
-    public enum SourceType {
-        NONE = 0,
-        DIRECTORY,
-        LIBRARY,
-        PLAYLIST,
-        EXTPLAYLIST,
-        SMARTPLAYLIST,
-        FILE,
-        QUEUE
-    }
-
     public enum ActionType {
         NONE = 0,
         PLAY,

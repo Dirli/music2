@@ -5,7 +5,7 @@
         <value value="1" nick="media"/>
         <value value="2" nick="on"/>
     </enum>
-    <enum id="io.elementary.music2.source">
+    <!-- <enum id="io.elementary.music2.source">
         <value value="0" nick="none"/>
         <value value="1" nick="directory"/>
         <value value="2" nick="library"/>
@@ -13,7 +13,7 @@
         <value value="4" nick="extplaylist"/>
         <value value="5" nick="smartplaylist"/>
         <value value="6" nick="file"/>
-    </enum>
+    </enum> -->
 
     <schema path="/io/elementary/music2/" id="io.elementary.music2">
         <key type="b" name="shuffle-mode">
@@ -26,11 +26,11 @@
             <summary>An index representing the repeat mode</summary>
             <description>An index representing the repeat mode</description>
         </key>
-        <key enum="io.elementary.music2.source" name="source-type">
+        <!-- <key enum="io.elementary.music2.source" name="source-type">
             <default>'none'</default>
             <summary>The name of the source type from the last launch</summary>
             <description>The name of the source type from the last launch</description>
-        </key>
+        </key> -->
         <key type="b" name="block-sleep-mode">
             <default>false</default>
             <summary>Block sleep mode</summary>

@@ -270,24 +270,6 @@ namespace Music2.Tools.FileUtils {
         return uris;
     }
 
-    public Enums.SourceType get_source_type (GLib.File f) {
-        if (f.query_exists ()) {
-            var file_type = f.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
-            if (file_type == GLib.FileType.DIRECTORY) {
-                return Enums.SourceType.DIRECTORY;
-            } else if (file_type == GLib.FileType.REGULAR) {
-                var file_name = f.get_basename ();
-                if (file_name != null) {
-                    if (file_name.has_suffix (".m3u")) {
-                        return Enums.SourceType.EXTPLAYLIST;
-                    }
-                }
-            }
-        }
-
-        return Enums.SourceType.FILE;
-    }
-
     public bool is_audio_file (GLib.FileInfo f_info) {
         string mime_type = f_info.get_content_type ();
 
