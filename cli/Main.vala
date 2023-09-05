@@ -114,9 +114,15 @@ namespace Music2 {
                         });
                     } else {
                         if (path != null) {
-                            settings.set_enum ("source-type", Enums.SourceType.NONE);
-                            settings.set_string ("source-media", "file://" + path);
-                            settings.set_enum ("source-type", Enums.SourceType.DIRECTORY);
+                            var to_save = "";
+                            foreach (var s in Tools.FileUtils.get_audio_files (GLib.Filename.to_uri (path))) {
+                                to_save += @"$(s)\n";
+                            }
+
+                            if (to_save != "") {
+                                settings.set_uint64 ("current-media", 0);
+                                Tools.FileUtils.save_playlist (to_save, Tools.FileUtils.get_tmp_path ());
+                            }
                         } else if (sleep != null) {
                             if (sleep == "true") {
                                 settings.set_boolean ("block-sleep-mode", false);
