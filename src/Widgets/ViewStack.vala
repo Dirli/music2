@@ -18,32 +18,29 @@
 
 namespace Music2 {
     public class Widgets.ViewStack : Gtk.Stack {
-        // private string current_view = "";
+        private string current_view = "";
 
         public ViewStack () {
             Object (expand: true);
         }
 
         construct {
-            add_named (new Granite.Widgets.AlertView (_("No Results"), _("Try another search"), "edit-find-symbolic"),
-                       "alert");
+            add_named (new Granite.Widgets.AlertView (_("No Results"), _("Try another search"), "edit-find-symbolic"), "alert");
         }
 
-        // private void show_alert () {
-        //     var v_name = get_visible_child_name ();
-        //     if (v_name != "alert") {
-        //         if (v_name != null) {
-        //             current_view = v_name;
-        //         }
-        //
-        //         visible_child_name = "alert";
-        //     }
-        // }
+        public new void set_visible_child_name (string name) {
+            var v_name = get_visible_child_name ();
+            if (v_name != null && v_name != name) {
+                current_view = v_name;
+            }
 
-        // private void hide_alert () {
-        //     if (current_view != "") {
-        //         visible_child_name = current_view;
-        //     }
-        // }
+            base.set_visible_child_name (name);
+        }
+
+        public void return_last_page () {
+           if (current_view != "") {
+               visible_child_name = current_view;
+           }
+        }
     }
 }

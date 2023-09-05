@@ -19,7 +19,6 @@
 namespace Music2 {
     public class Widgets.ActionStack : Gtk.Stack {
         public signal void cancelled_scan ();
-        public signal void dnd_button_clicked (Enums.ActionType action_type, string uri);
 
         public ActionStack () {
             Object (margin_start: 5,
@@ -56,24 +55,6 @@ namespace Music2 {
 
             update_progress (0, "");
             set_visible_child_name ("progress");
-        }
-
-        public void init_dnd (string uri) {
-            if (get_child_by_name ("dnd") == null) {
-                var dnd_selection = new Views.DnDSelection ();
-                dnd_selection.button_clicked.connect ((btn_name, uri) => {
-                    hide_widget ("dnd");
-                    dnd_button_clicked (btn_name, uri);
-                });
-
-                add_named (dnd_selection, "dnd");
-            }
-
-            var dnd_widget = get_child_by_name ("dnd") as Views.DnDSelection;
-            if (dnd_widget != null) {
-                dnd_widget.add_data (uri);
-                set_visible_child_name ("dnd");
-            }
         }
 
         public void update_progress (double progress_val, string progress_string) {

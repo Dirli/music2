@@ -216,6 +216,42 @@ namespace Music2.Tools.FileUtils {
         return tracks;
     }
 
+    public string source_to_str (string[] uris) {
+        var path_file = GLib.File.new_for_uri (uris[0]);
+        var file_type = path_file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
+        
+        var tracks_str = "";
+        if (file_type == GLib.FileType.DIRECTORY) {
+            foreach (var s in get_audio_files (uris[0])) {
+                tracks_str += @"$(s)\n";
+            }
+        } else if (file_type == GLib.FileType.REGULAR) {
+            var file_name = path_file.get_basename ();
+            if (file_name != null) {
+                if (file_name.has_suffix (".m3u")) {
+                    var str = get_playlist_m3u (uris[0]);
+                    if (str != null) {
+                        tracks_str = str;
+                    }
+                } else {
+                    try {
+                        foreach (var u in uris) {
+                            var f = GLib.File.new_for_uri (u);
+                            if (f.query_exists () && is_audio_file (f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NONE))) {
+                                tracks_str += @"$(u)\n";
+                            }
+                        }
+
+                    } catch (Error e) {
+                        warning (e.message);
+                    }
+                }
+            }
+        }
+
+        return tracks_str;
+    }
+
     public string files_to_str (GLib.File[] files) {
         var uris = "";
         foreach (GLib.File f in files) {

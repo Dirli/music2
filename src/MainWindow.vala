@@ -31,6 +31,7 @@ namespace Music2 {
         private Widgets.MusicStack music_stack;
         private Widgets.QueueStack queue_stack;
         private Widgets.PlaylistStack playlist_stack;
+        private Widgets.DnDSelection dnd_selection;
 
         private Widgets.SourceListView source_list_view;
         private Widgets.StatusBar status_bar;
@@ -225,7 +226,6 @@ namespace Music2 {
                     library_scanner.stop_scan ();
                 }
             });
-            action_stack.dnd_button_clicked.connect (on_dnd_button_clicked);
 
             status_bar = new Widgets.StatusBar ();
             status_bar.create_new_pl.connect (playlist_manager.create_playlist);
@@ -240,11 +240,15 @@ namespace Music2 {
             left_grid.add (action_stack);
             left_grid.add (status_bar);
 
+            dnd_selection = new Widgets.DnDSelection ();
+            dnd_selection.activated.connect (on_dnd_activate);
+
             Gtk.TargetEntry target = {"text/uri-list", 0, 0};
             Gtk.drag_dest_set (left_grid, Gtk.DestDefaults.ALL, {target}, Gdk.DragAction.COPY);
             left_grid.drag_data_received.connect (on_drag_data_received);
 
             view_stack = new Widgets.ViewStack ();
+            view_stack.add_named (dnd_selection, "dnd");
             view_stack.add_named (queue_stack, Constants.QUEUE);
             view_stack.add_named (music_stack, "music");
             view_stack.add_named (playlist_stack, "playlist");
@@ -859,51 +863,37 @@ namespace Music2 {
             }
         }
 
-        private void on_dnd_button_clicked (Enums.ActionType action_type, string uri) {
-            switch (action_type) {
-                case Enums.ActionType.PLAY:
-                    source_list_view.select_active_item (queue_id);
-
-                    var to_save = "";
-                    foreach (var s in Tools.FileUtils.get_audio_files (uri)) {
-                        to_save += @"$(s)\n";
-                    }
-
-                    settings.set_uint64 ("current-media", 0);
-                    Tools.FileUtils.save_playlist (to_save, Tools.FileUtils.get_tmp_path ());
-
-                    break;
-                case Enums.ActionType.IMPORT:
-                    if (library_scanner == null) {
-                        on_import_folder (GLib.File.new_for_uri (uri));
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-
         private void on_drag_data_received (Gdk.DragContext ctx, int x, int y, Gtk.SelectionData sel, uint info, uint time) {
             var uris = sel.get_uris ();
-            if (uris.length > 0) {
-                var path_file = GLib.File.new_for_uri (uris[0]);
-                var file_type = path_file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
+            if (dnd_selection.add_uris (uris)) {
+                view_stack.set_visible_child_name ("dnd");
+            }
 
-                if (file_type == GLib.FileType.DIRECTORY) {
-                    action_stack.init_dnd (uris[0]);
-                } else if (file_type == GLib.FileType.REGULAR) {
-                    var file_name = path_file.get_basename ();
-                    if (file_name != null) {
-                        if (file_name.has_suffix (".m3u")) {
-                            var to_save = Tools.FileUtils.get_playlist_m3u (uris[0]);
+            Gtk.drag_finish (ctx, true, false, time);
+        }
+        
+        private void on_dnd_activate (int index) {
+            view_stack.return_last_page ();
 
-                            settings.set_uint64 ("current-media", 0);
-                            Tools.FileUtils.save_playlist (to_save, Tools.FileUtils.get_tmp_path ());
-                        }
-                    }
+            var uris = dnd_selection.uris;
+            dnd_selection.reset ();
+            if (uris == null || uris.length == 0) {
+                return;
+            }
+
+            if (index == 0) {
+                string to_save = Tools.FileUtils.source_to_str (uris);
+                if (to_save != "") {
+                    source_list_view.select_active_item (queue_id);
+                    settings.set_uint64 ("current-media", 0);
+                    Tools.FileUtils.save_playlist (to_save, Tools.FileUtils.get_tmp_path ());
                 }
-
-                Gtk.drag_finish (ctx, true, false, time);
+            } else if (index == 1) {
+                //  if (library_scanner == null) {
+                //      on_import_folder (GLib.File.new_for_uri (uri));
+                //  }
+            } else if (index == 2) {
+                //  do something
             }
         }
 
