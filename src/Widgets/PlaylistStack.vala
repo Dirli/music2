@@ -31,6 +31,7 @@ namespace Music2 {
 
         construct {
             hint = Enums.Hint.PLAYLIST;
+            pid = -1;
 
             iter_hash = new Gee.HashMap<uint, Gtk.TreeIter?> ();
 
@@ -47,7 +48,7 @@ namespace Music2 {
         public void init_store (int p_id, Enums.Hint h) {
             clear_stack ();
             pid = p_id;
-
+            
             if (hint != h) {
                 hint = h;
                 update_visible ();
@@ -70,6 +71,8 @@ namespace Music2 {
         }
 
         public override int add_iter (CObjects.Media m) {
+            Mutex mutex = Mutex ();
+            mutex.lock ();
             m.track = iter_hash.size + 1;
             Gtk.TreeIter iter;
             list_store.insert_with_values (out iter, -1,
@@ -79,9 +82,10 @@ namespace Music2 {
                 Enums.ListColumn.LENGTH, m.length,
                 Enums.ListColumn.TITLE, m.get_display_title (),
                 Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
-
-            iter_hash[m.tid] = iter;
-
+                
+                iter_hash[m.tid] = iter;
+            mutex.unlock ();
+                
             return 1;
         }
 
@@ -125,8 +129,8 @@ namespace Music2 {
 
             string message_body = "";
             switch (hint) {
-                case Enums.Hint.READ_ONLY_PLAYLIST:
-                    message_body = _("Updating playlist. Please wait.");
+                case Enums.Hint.EXTERNAL_PLAYLIST:
+                    message_body = _("Loading playlist. Please wait.");
                     break;
                 case Enums.Hint.PLAYLIST:
                     message_body = _("To add songs to this playlist, use the <b>secondary click</b> on an item and choose <b>Add to Playlist</b>.");

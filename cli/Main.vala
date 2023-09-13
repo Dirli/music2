@@ -115,7 +115,7 @@ namespace Music2 {
                     } else {
                         if (path != null) {
                             var to_save = "";
-                            foreach (var s in Tools.FileUtils.get_audio_files (GLib.Filename.to_uri (path))) {
+                            foreach (var s in Tools.FileUtils.get_audio_files (GLib.File.new_for_path (path))) {
                                 to_save += @"$(s)\n";
                             }
 

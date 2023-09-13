@@ -20,7 +20,7 @@ namespace Music2 {
     public class Widgets.SourceListView : Granite.Widgets.SourceList {
         public signal void selection_changed (int pid, Enums.Hint hint);
         public signal void menu_activated (Views.SourceListItem menu_item, Enums.ActionType action_type);
-        public signal void edited (int pid, string new_name);
+        public signal void edited (int pid, string new_name, Enums.Hint hint);
 
         private Granite.Widgets.SourceList.ExpandableItem library_category;
         private Granite.Widgets.SourceList.ExpandableItem devices_category;
@@ -67,7 +67,7 @@ namespace Music2 {
             var sourcelist_item = new Views.SourceListItem (pid, name, hint, icon, activatable_icon);
 
             sourcelist_item.edited.connect ((new_name) => {
-                edited (pid, new_name);
+                edited (pid, new_name, hint);
             });
 
             sourcelist_item.menu_item_activated.connect ((item, action) => {
@@ -82,12 +82,12 @@ namespace Music2 {
                     library_category.add (sourcelist_item);
                     break;
                 case Enums.Hint.PLAYLIST:
+                case Enums.Hint.EXTERNAL_PLAYLIST:
                     sourcelist_item.editable = true;
                     playlists_category.add (sourcelist_item);
                     break;
                 case Enums.Hint.QUEUE:
                 case Enums.Hint.SMART_PLAYLIST:
-                case Enums.Hint.READ_ONLY_PLAYLIST:
                     sourcelist_item.editable = false;
                     playlists_category.add (sourcelist_item);
                     break;
@@ -117,6 +117,7 @@ namespace Music2 {
                 var removed_item = items_hash[pid];
                 switch (removed_item.hint) {
                     case Enums.Hint.SMART_PLAYLIST:
+                    case Enums.Hint.EXTERNAL_PLAYLIST:
                     case Enums.Hint.PLAYLIST:
                         playlists_category.remove (removed_item);
                         break;

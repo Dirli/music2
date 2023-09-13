@@ -54,10 +54,10 @@ namespace Music2.Enums {
         MUSIC,
         ALBUM_LIST,
         PLAYLIST,
-        READ_ONLY_PLAYLIST,
+        EXTERNAL_PLAYLIST,
         SMART_PLAYLIST,
         QUEUE
-    }
+        }
 
     public enum ListColumn {
         ICON = 0,

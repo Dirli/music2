@@ -25,12 +25,16 @@ namespace Music2 {
 
         protected bool stop_flag = false;
 
-        public void init () {
+        public bool init () {
             try {
                 discoverer = new Gst.PbUtils.Discoverer ((Gst.ClockTime) (5 * Gst.SECOND));
+
+                return true;
             } catch (Error e) {
                 warning (e.message);
             }
+
+            return false;
         }
 
         public void stop_scan () {
@@ -39,21 +43,18 @@ namespace Music2 {
             }
         }
 
-        private CObjects.Media? discovered (Gst.PbUtils.DiscovererInfo info) {
-            if (info.get_result () == Gst.PbUtils.DiscovererResult.OK) {
-                return create_media (info);
-            }
-
-            return null;
-        }
-
-        public CObjects.Media? add_discover_uri (string uri) {
+        public CObjects.Media? add_discover_uri (string? uri) {
             // discoverer.discover_uri_async (uri);
-            try {
-                var info = discoverer.discover_uri (uri);
-                return discovered (info);
-            } catch (Error e) {
-                warning ("DISCOVER ERROR: '%d' %s", e.code, e.message);
+
+            if (uri != null && uri != "") {
+                try {
+                    var info = discoverer.discover_uri (uri);
+                    if (info.get_result () == Gst.PbUtils.DiscovererResult.OK) {
+                        return create_media (info);
+                    }
+                } catch (Error e) {
+                    warning ("DISCOVER ERROR: '%d' %s", e.code, e.message);
+                }
             }
 
             return null;

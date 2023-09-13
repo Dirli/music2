@@ -40,7 +40,8 @@ namespace Music2 {
 
         private GLib.FileMonitor tmp_monitor;
 
-        private CObjects.Scanner? scanner = null;
+        private int stop_scans = -1;
+
         private ScreenSaverIface? scrsaver_iface = null;
 
         private uint32? inhibit_cookie = null;
@@ -362,34 +363,51 @@ namespace Music2 {
             player.current_index = (uint) settings.get_uint64 ("current-media");
 
             if (tracks.size > 0) {
-                if (scanner != null) {
-                    stop_scanner ();
+                lock (stop_scans) {
+                    if (stop_scans == 1) {
+                        stop_scans = 0;
+                    }
                 }
 
-                player.launch = launch_player;
+                new Thread<void> ("start_scanner", () => {
+                    while (stop_scans != -1) {
+                        warning ("waiting stop scan");
+                    }
+                    
+                    player.launch = launch_player;
 
-                scanner = new CObjects.Scanner ();
-                scanner.init ();
-                scanner.discovered_new_item.connect (on_new_item);
-                scanner.scan_tracks (tracks);
+                    var uri_scanner = CObjects.UriScanner.init_scanner ();
+                    if (uri_scanner != null) {
+                        stop_scans = 1;
+                        tracks.foreach ((uri) => {
+                            var t = uri_scanner.add_discover_uri (uri);
+
+                            if (stop_scans == 0) {
+                                return false;
+                            }
+
+                            if (t != null) {
+                                add_new_item (t);
+                            }
+                            
+                            return true;
+                        });
+                    }
+                    
+                    stop_scans = -1;
+                });
             }
         }
-
-        private void stop_scanner () {
-            scanner.discovered_new_item.disconnect (on_new_item);
-            scanner.stop_scan ();
-            scanner = null;
-        }
-
+        
         // private void update_current_playlist (uint[] tracks) {
-        //     if (tracks.length > 0) {
+            //     if (tracks.length > 0) {
         //         new GLib.Thread<void*> ("fill_queue", () => {
         //             var db_manager = DataBaseManager.to_write ();
         //             if (db_manager == null) {
-        //                 return null;
-        //             }
-        //
-        //             db_manager.update_playlist (queue_id, tracks, true);
+            //                 return null;
+            //             }
+            //
+            //             db_manager.update_playlist (queue_id, tracks, true);
         //             return null;
         //         });
         //     }
@@ -429,18 +447,12 @@ namespace Music2 {
             return tracks;
         }
 
-        private void on_new_item (CObjects.Media? m) {
-            if (m != null) {
-                if (player.add_to_queue (m)) {
-                    player.added_to_queue (m);
-                    if (player.current_index == 0 || player.current_index == m.tid) {
-                        player.current_index = m.tid;
-                    }
+        private void add_new_item (CObjects.Media m) {
+            if (player.add_to_queue (m)) {
+                player.added_to_queue (m);
+                if (player.current_index == 0 || player.current_index == m.tid) {
+                    player.current_index = m.tid;
                 }
-            }
-
-            if (scanner.stopped_scan ()) {
-                stop_scanner ();
             }
         }
 

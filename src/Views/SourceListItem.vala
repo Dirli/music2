@@ -53,6 +53,15 @@ namespace Music2 {
                     playlist_export.activate.connect (() => {menu_item_activated (this, Enums.ActionType.EXPORT);});
                     playlist_clear.activate.connect (() => {menu_item_activated (this, Enums.ActionType.CLEAR);});
                     break;
+                case Enums.Hint.EXTERNAL_PLAYLIST:
+                    var playlist_rename = new Gtk.MenuItem.with_label (_("Rename"));
+                    var playlist_remove = new Gtk.MenuItem.with_label (_("Remove"));                    
+
+                    playlist_menu.append (playlist_rename);
+                    playlist_menu.append (playlist_remove);
+                    playlist_rename.activate.connect (() => {menu_item_activated (this, Enums.ActionType.RENAME);});
+                    playlist_remove.activate.connect (() => {menu_item_activated (this, Enums.ActionType.REMOVE);});
+                    break;
                 case Enums.Hint.SMART_PLAYLIST:
                     // var playlist_rename = new Gtk.MenuItem.with_label (_("Rename"));
                     var playlist_edit = new Gtk.MenuItem.with_label (_("Edit…"));
@@ -70,7 +79,6 @@ namespace Music2 {
                     playlist_export.activate.connect (() => {menu_item_activated (this, Enums.ActionType.EXPORT);});
                     break;
                 case Enums.Hint.QUEUE:
-                case Enums.Hint.READ_ONLY_PLAYLIST:
                     var playlist_save = new Gtk.MenuItem.with_label (_("Save as Playlist"));
                     playlist_menu.append (playlist_save);
                     var playlist_export = new Gtk.MenuItem.with_label (_("Export…"));

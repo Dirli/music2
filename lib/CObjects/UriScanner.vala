@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Dirli <litandrej85@gmail.com>
+ * Copyright (c) 2023 Dirli <litandrej85@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,63 +17,17 @@
  */
 
 namespace Music2 {
-    public class CObjects.Scanner : Interfaces.GSTagger {
-        private bool finished = false;
-
-        public Scanner () {
-            finished = false;
-        }
-
-        public void start_scan (string uri) {
-            scan_directory (uri);
-        }
-
-        public bool stopped_scan () {
-            return finished;
-        }
-
-        private void scan_uri (string uri) {
-            var t = add_discover_uri (uri);
-            if (t != null) {
-                discovered_new_item (t);
+    public class CObjects.UriScanner : Interfaces.GSTagger {
+        public static CObjects.UriScanner? init_scanner () {
+            var uri_scanner = new UriScanner ();
+            if (uri_scanner.init ()) {
+                return uri_scanner;
             }
+
+            return null;
         }
 
-        public void scan_tracks (Gee.ArrayList<string> tracks_uri) {
-            new Thread<void> ("scan_tracks", () => {
-                tracks_uri.foreach ((uri) => {
-                    scan_uri (uri);
-
-                    if (stop_flag) {
-                        return false;
-                    }
-
-                    return true;
-                });
-
-                lock (finished) {
-                    finished = true;
-                }
-                discovered_new_item (null);
-            });
-        }
-
-        private void scan_directory (string uri) {
-            new Thread<void> ("scan_directory", () => {
-                foreach (var s in Tools.FileUtils.get_audio_files (uri)) {
-                    scan_uri (s);
-
-                    if (stop_flag) {
-                        break;
-                    }
-                }
-
-                lock (finished) {
-                    finished = true;
-                }
-                discovered_new_item (null);
-            });
-        }
+        private UriScanner () {}
 
         protected override CObjects.Media? create_media (Gst.PbUtils.DiscovererInfo info) {
             var tags = info.get_tags ();
@@ -141,5 +95,5 @@ namespace Music2 {
 
             return track;
         }
-    }
+    } 
 }

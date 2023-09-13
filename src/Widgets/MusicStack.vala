@@ -286,6 +286,8 @@ namespace Music2 {
                 return;
             }
 
+            Mutex mutex = Mutex ();
+            mutex.lock ();
             var album_store = (Gtk.ListStore) track_list;
             tracks.foreach ((m) => {
                 Gtk.TreeIter iter;
@@ -297,6 +299,7 @@ namespace Music2 {
 
                 return true;
             });
+            mutex.unlock ();
 
             album_view.show_all ();
         }

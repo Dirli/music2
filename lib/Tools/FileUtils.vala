@@ -61,31 +61,45 @@ namespace Music2.Tools.FileUtils {
         return cache_dir;
     }
 
-    public string[] get_audio_files (string uri) {
-        var directory = GLib.File.new_for_uri (uri.replace ("#", "%23"));
+    public string[] get_audio_files (GLib.File d) {
         string[] total_files = {};
-
-        try {
-            var children = directory.enumerate_children ("standard::*", FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
-
-            GLib.FileInfo? file_info = null;
-            while ((file_info = children.next_file ()) != null) {
-                if (file_info.get_is_hidden () || file_info.get_is_symlink () || file_info.get_file_type () == FileType.DIRECTORY) {
-                    continue;
-                }
-
-                if (is_audio_file (file_info)) {
-                    total_files += (directory.get_uri () + "/" + file_info.get_name ().replace ("#", "%23").replace ("%", "%25"));
-                }
-            }
-
-            children.close ();
-            children.dispose ();
-        } catch (Error err) {
-            warning ("%s\n%s", err.message, uri);
+        var dir_path = d.get_path ();
+        if (dir_path == null) {
+            return total_files;
         }
 
-        directory.dispose ();
+        GLib.List<string> uris_list = new GLib.List<string> ();
+        try {
+            string name;
+            GLib.Dir dir = GLib.Dir.open (dir_path, 0);
+            while ((name = dir.read_name ()) != null) {
+                if (name != "") {
+                    uris_list.append (name);
+                }
+            }
+        } catch (GLib.FileError err) {
+            warning (err.message);
+        }
+
+        uris_list.sort ((a, b) => {
+            return GLib.strcmp (a, b);
+        });
+        
+        uris_list.foreach ((entry) => {
+            try {
+                var f = GLib.File.new_for_path (dir_path + "/" + entry);
+                var file_info = f.query_info ("standard::*," + GLib.FileAttribute.STANDARD_CONTENT_TYPE, GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
+                
+                if (!file_info.get_is_hidden ()
+                 && !file_info.get_is_symlink ()
+                 && file_info.get_file_type () != FileType.DIRECTORY
+                 && is_audio_file (file_info)) {
+                    total_files += f.get_uri ();
+                }
+            } catch (Error err) {
+                warning ("%s\n%s", err.message, d.get_uri ());
+            }
+        });
 
         return total_files;
     }
@@ -93,19 +107,19 @@ namespace Music2.Tools.FileUtils {
     public string get_cover_path (uint year, string album_name) {
         string cov_name = year.to_string () + album_name;
         string cov_path = GLib.Path.build_path (GLib.Path.DIR_SEPARATOR_S,
-                                                GLib.Environment.get_user_cache_dir (),
-                                                Constants.APP_NAME,
-                                                "covers",
+            GLib.Environment.get_user_cache_dir (),
+            Constants.APP_NAME,
+            "covers",
                                                 cov_name.hash ().to_string ());
-
+                                                
         return GLib.FileUtils.test (cov_path, GLib.FileTest.EXISTS) ? cov_path : "";
     }
 
     public bool save_cover_file (GLib.File file, uint year, string album_name) {
         string cov_name = year.to_string () + album_name;
-
+        
         var dest = get_cache_directory ("covers").get_child (cov_name.hash ().to_string ());
-
+        
         try {
             file.copy (dest, GLib.FileCopyFlags.OVERWRITE);
             return true;
@@ -115,7 +129,7 @@ namespace Music2.Tools.FileUtils {
 
         return false;
     }
-
+    
     public bool save_playlist (string to_save, string playlist_path) {
         if (to_save != "") {
             var playlist_file = GLib.File.new_for_path (playlist_path);
@@ -123,25 +137,25 @@ namespace Music2.Tools.FileUtils {
                 if (playlist_file.query_exists ()) {
                     playlist_file.delete ();
                 }
-
+                
                 var file_stream = playlist_file.create (GLib.FileCreateFlags.PRIVATE);
-
+                
                 var data_stream = new GLib.DataOutputStream (file_stream);
                 data_stream.put_string (to_save);
-
+                
                 return true;
             } catch (Error e) {
                 warning (e.message);
             }
         }
-
+        
         return false;
     }
 
     public bool save_playlist_m3u (string playlist_path, CObjects.Media[] tracks) {
         string to_save = get_m3u_content (tracks);
         GLib.File dest = GLib.File.new_for_path (playlist_path);
-
+        
         try {
             if (dest.query_exists ()) {
                 dest.delete ();
@@ -158,24 +172,24 @@ namespace Music2.Tools.FileUtils {
 
         return false;
     }
-
-    public string get_m3u_content (CObjects.Media[] tracks) {
+    
+    private string get_m3u_content (CObjects.Media[] tracks) {
         string to_save = "#EXTM3U";
-
+        
         foreach (unowned CObjects.Media t in tracks) {
             if (t == null) {
                 continue;
             }
-
+            
             var sec = Tools.TimeUtils.mili_to_sec (t.length).to_string ();
-
+            
             to_save += "\n\n#EXTINF:" + sec + ", " + t.get_display_artist () + " - " + t.get_display_title ();
             to_save += "\n" + GLib.File.new_for_uri (t.uri).get_path ();
         }
 
         return to_save;
     }
-
+    
     public string? get_playlist_m3u (string playlist_uri) {
         string tracks = "";
 
@@ -212,17 +226,17 @@ namespace Music2.Tools.FileUtils {
             warning ("Could not load m3u file at %s: %s\n", pl_file.get_path (), e.message);
             return null;
         }
-
+        
         return tracks;
     }
 
     public string source_to_str (string[] uris) {
-        var path_file = GLib.File.new_for_uri (uris[0]);
+        var path_file = GLib.File.new_for_uri (uris[0].replace ("#", "%23"));
         var file_type = path_file.query_file_type (GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS);
         
         var tracks_str = "";
         if (file_type == GLib.FileType.DIRECTORY) {
-            foreach (var s in get_audio_files (uris[0])) {
+            foreach (var s in get_audio_files (path_file)) {
                 tracks_str += @"$(s)\n";
             }
         } else if (file_type == GLib.FileType.REGULAR) {
@@ -248,10 +262,10 @@ namespace Music2.Tools.FileUtils {
                 }
             }
         }
-
+        
         return tracks_str;
     }
-
+    
     public string files_to_str (GLib.File[] files) {
         var uris = "";
         foreach (GLib.File f in files) {
@@ -272,7 +286,9 @@ namespace Music2.Tools.FileUtils {
 
     public bool is_audio_file (GLib.FileInfo f_info) {
         string mime_type = f_info.get_content_type ();
-
-        return mime_type.has_prefix ("audio/") && !mime_type.contains ("x-mpegurl") && !mime_type.contains ("x-scpls");
+        
+        return mime_type != null
+               ? mime_type.has_prefix ("audio/") && !mime_type.contains ("x-mpegurl") && !mime_type.contains ("x-scpls")
+               : false;
     }
 }

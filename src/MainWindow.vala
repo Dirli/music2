@@ -177,6 +177,7 @@ namespace Music2 {
             }
 
             playlist_manager.add_view.connect (on_add_view);
+            playlist_manager.add_media.connect (on_add_media);
             playlist_manager.cleared_playlist.connect (playlist_stack.clear_stack);
             playlist_manager.added_playlist.connect (source_list_view.add_item);
 
@@ -228,7 +229,7 @@ namespace Music2 {
             });
 
             status_bar = new Widgets.StatusBar ();
-            status_bar.create_new_pl.connect (playlist_manager.create_playlist);
+            status_bar.create_new_pl.connect (playlist_manager.create_internal_playlist);
             status_bar.changed_volume.connect ((new_volume) => {
                 dbus_player.volume = new_volume;
             });
@@ -696,6 +697,7 @@ namespace Music2 {
                     view_stack.set_visible_child_name (Constants.QUEUE);
                     break;
                 case Enums.Hint.SMART_PLAYLIST:
+                case Enums.Hint.EXTERNAL_PLAYLIST:
                 case Enums.Hint.PLAYLIST:
                     view_stack.set_visible_child_name ("playlist");
                     select_playlist_item (pid, hint);
@@ -739,11 +741,20 @@ namespace Music2 {
             }
 
             settings.set_uint64 ("current-media", row_id);
-
+            
             if (active_hint == Enums.Hint.MUSIC) {
                 var tids = music_stack.get_filter_tracks ();
                 if (playlist_from_library (tids)) {
                     return;
+                }
+            } else if (active_hint == Enums.Hint.EXTERNAL_PLAYLIST) {
+                var playlist_path = playlist_manager.get_playlist_path (playlist_stack.pid);
+                if (playlist_path != "") {
+                    var playlist_file = GLib.File.new_for_path (playlist_path);
+                    var to_save = Tools.FileUtils.get_playlist_m3u (playlist_file.get_uri());
+                    if (to_save != "" && Tools.FileUtils.save_playlist (to_save, Tools.FileUtils.get_tmp_path ())) {
+                        return;
+                    }
                 }
             } else if (active_hint >= Enums.Hint.PLAYLIST) {
                 var tids = playlist_stack.get_playlist ();
@@ -773,7 +784,7 @@ namespace Music2 {
                     break;
                 case Enums.ActionType.SAVE:
                     if (item.hint == Enums.Hint.QUEUE) {
-                        var pid = playlist_manager.create_playlist (_("Queue"));
+                        var pid = playlist_manager.create_internal_playlist (_("Queue"));
                         if (pid > 0) {
                             try {
                                 var tracks = dbus_tracklist.get_tracklist ();
@@ -789,11 +800,9 @@ namespace Music2 {
                     }
                     break;
                 case Enums.ActionType.REMOVE:
-                    if (item.hint == Enums.Hint.PLAYLIST) {
-                        var pid = item.pid;
-                        if (playlist_manager.remove_playlist (pid, pid == playlist_stack.pid)) {
-                            source_list_view.remove_item (pid);
-                        }
+                    var pid = item.pid;
+                    if (playlist_manager.remove_playlist (pid, item.hint, pid == playlist_stack.pid)) {
+                        source_list_view.remove_item (pid);
                     }
                     break;
                 case Enums.ActionType.EXPORT:
@@ -829,6 +838,14 @@ namespace Music2 {
             return false;
         }
 
+        private void on_add_media (int pid) {
+            var m = playlist_manager.get_external_iter ();
+
+            if (m != null && playlist_stack.pid == pid) {
+                playlist_stack.add_iter (m);
+            }
+        }
+
         private void on_prepare_scan () {
             action_stack.init_progress ();
             music_stack.show_alert ();
@@ -854,9 +871,9 @@ namespace Music2 {
             status_bar.sensitive_btns (true);
         }
 
-        private void on_edited_playlist (int pid, string playlist_name) {
+        private void on_edited_playlist (int pid, string playlist_name, Enums.Hint hint) {
             if (queue_id != pid) {
-                var modified_name = playlist_manager.edit_playlist (pid, playlist_name);
+                var modified_name = playlist_manager.edit_playlist (pid, playlist_name, hint);
                 if (modified_name != "") {
                     source_list_view.rename_playlist (pid, modified_name);
                 }
@@ -871,7 +888,7 @@ namespace Music2 {
 
             Gtk.drag_finish (ctx, true, false, time);
         }
-        
+
         private void on_dnd_activate (int index) {
             view_stack.return_last_page ();
 
@@ -893,7 +910,12 @@ namespace Music2 {
                 //      on_import_folder (GLib.File.new_for_uri (uri));
                 //  }
             } else if (index == 2) {
-                //  do something
+                string to_save = Tools.FileUtils.source_to_str (uris);
+                if (to_save != null) {
+                    new Thread<void> ("import_ext_playlist", () => {
+                        playlist_manager.import_ext_playlist (to_save);
+                    });
+                }
             }
         }
 
@@ -1014,6 +1036,8 @@ namespace Music2 {
 
         private void select_playlist_item (int pid, Enums.Hint playlist_hint) {
             if (playlist_stack.pid != pid) {
+                playlist_manager.scan_pid = pid;
+
                 playlist_stack.init_store (pid, playlist_hint);
             } else if (playlist_hint == Enums.Hint.SMART_PLAYLIST) {
                 playlist_stack.clear_stack ();
@@ -1021,7 +1045,22 @@ namespace Music2 {
                 return;
             }
 
-            playlist_manager.select_playlist (pid, playlist_hint);
+            if (playlist_hint == Enums.Hint.EXTERNAL_PLAYLIST) {
+                //  I don't think this will solve the problem, what if
+                GLib.Timeout.add (500, () => {
+                    //  FIXME: The application may crash when loading an external playlist.
+                    //  Choosing between responsiveness and stability, I chose responsiveness,
+                    //  since the error rarely appears
+                    //  I don’t want to give up the Thread, it’s very appropriate here
+                    new Thread<void> ("load_ext_playlist", () => {
+                        playlist_manager.select_ext_playlist (pid);
+                    });
+
+                    return false;
+                });
+            } else {
+                playlist_manager.select_int_playlist (pid, playlist_hint);
+            }
         }
 
         private void add_to_queue (CObjects.Media m) {

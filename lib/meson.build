@@ -9,6 +9,7 @@ common_files = files (
     'Constants.vala',
     'CObjects/EqualizerPreset.vala',
     'CObjects/Media.vala',
+    'CObjects/UriScanner.vala',
     'Interfaces/GSTagger.vala',
     'Tools/FileUtils.vala',
     'Tools/String.vala',
@@ -18,7 +19,6 @@ common_files = files (
 core_files = common_files
 core_files += files (
     'Structs.vala',
-    'CObjects/Scanner.vala',
 )
 #if get_option ('sqlite')
 #    core_files += files (
