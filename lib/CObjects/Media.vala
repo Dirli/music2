@@ -23,7 +23,7 @@ namespace Music2 {
         public string album;
         public string artist;
         public string genre;
-        public uint tid = 0;
+        public uint tid;
         public uint hits;
         public uint track;
         // milliseconds
@@ -31,8 +31,11 @@ namespace Music2 {
         public uint year;
         public uint bitrate;
 
-        public Media (string uri) {
-            this.uri = uri;
+        public Media (string _uri) {
+            uri = _uri;
+
+            var f = GLib.File.new_for_uri (uri);
+            tid = f.get_path ().hash ();
         }
 
         public inline string get_display_title () {

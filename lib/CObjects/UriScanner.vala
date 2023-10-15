@@ -38,7 +38,6 @@ namespace Music2 {
 
                 var t_uri = info.get_uri ();
                 track = new CObjects.Media (t_uri);
-                track.tid = t_uri.hash ();
 
                 if (tags.get_string (Gst.Tags.TITLE, out o)) {
                     track.title = o;

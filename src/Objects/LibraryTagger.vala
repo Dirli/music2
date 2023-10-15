@@ -29,7 +29,6 @@ namespace Music2 {
             if (tags != null) {
                 var t_uri = info.get_uri ();
                 var track = new CObjects.Media (t_uri);
-                track.tid = t_uri.hash ();
 
                 string o;
 
