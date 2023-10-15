@@ -183,11 +183,11 @@ namespace Music2 {
 
             playlist_manager.load_playlists ();
             changed_smart_playlists ();
-
+            
             settings.bind ("auto-length", playlist_manager, "auto-length", GLib.SettingsBindFlags.GET);
             settings.changed["smart-playlists"].connect (changed_smart_playlists);
             settings_ui.changed["music-folder"].connect (changed_music_folder);
-
+            
             if (has_music_folder) {
                 source_list_view.add_item (-1, _("Music"), Enums.Hint.MUSIC, new ThemedIcon ("library-music"));
                 new Thread<void> ("init_library", () => {

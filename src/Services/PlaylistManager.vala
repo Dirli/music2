@@ -41,15 +41,15 @@ namespace Music2 {
         public PlaylistManager () {
             ext_tracks = new GLib.AsyncQueue<CObjects.Media> ();
             ext_playlist_path = Tools.FileUtils.get_cache_directory ("ext").get_path ();
-            
+
             db_manager = Services.DataBaseManager.get_instance ();
             playlists_hash = db_manager != null 
-            ? db_manager.get_playlists ()
+                             ? db_manager.get_playlists ()
                              : new Gee.HashMap<int, string> ();
 
             ext_playlists_hash = new Gee.HashMap<int, string> (); 
         }
-
+        
         public void load_playlists () {
             playlists_hash.foreach ((entry) => {
                 added_playlist (entry.key, entry.value, Enums.Hint.PLAYLIST, new ThemedIcon ("playlist"));
