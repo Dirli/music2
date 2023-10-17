@@ -28,7 +28,7 @@ namespace Music2 {
         public Enums.Category category { get; construct set; }
         public Gtk.CheckMenuItem menu_item { get; construct set;}
 
-        protected int selected_item = -1;
+        protected int selected_item = -2;
 
         protected LViews.ColumnView view;
 
@@ -73,7 +73,7 @@ namespace Music2 {
         private void init_selection () {
             var first_path = new Gtk.TreePath.first ();
             tree_selection.select_path (first_path);
-            selected_item = 0;
+            selected_item = -1;
 
             tree_selection.changed.connect (selected_item_changed);
         }
@@ -86,7 +86,7 @@ namespace Music2 {
         }
 
         private void clear_selection () {
-            selected_item = -1;
+            selected_item = -2;
 
             tree_selection.changed.disconnect (selected_item_changed);
             tree_selection.unselect_all ();
@@ -125,7 +125,7 @@ namespace Music2 {
                 string value_str;
                 temp_model.@get (iter, 0, out value_str, 1, out value_id, -1);
                 if (value_id != selected_item) {
-                    if (selected_item != -1) {
+                    if (selected_item != -2) {
                         select_row (category, value_str, value_id);
                     }
 
