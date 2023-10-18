@@ -699,7 +699,7 @@ namespace Music2 {
             return album_id;
         }
 
-        public Gee.HashMap<uint, CObjects.Media> get_tracks () {
+        public GLib.HashTable<uint, CObjects.Media> get_tracks () {
             Sqlite.Statement stmt;
 
             string sql = """
@@ -716,12 +716,13 @@ namespace Music2 {
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
 
-            var tracks_hash = new Gee.HashMap<uint, CObjects.Media> ();
+            GLib.HashTable<uint, CObjects.Media> tracks_hash = new GLib.HashTable<uint, CObjects.Media> ((k) => {return k;}, (k1, k2) => {return k1 == k2;});
             while (stmt.step () == Sqlite.ROW) {
                 var uri = stmt.column_text (4);
                 if (uri == null) {
                     continue;
                 }
+
                 var m = new CObjects.Media (uri);
                 m.tid = (uint) stmt.column_int64 (0);
                 m.title = stmt.column_text (1) ?? "";
@@ -733,7 +734,7 @@ namespace Music2 {
                 m.artist = stmt.column_text (8) ?? "";
                 m.hits = (uint) stmt.column_int (9);
 
-                tracks_hash[m.tid] = m;;
+                tracks_hash.insert (m.tid, m);
             }
 
             stmt.reset ();

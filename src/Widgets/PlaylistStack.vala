@@ -83,9 +83,9 @@ namespace Music2 {
                 Enums.ListColumn.TITLE, m.get_display_title (),
                 Enums.ListColumn.ARTIST, m.get_display_artist (), -1);
                 
-                iter_hash[m.tid] = iter;
+            iter_hash[m.tid] = iter;
             mutex.unlock ();
-                
+
             return 1;
         }
 

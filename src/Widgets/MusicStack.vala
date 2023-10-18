@@ -78,6 +78,9 @@ namespace Music2 {
 
             list_store = new Gtk.ListStore.newv (Enums.ListColumn.get_all ());
 
+            list_filter = new Gtk.TreeModelFilter (list_store, null);
+            list_filter.set_visible_func (row_visible_cb);
+
             albums_view = new LViews.GridView ();
             albums_view.set_columns (-1);
             albums_view.selection_changed.connect (grid_selection_changed);
@@ -162,9 +165,7 @@ namespace Music2 {
                 filter_categories (c, id);
             }
 
-            if (list_filter != null) {
-                list_filter.refilter ();
-            }
+            list_filter.refilter ();
         }
 
         private void on_choose_cover () {
@@ -231,7 +232,9 @@ namespace Music2 {
             }
         }
 
-        public void add_tracks (Gee.Collection<CObjects.Media> tracks) {
+        public void add_tracks (GLib.List<unowned CObjects.Media> tracks) {
+            Mutex mutex = Mutex ();
+            mutex.lock ();
             tracks.foreach ((m) => {
                 Gtk.TreeIter iter;
                 list_store.insert_with_values (out iter, -1,
@@ -243,17 +246,17 @@ namespace Music2 {
                     Enums.ListColumn.GENRE, m.get_display_genre (),
                     Enums.ListColumn.TITLE, m.get_display_title (),
                     Enums.ListColumn.ARTIST, GLib.Markup.escape_text (m.get_display_artist ()), -1);
-
+                    
                 media_iter_hash[m.tid] = iter;
-
-                return true;
             });
-
+            
             list_store.set_sort_column_id ((int) Enums.ListColumn.ARTIST, Gtk.SortType.ASCENDING);
             list_store.set_sort_func ((int) Enums.ListColumn.ARTIST, media_sort_func);
-
+            mutex.unlock ();
+            
             list_filter = new Gtk.TreeModelFilter (list_store, null);
             list_filter.set_visible_func (row_visible_cb);
+            
             list_view.set_model (list_filter);
         }
 

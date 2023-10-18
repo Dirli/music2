@@ -23,13 +23,13 @@ namespace Music2 {
 
         public bool library_not_empty {
             get {
-                return media_hash.size > 0 || artists_hash.size > 0 || albums_hash.size > 0;
+                return media_hash.length > 0 || artists_hash.size > 0 || albums_hash.size > 0;
             }
         }
 
         private Services.DataBaseManager? db_manager = null;
 
-        public Gee.HashMap<uint, CObjects.Media> media_hash;
+        public GLib.HashTable<uint, CObjects.Media> media_hash;
         public Gee.HashMap<int, Structs.Album?> albums_hash;
         public Gee.HashMap<int, string> artists_hash;
         public Gee.HashMap<int, string> genres_hash;
@@ -41,21 +41,38 @@ namespace Music2 {
         construct {
             db_manager = Services.DataBaseManager.get_instance ();
 
-            media_hash = new Gee.HashMap<uint, CObjects.Media> ();
+            media_hash = new GLib.HashTable<uint, CObjects.Media> ((k) => {return k;}, (k1, k2) => {return k1 == k2;});
+
             artists_hash = new Gee.HashMap<int, string> ();
             genres_hash = new Gee.HashMap<int, string> ();
             albums_hash = new Gee.HashMap<int, Structs.Album?> ();
         }
 
-        public Gee.Collection<CObjects.Media> get_track_list () {
-            return media_hash.values;
+        public GLib.List<unowned CObjects.Media> get_track_list () {
+            GLib.List<unowned CObjects.Media> track_list = media_hash.get_values ();
+            track_list.sort ((m1, m2) => {
+                var res = Tools.String.compare (m1.get_display_artist (), m2.get_display_artist ());
+                if (res != 0) {return res;}
+
+                if (m1.year != m2.year) {return m1.year > m2.year ? 1 : -1;}
+
+                res = Tools.String.compare (m1.get_display_album (), m2.get_display_album ());
+                if (res != 0) { return res;}
+
+                if (m1.track != m2.track) {return m1.track > m2.track ? 1 : -1;}
+
+                return Tools.String.compare (m1.get_display_title (), m2.get_display_title ());
+            });
+
+            return track_list;
         }
+
         public Gee.Collection<Structs.Album?> get_albums () {
             return albums_hash.values;
         }
 
         public bool in_library (uint tid) {
-            return media_hash.has_key (tid);
+            return media_hash.contains (tid);
         }
 
         public Gee.ArrayList<int>? get_filtered_category (Enums.Category c, Enums.Category f, int id) {
@@ -81,19 +98,19 @@ namespace Music2 {
         }
 
         public CObjects.Media? get_media (uint tid) {
-            if (!media_hash.has_key (tid)) {
+            if (!media_hash.contains (tid)) {
                 return null;
             }
 
-            return media_hash[tid];
+            return media_hash.get (tid);
         }
 
         public Gee.ArrayQueue<CObjects.Media> get_album_tracks (int album_id) {
             var tracks_queue = new Gee.ArrayQueue<CObjects.Media> ();
             if (db_manager != null) {
                 db_manager.get_album_tracks (album_id).foreach ((tid) => {
-                    if (media_hash.has_key (tid)) {
-                        tracks_queue.offer (media_hash[tid]);
+                    if (media_hash.contains (tid)) {
+                        tracks_queue.offer (media_hash.get (tid));
                     }
 
                     return true;
@@ -116,7 +133,7 @@ namespace Music2 {
 
             media_hash = db_manager.get_tracks ();
 
-            if (media_hash.size > 0) {
+            if (media_hash.length > 0) {
                 library_loaded ();
             }
         }
@@ -192,7 +209,7 @@ namespace Music2 {
 
 
         public void clear_library () {
-            media_hash.clear ();
+            media_hash.remove_all ();
             artists_hash.clear ();
             genres_hash.clear ();
             albums_hash.clear ();
