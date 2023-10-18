@@ -508,41 +508,38 @@ namespace Music2 {
             return item_id;
         }
 
-        public Gee.HashMap<int, string> get_genres_hash () {
-            return get_hash ("genres");
-        }
-
-        public Gee.HashMap<int, string> get_artists_hash () {
-            return get_hash ("artists");
-        }
-
-        private Gee.HashMap<int, string> get_hash (string t_name) {
-            var _hash = new Gee.HashMap<int, string> ();
+        public GLib.List<Structs.KeyVal?> get_category_contents (string t_name) {
             Sqlite.Statement stmt;
             string sql = """
                 SELECT id, name
                 FROM """ + t_name + """
                 ORDER BY name;
             """;
-
+            
             int res = db.prepare_v2 (sql, sql.length, out stmt);
             assert (res == Sqlite.OK);
-
+            
+            var _list = new GLib.List<Structs.KeyVal?> ();
             while (stmt.step () == Sqlite.ROW) {
-                _hash[stmt.column_int (0)] = stmt.column_text (1);
+                Structs.KeyVal kv_struct = {};
+
+                kv_struct.k = stmt.column_int (0);
+                kv_struct.v = stmt.column_text (1);
+
+                _list.append (kv_struct);
             }
 
             stmt.reset ();
-            return _hash;
+            return _list;
         }
 
         public Gee.ArrayList<int> get_albums_id (string f_name, int fid) {
             Sqlite.Statement stmt;
 
             string sql = """
-                    SELECT DISTINCT album_id
-                    FROM media
-                    WHERE """ + f_name + """=$FID
+                SELECT DISTINCT album_id
+                FROM media
+                WHERE """ + f_name + """=$FID
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);
@@ -564,9 +561,9 @@ namespace Music2 {
             Sqlite.Statement stmt;
 
             string sql = """
-                    SELECT DISTINCT artist_id
-                    FROM media
-                    WHERE genre_id=$GID
+                SELECT DISTINCT artist_id
+                FROM media
+                WHERE genre_id=$GID
             """;
 
             int res = db.prepare_v2 (sql, sql.length, out stmt);

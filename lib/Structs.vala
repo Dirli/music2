@@ -17,6 +17,11 @@
  */
 
 namespace Music2.Structs {
+    public struct KeyVal {
+        public int k;
+        public string v;
+    }
+
     public struct Album {
         public int album_id;
         public string title;

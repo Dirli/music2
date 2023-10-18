@@ -266,6 +266,19 @@ namespace Music2.Enums {
             }
         }
 
+        public string to_table_name () {
+            switch (this) {
+                case Category.GENRE:
+                    return "genres";
+                case Category.ARTIST:
+                    return "artists";
+                case Category.ALBUM:
+                    return "albums";
+                default:
+                    GLib.assert_not_reached ();
+            }
+        }
+
         public static Category[] get_all () {
             Category[] list = {};
             for (int i = 0; i < N_CATEGORIES; i++) {

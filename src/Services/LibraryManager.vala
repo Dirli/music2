@@ -23,16 +23,14 @@ namespace Music2 {
 
         public bool library_not_empty {
             get {
-                return media_hash.length > 0 || artists_hash.size > 0 || albums_hash.size > 0;
+                return media_hash.length > 0 || albums_hash.size > 0;
             }
         }
 
         private Services.DataBaseManager? db_manager = null;
 
-        public GLib.HashTable<uint, CObjects.Media> media_hash;
-        public Gee.HashMap<int, Structs.Album?> albums_hash;
-        public Gee.HashMap<int, string> artists_hash;
-        public Gee.HashMap<int, string> genres_hash;
+        private GLib.HashTable<uint, CObjects.Media> media_hash;
+        private Gee.HashMap<int, Structs.Album?> albums_hash;
 
         public LibraryManager () {
             Tools.FileUtils.get_cache_directory ("covers");
@@ -43,8 +41,6 @@ namespace Music2 {
 
             media_hash = new GLib.HashTable<uint, CObjects.Media> ((k) => {return k;}, (k1, k2) => {return k1 == k2;});
 
-            artists_hash = new Gee.HashMap<int, string> ();
-            genres_hash = new Gee.HashMap<int, string> ();
             albums_hash = new Gee.HashMap<int, Structs.Album?> ();
         }
 
@@ -125,12 +121,10 @@ namespace Music2 {
                 return;
             }
 
-            genres_hash = db_manager.get_genres_hash ();
-            load_genres ();
-            artists_hash = db_manager.get_artists_hash ();
-            load_artists ();
+            load_category (Enums.Category.GENRE);
+            load_category (Enums.Category.ARTIST);
             load_albums (db_manager.get_albums ());
-
+            
             media_hash = db_manager.get_tracks ();
 
             if (media_hash.length > 0) {
@@ -138,42 +132,20 @@ namespace Music2 {
             }
         }
 
-        private void load_genres () {
-            var genre_store = new Objects.CategoryStore (Enums.Category.GENRE, new Type[] {
+        private void load_category (Enums.Category cat) {
+            var list_store = new Objects.CategoryStore (cat, new Type[] {
                 typeof (string),
                 typeof (int),
             });
 
-            genres_hash.keys.foreach ((k) => {
-                Gtk.TreeIter genre_iter;
-                genre_store.insert_with_values (out genre_iter, -1,
-                                                0, Tools.String.get_simple_display_text (genres_hash[k]),
-                                                1, k, -1);
-
-                return true;
-            });
-
-            added_category (Enums.Category.GENRE, genre_store);
-        }
-
-        private void load_artists () {
-            var artists_store = new Objects.CategoryStore (Enums.Category.ARTIST, new Type[] {
-                typeof (string),
-                typeof (int),
-            });
-
-            artists_hash.keys.foreach ((k) => {
-                string simple_artist = Tools.String.get_simple_display_text (artists_hash[k]);
-
+            db_manager.get_category_contents (cat.to_table_name ()).foreach ((entry) => {
                 Gtk.TreeIter iter;
-                artists_store.insert_with_values (out iter, -1,
-                                                  0, simple_artist,
-                                                  1, k, -1);
-
-                return true;
+                list_store.insert_with_values (out iter, -1,
+                                                0, Tools.String.get_simple_display_text (entry.v),
+                                                1, entry.k, -1);
             });
 
-            added_category (Enums.Category.ARTIST, artists_store);
+            added_category (cat, list_store);
         }
 
         private void load_albums (Gee.ArrayList<Structs.Album?> albums) {
@@ -210,8 +182,6 @@ namespace Music2 {
 
         public void clear_library () {
             media_hash.remove_all ();
-            artists_hash.clear ();
-            genres_hash.clear ();
             albums_hash.clear ();
         }
     }
